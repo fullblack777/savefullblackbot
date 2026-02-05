@@ -912,7 +912,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="checkers[]" value="ggsitau" id="perm_ggsitau">
-                            <label for="perm_ggsitau">GGs ITAU</label>
+                            <label for="perm_ggsitau">GETNET</label>
                         </div>
                     </div>
                 </div>
