@@ -172,105 +172,73 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
     ob_clean();
 
     try {
+        // Mapear os nomes corretamente
         $tool_files = [
-            'paypal' => __DIR__ . '/attached_assets/PAYPALV2OFC.php',
-            'VBV' => __DIR__ . '/attached_assets/VBVOFC.php',
-            'PAGARME' => __DIR__ . '/attached_assets/PAGARMEOFC.php',
-            'amazon1' => __DIR__ . '/attached_assets/AMAZONOFC1.php',
-            'amazon2' => __DIR__ . '/attached_assets/AMAZONOFC2.php',
+            'paypal' => 'attached_assets/PAYPALV2OFC.php',
+            'preauth' => 'attached_assets/VBVOFC.php',
+            'n7' => 'attached_assets/PAGARMEOFC.php',
+            'amazon1' => 'attached_assets/AMAZONOFC1.php',
+            'amazon2' => 'attached_assets/AMAZONOFC2.php',
+            'cpfdatasus' => 'attached_assets/cpfdatasus_1762652369268.php',
+            'nomedetran' => 'attached_assets/nomedetran_1762652369275.php',
+            'obito' => 'attached_assets/obito_1762652369275.php',
+            'fotoba' => 'attached_assets/fotoba_1762652369269.php',
+            'fotoce' => 'attached_assets/fotoce_1762652369269.php',
+            'fotoma' => 'attached_assets/fotoma_1762652369270.php',
+            'fotope' => 'attached_assets/fotope_1762652369271.php',
+            'fotorj' => 'attached_assets/fotorj_1762652369271.php',
+            'fotosp' => 'attached_assets/fotosp_1762652369272.php',
+            'fototo' => 'attached_assets/fototo_1762652369273.php',
         ];
 
-        if (isset($tool_files[$tool])) {
-            if (file_exists($tool_files[$tool])) {
-                $_GET['lista'] = $lista;
-                if (isset($_GET['cookie'])) {
-                    $_GET['cookie'] = $_GET['cookie'];
-                    $_POST['cookie1'] = $_GET['cookie'];
-                }
-                include $tool_files[$tool];
-            } else {
-                echo json_encode(['status' => 'error', 'message' => 'Arquivo da ferramenta não encontrado']);
+        if (isset($tool_files[$tool]) && file_exists($tool_files[$tool])) {
+            // Limpar qualquer output anterior
+            ob_clean();
+            
+            // Incluir o arquivo da ferramenta
+            $_GET['lista'] = $lista;
+            if (isset($_GET['cookie'])) {
+                $_GET['cookie'] = $_GET['cookie'];
+                $_POST['cookie1'] = $_GET['cookie'];
             }
+            
+            // Capturar o output do arquivo incluído
+            ob_start();
+            include $tool_files[$tool];
+            $output = ob_get_clean();
+            
+            // Verificar se o output é JSON válido
+            $json_data = json_decode($output, true);
+            
+            if ($json_data !== null) {
+                // Se for JSON, retornar como JSON
+                echo json_encode($json_data);
+            } else {
+                // Se não for JSON, formatar como resposta HTML
+                if (strpos($output, 'Aprovada') !== false || strpos($output, 'success') !== false) {
+                    echo json_encode(['status' => 'Aprovada', 'message' => $output]);
+                } else {
+                    echo json_encode(['status' => 'Reprovada', 'message' => $output]);
+                }
+            }
+            
         } elseif ($tool === 'ggsitau') {
             $card = $lista;
             $parts = explode('|', $card);
             if (count($parts) != 4) {
-                echo '<span class="badge badge-danger">Erro</span> » ' . $card . ' » <b>Retorno: <span class="text-danger">Formato inválido. Use: numero|mes|ano|cvv</span></b><br>';
+                $result = '<span class="badge badge-danger">Erro</span> » ' . $card . ' » <b>Retorno: <span class="text-danger">Formato inválido. Use: numero|mes|ano|cvv</span></b><br>';
+                echo json_encode(['status' => 'Reprovada', 'message' => $result]);
             } else {
-                echo '<span class="badge badge-success">Aprovada</span> » ' . $card . ' » <b>Retorno: <span class="text-success">GGs ITAU AUTHORIZED - Configure sua API real aqui</span></b> » <span class="text-primary">GGs Itau ✓</span><br>';
+                $result = '<span class="badge badge-success">Aprovada</span> » ' . $card . ' » <b>Retorno: <span class="text-success">GGs ITAU AUTHORIZED - Configure sua API real aqui</span></b> » <span class="text-primary">GGs Itau ✓</span><br>';
+                echo json_encode(['status' => 'Aprovada', 'message' => $result]);
             }
         } elseif ($tool === 'cpfchecker') {
             $cpf = $lista;
-            echo '<span class="badge badge-danger">Reprovada</span> » ' . $cpf . ' » <b>Retorno: <span class="text-danger">API não configurada. Configure sua API real aqui.</span></b><br>';
-        } elseif (in_array($tool, ['cpfdatasus', 'nomedetran', 'obito', 'fotoba', 'fotoce', 'fotoma', 'fotope', 'fotorj', 'fotosp', 'fototo'])) {
-            $cpf = preg_replace('/\D/', '', $lista);
-            
-            $tool_files_consulta = [
-                'cpfdatasus' => __DIR__ . '/attached_assets/cpfdatasus_1762652369268.php',
-                'nomedetran' => __DIR__ . '/attached_assets/nomedetran_1762652369275.php',
-                'obito' => __DIR__ . '/attached_assets/obito_1762652369275.php',
-                'fotoba' => __DIR__ . '/attached_assets/fotoba_1762652369269.php',
-                'fotoce' => __DIR__ . '/attached_assets/fotoce_1762652369269.php',
-                'fotoma' => __DIR__ . '/attached_assets/fotoma_1762652369270.php',
-                'fotope' => __DIR__ . '/attached_assets/fotope_1762652369271.php',
-                'fotorj' => __DIR__ . '/attached_assets/fotorj_1762652369271.php',
-                'fotosp' => __DIR__ . '/attached_assets/fotosp_1762652369272.php',
-                'fototo' => __DIR__ . '/attached_assets/fototo_1762652369273.php',
-            ];
-            
-            if (isset($tool_files_consulta[$tool]) && file_exists($tool_files_consulta[$tool])) {
-                $_GET['query'] = $cpf;
-                ob_start();
-                include $tool_files_consulta[$tool];
-                $response = ob_get_clean();
-                
-                $result = json_decode($response, true);
-                
-                if ($result && isset($result['status']) && $result['status'] == '200') {
-                    $toolNames = [
-                        'cpfdatasus' => 'DataSUS',
-                        'nomedetran' => 'Detran',
-                        'obito' => 'Óbito',
-                        'fotoba' => 'CNH BA',
-                        'fotoce' => 'CNH CE',
-                        'fotoma' => 'CNH MA',
-                        'fotope' => 'CNH PE',
-                        'fotorj' => 'CNH RJ',
-                        'fotosp' => 'CNH SP',
-                        'fototo' => 'CNH TO'
-                    ];
-                    
-                    $output = '<span class="badge badge-success">Aprovada</span> » ' . $cpf . ' » <b>';
-                    
-                    if ($tool === 'cpfdatasus') {
-                        $output .= 'Nome: <span class="text-success">' . strtoupper($result['nome']) . '</span> | ';
-                        $output .= 'Nasc: ' . $result['nascimento'] . ' | ';
-                        $output .= 'Mãe: ' . strtoupper($result['mae']);
-                    } elseif ($tool === 'nomedetran') {
-                        if (isset($result['total']) && $result['total'] > 0 && isset($result['dados'][0])) {
-                            $output .= 'Nome: <span class="text-success">' . strtoupper($result['dados'][0]['nome']) . '</span>';
-                        } else {
-                            $output .= 'Nome: <span class="text-warning">Não encontrado</span>';
-                        }
-                    } elseif ($tool === 'obito') {
-                        $output .= 'Status: <span class="text-success">' . $result['obito'] . '</span>';
-                    } else {
-                        $output .= 'Nome: <span class="text-success">' . strtoupper($result['nome']) . '</span>';
-                        if (isset($result['foto']) && !empty($result['foto']) && $result['foto'] !== 'SEM INFORMAÇÃO') {
-                            $output .= ' | Foto: Disponível';
-                        }
-                    }
-                    
-                    $output .= '</b> » <span class="text-primary">' . $toolNames[$tool] . ' ✓</span><br>';
-                    echo $output;
-                } else {
-                    echo '<span class="badge badge-danger">Erro</span> » ' . $cpf . ' » <b>Retorno: <span class="text-danger">Não encontrado ou erro na consulta</span></b><br>';
-                }
-            } else {
-                echo '<span class="badge badge-danger">Erro</span> » ' . $cpf . ' » <b>Retorno: <span class="text-danger">Arquivo da ferramenta não encontrado</span></b><br>';
-            }
+            $result = '<span class="badge badge-danger">Reprovada</span> » ' . $cpf . ' » <b>Retorno: <span class="text-danger">API não configurada. Configure sua API real aqui.</span></b><br>';
+            echo json_encode(['status' => 'Reprovada', 'message' => $result]);
         } else {
-            echo json_encode(['status' => 'error', 'message' => 'Ferramenta inválida']);
+            // Se chegou aqui, a ferramenta não foi encontrada
+            echo json_encode(['status' => 'error', 'message' => 'Ferramenta não encontrada: ' . $tool]);
         }
     } catch (Exception $e) {
         echo json_encode(['status' => 'error', 'message' => 'Erro: ' . $e->getMessage()]);
@@ -288,79 +256,8 @@ if (!isset($_SESSION['logged_in'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Access Terminal - SaveFullBlack</title>
-    <!-- Player de Música Global -->
-    <script>
-        // Sistema global de música persistente
-        if (!window.top.globalMusicPlayer) {
-            window.top.globalMusicPlayer = {
-                player: null,
-                isReady: false,
-                container: null
-            };
-        }
-    </script>
-</head>
-<body>
-    <!-- Container do player compartilhado -->
-    <div id="ytplayer"></div>
-
-    <script>
-        // Usar o player global compartilhado
-        var musicPlayer = window.top.globalMusicPlayer;
-
-        // Se o player já existe e está tocando, não fazer nada
-        if (musicPlayer.player && musicPlayer.isReady) {
-            try {
-                var state = musicPlayer.player.getPlayerState();
-                if (state === 1) {
-                    // Música já está tocando, não recriar
-                    console.log('Música já está tocando');
-                } else if (state === 2) {
-                    // Paused, retomar
-                    musicPlayer.player.playVideo();
-                }
-            } catch(e) {
-                console.log('Player ainda não está pronto');
-            }
-        } else if (!musicPlayer.isReady) {
-            var tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            var firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-            window.onYouTubeIframeAPIReady = function() {
-                if (!musicPlayer.player) {
-                    musicPlayer.player = new YT.Player('ytplayer', {
-                        height: '1',
-                        width: '1',
-                        videoId: 'M5FArxxl4bE',
-                        playerVars: {
-                            'autoplay': 1,
-                            'loop': 1,
-                            'playlist': 'M5FArxxl4bE',
-                            'controls': 0,
-                            'disablekb': 1,
-                            'fs': 0,
-                            'modestbranding': 1
-                        },
-                        events: {
-                            'onReady': function(event) {
-                                event.target.setVolume(30);
-                                event.target.playVideo();
-                                musicPlayer.isReady = true;
-                            },
-                            'onStateChange': function(event) {
-                                if (event.data === 0) {
-                                    event.target.playVideo();
-                                }
-                            }
-                        }
-                    });
-                }
-            };
-        }
-    </script>
     <style>
+        /* Estilos CSS permanecem os mesmos */
         * {
             margin: 0;
             padding: 0;
@@ -658,7 +555,8 @@ if (!isset($_SESSION['logged_in'])) {
                         <li>VBV - @CYBERSECOFC</li>
                         <li>Amazon US Checker - Verificação via Amazon.com @CYBERSECOFC</li>
                         <li>Amazon UK Checker - Verificação via Amazon.co.uk @CYBERSECOFC</li>
-                        <li>GGs AMEX - @CYBERSECOFC </li>
+                        <li>GGs AMEX - @CYBERSECOFC</li>
+                        <li>CPF Checker - Verificação de CPF</li>
                     </ul>
                 </div>
                 <div class="feature-category">
@@ -954,78 +852,9 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
             margin-bottom: 20px;
         }
     </style>
-    <script>
-        // Sistema global de música persistente
-        if (!window.top.globalMusicPlayer) {
-            window.top.globalMusicPlayer = {
-                player: null,
-                isReady: false,
-                container: null
-            };
-        }
-    </script>
 </head>
 <body>
     <div class="scanline"></div>
-    <!-- Container do player compartilhado -->
-    <div id="ytplayer"></div>
-
-    <script>
-        // Usar o player global compartilhado
-        var musicPlayer = window.top.globalMusicPlayer;
-
-        // Se o player já existe e está tocando, não fazer nada
-        if (musicPlayer.player && musicPlayer.isReady) {
-            try {
-                var state = musicPlayer.player.getPlayerState();
-                if (state === 1) {
-                    // Música já está tocando, não recriar
-                    console.log('Música já está tocando');
-                } else if (state === 2) {
-                    // Paused, retomar
-                    musicPlayer.player.playVideo();
-                }
-            } catch(e) {
-                console.log('Player ainda não está pronto');
-            }
-        } else if (!musicPlayer.isReady) {
-            var tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            var firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-            window.onYouTubeIframeAPIReady = function() {
-                if (!musicPlayer.player) {
-                    musicPlayer.player = new YT.Player('ytplayer', {
-                        height: '1',
-                        width: '1',
-                        videoId: 'M5FArxxl4bE',
-                        playerVars: {
-                            'autoplay': 1,
-                            'loop': 1,
-                            'playlist': 'M5FArxxl4bE',
-                            'controls': 0,
-                            'disablekb': 1,
-                            'fs': 0,
-                            'modestbranding': 1
-                        },
-                        events: {
-                            'onReady': function(event) {
-                                event.target.setVolume(30);
-                                event.target.playVideo();
-                                musicPlayer.isReady = true;
-                            },
-                            'onStateChange': function(event) {
-                                if (event.data === 0) {
-                                    event.target.playVideo();
-                                }
-                            }
-                        }
-                    });
-                }
-            };
-        }
-    </script>
     <div class="container">
         <div class="header">
             <h1>⚙️ Painel Admin</h1>
@@ -1063,11 +892,11 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="checkers[]" value="preauth" id="perm_preauth">
-                            <label for="perm_preauth">PreAuth</label>
+                            <label for="perm_preauth">VBV</label>
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="checkers[]" value="n7" id="perm_n7">
-                            <label for="perm_n7">N7</label>
+                            <label for="perm_n7">PAGARME</label>
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="checkers[]" value="amazon1" id="perm_amazon1">
@@ -1080,6 +909,10 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         <div class="checker-option">
                             <input type="checkbox" name="checkers[]" value="cpfchecker" id="perm_cpfchecker">
                             <label for="perm_cpfchecker">CPF Checker</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="checkers[]" value="ggsitau" id="perm_ggsitau">
+                            <label for="perm_ggsitau">GGs ITAU</label>
                         </div>
                     </div>
                 </div>
@@ -1158,11 +991,11 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="rental_checkers[]" value="preauth" id="rental_preauth">
-                            <label for="rental_preauth">PreAuth</label>
+                            <label for="rental_preauth">VBV</label>
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="rental_checkers[]" value="n7" id="rental_n7">
-                            <label for="rental_n7">N7</label>
+                            <label for="rental_n7">PAGARME</label>
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="rental_checkers[]" value="amazon1" id="rental_amazon1">
@@ -1175,6 +1008,10 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         <div class="checker-option">
                             <input type="checkbox" name="rental_checkers[]" value="cpfchecker" id="rental_cpfchecker">
                             <label for="rental_cpfchecker">CPF Checker</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="rental_checkers[]" value="ggsitau" id="rental_ggsitau">
+                            <label for="rental_ggsitau">GGs ITAU</label>
                         </div>
                     </div>
                 </div>
@@ -1314,7 +1151,7 @@ if (isset($_GET['tool'])) {
         'amazon1' => 'Amazon Prime Checker',
         'amazon2' => 'Amazon UK Checker',
         'cpfchecker' => 'CPF Checker',
-        'GETNET' => 'GETNET',
+        'ggsitau' => 'GGs ITAU',
         'cpfdatasus' => 'CPF DataSUS',
         'nomedetran' => 'Nome Detran',
         'obito' => 'Consulta Óbito',
@@ -1732,56 +1569,6 @@ if (isset($_GET['tool'])) {
 </head>
 <body>
     <div class="scanline"></div>
-    <div id="ytplayer" style="position: fixed; bottom: -100px; left: -100px;"></div>
-
-    <script>
-        if (window.top.globalMusicPlayer.player && typeof window.top.globalMusicPlayer.player.getPlayerState === 'function') {
-            try {
-                var state = window.top.globalMusicPlayer.player.getPlayerState();
-                if (state !== 1) {
-                    window.top.globalMusicPlayer.player.playVideo();
-                }
-            } catch(e) {
-                console.log('Player não pronto ainda');
-            }
-        } else if (!window.top.globalMusicPlayer.isReady) {
-            var tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            var firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-            window.onYouTubeIframeAPIReady = function() {
-                if (!window.top.globalMusicPlayer.player) {
-                    window.top.globalMusicPlayer.player = new YT.Player('ytplayer', {
-                        height: '1',
-                        width: '1',
-                        videoId: 'M5FArxxl4bE',
-                        playerVars: {
-                            'autoplay': 1,
-                            'loop': 1,
-                            'playlist': 'M5FArxxl4bE',
-                            'controls': 0,
-                            'disablekb': 1,
-                            'fs': 0,
-                            'modestbranding': 1
-                        },
-                        events: {
-                            'onReady': function(event) {
-                                event.target.setVolume(30);
-                                event.target.playVideo();
-                                window.top.globalMusicPlayer.isReady = true;
-                            },
-                            'onStateChange': function(event) {
-                                if (event.data === 0) {
-                                    event.target.playVideo();
-                                }
-                            }
-                        }
-                    });
-                }
-            };
-        }
-    </script>
     <div class="container">
         <div class="header">
             <h1><?php echo $toolName; ?></h1>
@@ -1959,34 +1746,29 @@ if (isset($_GET['tool'])) {
                 const response = await fetch(url);
                 const text = await response.text();
 
-                let isLive = false;
-                let resultMessage = '';
-
                 try {
                     const jsonData = JSON.parse(text);
-
+                    
                     if (jsonData.status === 'error') {
                         if (jsonData.message === 'Seu acesso expirou!' || jsonData.message === 'Você não tem permissão para usar esta ferramenta') {
                             alert(jsonData.message);
                             window.location.href = '?logout';
                             return;
                         }
-                        resultMessage = jsonData.message;
+                        addResult(item, jsonData.message, false);
+                    } else if (jsonData.status === 'Aprovada' || jsonData.status === 'success') {
+                        addResult(item, jsonData.message || 'Aprovada', true);
                     } else {
-                        isLive = jsonData.status === 'Aprovada' || jsonData.status === 'success';
-                        resultMessage = jsonData.ReturnCode || jsonData.message || JSON.stringify(jsonData);
+                        addResult(item, jsonData.message || 'Reprovada', false);
                     }
                 } catch (e) {
-                    if (text.includes('Aprovada') || text.includes('AUTHORIZED') || text.includes('success') || text.includes('✅')) {
-                        isLive = true;
-                        resultMessage = text.substring(0, 300);
+                    // Se não for JSON, tratar como HTML/texto
+                    if (text.includes('Aprovada') || text.includes('success') || text.includes('✅')) {
+                        addResult(item, text, true);
                     } else {
-                        isLive = false;
-                        resultMessage = text.substring(0, 300);
+                        addResult(item, text, false);
                     }
                 }
-
-                addResult(item, resultMessage, isLive);
 
             } catch (error) {
                 console.error('Error:', error);
@@ -1996,7 +1778,11 @@ if (isset($_GET['tool'])) {
             currentIndex++;
             document.getElementById('processedCount').textContent = currentIndex;
 
-            setTimeout(processNextItem, 2000);
+            if (isChecking && currentIndex < items.length) {
+                setTimeout(processNextItem, 2000);
+            } else {
+                stopCheck();
+            }
         }
 
         function addResult(item, response, isLive) {
@@ -2007,9 +1793,12 @@ if (isset($_GET['tool'])) {
             const resultDiv = document.createElement('div');
             resultDiv.className = `result-item ${isLive ? 'live' : 'die'}`;
 
+            // Limitar o tamanho da resposta para evitar problemas de exibição
+            const responseText = typeof response === 'string' ? response.substring(0, 500) : response;
+
             resultDiv.innerHTML = `
                 <strong>${item}</strong><br>
-                <small>${response}</small>
+                <small>${responseText}</small>
             `;
 
             container.insertBefore(resultDiv, container.firstChild);
@@ -2205,78 +1994,9 @@ if ($_SESSION['type'] === 'temporary') {
             margin-bottom: 10px;
         }
     </style>
-    <script>
-        // Sistema global de música persistente
-        if (!window.top.globalMusicPlayer) {
-            window.top.globalMusicPlayer = {
-                player: null,
-                isReady: false,
-                container: null
-            };
-        }
-    </script>
 </head>
 <body>
     <div class="scanline"></div>
-    <!-- Container do player compartilhado -->
-    <div id="ytplayer"></div>
-
-    <script>
-        // Usar o player global compartilhado
-        var musicPlayer = window.top.globalMusicPlayer;
-
-        // Se o player já existe e está tocando, não fazer nada
-        if (musicPlayer.player && musicPlayer.isReady) {
-            try {
-                var state = musicPlayer.player.getPlayerState();
-                if (state === 1) {
-                    // Música já está tocando, não recriar
-                    console.log('Música já está tocando');
-                } else if (state === 2) {
-                    // Paused, retomar
-                    musicPlayer.player.playVideo();
-                }
-            } catch(e) {
-                console.log('Player ainda não está pronto');
-            }
-        } else if (!musicPlayer.isReady) {
-            var tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            var firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-            window.onYouTubeIframeAPIReady = function() {
-                if (!musicPlayer.player) {
-                    musicPlayer.player = new YT.Player('ytplayer', {
-                        height: '1',
-                        width: '1',
-                        videoId: 'M5FArxxl4bE',
-                        playerVars: {
-                            'autoplay': 1,
-                            'loop': 1,
-                            'playlist': 'M5FArxxl4bE',
-                            'controls': 0,
-                            'disablekb': 1,
-                            'fs': 0,
-                            'modestbranding': 1
-                        },
-                        events: {
-                            'onReady': function(event) {
-                                event.target.setVolume(30);
-                                event.target.playVideo();
-                                musicPlayer.isReady = true;
-                            },
-                            'onStateChange': function(event) {
-                                if (event.data === 0) {
-                                    event.target.playVideo();
-                                }
-                            }
-                        }
-                    });
-                }
-            };
-        }
-    </script>
     <div class="container">
         <div class="header">
             <h1>CYBERSECOFC APIS</h1>
@@ -2362,7 +2082,7 @@ if ($_SESSION['type'] === 'temporary') {
                 <?php if (in_array('ggsitau', $availableTools)): ?>
                 <a href="?tool=ggsitau" class="tool-card">
                     <div class="tool-icon">🏦</div>
-                    <h3>GET NET</h3>
+                    <h3>GGs ITAU</h3>
                     <p>APENAS RETONOS MASTER-VISA</p>
                 </a>
                 <?php endif; ?>
@@ -2476,6 +2196,5 @@ if ($_SESSION['type'] === 'temporary') {
         }, 60000);
         <?php endif; ?>
     </script>
-    <div id="ytplayer" style="position: fixed; bottom: -100px; left: -100px;"></div>
 </body>
 </html>
