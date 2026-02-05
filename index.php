@@ -14,48 +14,68 @@ header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: no-referrer');
 header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 
-// DETECTAR PROXY E FERRAMENTAS DE HACKING
+// DETECTAR PROXY E FERRAMENTAS DE HACKING (APENAS SE DETECTAR TENTATIVAS REAIS)
 if (isset($_SERVER['HTTP_USER_AGENT'])) {
-    $blacklisted_agents = [
-        'nmap', 'sqlmap', 'nikto', 'wpscan', 'dirbuster', 
-        'gobuster', 'burp', 'zap', 'hydra', 'metasploit',
-        'nessus', 'openvas', 'acunetix', 'netsparker',
-        'appscan', 'w3af', 'skipfish', 'wapiti', 'Charles',
-        'Fiddler', 'mitmproxy', 'Proxyman', 'CharlesProxy', 
-        'charles', 'chproxy', 'mitm', 'proxy'
-    ];
+    $user_agent = strtolower($_SERVER['HTTP_USER_AGENT']);
     
-    foreach ($blacklisted_agents as $agent) {
-        if (stripos($_SERVER['HTTP_USER_AGENT'], $agent) !== false) {
-            // ADICIONAR HEADER ESPECIAL PARA PROXY
-            header('X-Hacker-Redirect: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
-            header('Location: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
-            exit;
+    // SÓ BLOQUEAR SE FOR UMA FERRAMENTA DE HACKING CLARA
+    // Não bloquear navegadores normais
+    $is_browser = (
+        strpos($user_agent, 'mozilla') !== false ||
+        strpos($user_agent, 'chrome') !== false ||
+        strpos($user_agent, 'safari') !== false ||
+        strpos($user_agent, 'firefox') !== false ||
+        strpos($user_agent, 'edge') !== false ||
+        strpos($user_agent, 'opera') !== false
+    );
+    
+    if (!$is_browser) {
+        $blacklisted_agents = [
+            'nmap', 'sqlmap', 'nikto', 'wpscan', 'dirbuster', 
+            'gobuster', 'burp', 'zap', 'hydra', 'metasploit',
+            'nessus', 'openvas', 'acunetix', 'netsparker',
+            'appscan', 'w3af', 'skipfish', 'wapiti', 
+            'Fiddler', 'mitmproxy', 'Proxyman'
+        ];
+        
+        foreach ($blacklisted_agents as $agent) {
+            if (stripos($user_agent, $agent) !== false) {
+                // ADICIONAR HEADER ESPECIAL PARA PROXY
+                header('X-Hacker-Redirect: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
+                exit;
+            }
         }
     }
 }
 
-// BLOQUEAR REQUISIÇÕES COM HEADERS DE PROXY
-$proxy_headers = [
-    'HTTP_VIA',
-    'HTTP_X_FORWARDED_FOR', 
-    'HTTP_X_FORWARDED_HOST',
-    'HTTP_X_FORWARDED_SERVER',
-    'HTTP_X_PROXY_ID',
-    'HTTP_FORWARDED',
-    'HTTP_PROXY_CONNECTION',
-    'HTTP_CLIENT_IP'
-];
+// BLOQUEAR REQUISIÇÕES COM HEADERS DE PROXY (APENAS SE FOR MUITO SUSPEITO)
+// Não bloquear proxies comuns que usuários normais podem usar
+$suspicious_proxy = false;
 
-foreach ($proxy_headers as $header) {
-    if (isset($_SERVER[$header])) {
-        header('X-Hacker-Redirect: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
-        header('Location: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
-        exit;
+// Verificar se é um proxy de ataque (não proxy normal)
+if (isset($_SERVER['HTTP_VIA']) && 
+    (strpos($_SERVER['HTTP_VIA'], 'Charles') !== false || 
+     strpos($_SERVER['HTTP_VIA'], 'mitm') !== false ||
+     strpos($_SERVER['HTTP_VIA'], 'Fiddler') !== false)) {
+    $suspicious_proxy = true;
+}
+
+// Verificar X-Forwarded-For apenas se houver muitos IPs (proxy chain de ataque)
+if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+    if (count($ips) > 3) { // Mais de 3 proxies na chain = suspeito
+        $suspicious_proxy = true;
     }
 }
 
-// BLOQUEAR REQUISIÇÕES SUSPEITAS
+// Só bloquear se for realmente suspeito
+if ($suspicious_proxy) {
+    header('X-Hacker-Redirect: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
+    echo json_encode(['status' => 'error', 'message' => 'Proxy de ataque detectado']);
+    exit;
+}
+
+// BLOQUEAR REQUISIÇÕES SUSPEITAS (SQL Injection, XSS, etc)
 $suspicious_params = ['union', 'select', 'insert', 'update', 'delete', 
                      'drop', '--', '/*', '*/', 'script', 'iframe',
                      'onload', 'onerror', 'javascript:', 'vbscript:',
@@ -337,8 +357,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
 }
 
 // ============================================
-// SISTEMA DE SEGURANÇA JAVASCRIPT
-// ADICIONE ESTE SCRIPT EM TODAS AS PÁGINAS
+// SISTEMA DE SEGURANÇA JAVASCRIPT CORRIGIDO
+// NÃO BLOQUEIA ACESSO NORMAL, APENAS TENTATIVAS DE HACKING
 // ============================================
 
 $security_script = <<<'HTML'
@@ -348,45 +368,7 @@ $security_script = <<<'HTML'
     // VARIÁVEL GLOBAL PARA DETECTAR HACKER
     let hackerDetected = false;
     
-    // BLOQUEAR FERRAMENTAS DE DESENVOLVEDOR
-    const blockDevTools = () => {
-        const devtools = {
-            isOpen: false,
-            orientation: undefined
-        };
-        
-        const threshold = 160;
-        const emitEvent = (isOpen, orientation) => {
-            if (devtools.isOpen !== isOpen || devtools.orientation !== orientation) {
-                devtools.isOpen = isOpen;
-                devtools.orientation = orientation;
-                
-                // SE DEVTOOLS ABERTO, ATIVAR MODO HACKER
-                if (isOpen) {
-                    hackerDetected = true;
-                    activateHackerMode();
-                }
-            }
-        };
-        
-        const checkDevTools = () => {
-            const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-            const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-            const orientation = widthThreshold ? 'vertical' : 'horizontal';
-            
-            if (!(heightThreshold && widthThreshold) && ((window.Firebug && window.Firebug.chrome && window.Firebug.chrome.isInitialized) || widthThreshold || heightThreshold)) {
-                emitEvent(true, orientation);
-            } else {
-                emitEvent(false, undefined);
-            }
-        };
-        
-        // VERIFICAR A CADA 500ms
-        setInterval(checkDevTools, 500);
-        checkDevTools();
-    };
-    
-    // FUNÇÃO PARA ATIVAR MODO HACKER
+    // FUNÇÃO PARA ATIVAR MODO HACKER (SÓ SE DETECTAR TENTATIVAS REAIS)
     const activateHackerMode = () => {
         // DESTRUIR TUDO
         document.body.innerHTML = '<h1 style="color:#f00;text-align:center;margin-top:100px">@cybersecofc nao deixa rastro bb</h1>';
@@ -402,109 +384,113 @@ $security_script = <<<'HTML'
         }, 1000);
     };
     
-    // BLOQUEAR TECLAS DE DESENVOLVEDOR
+    // DETECTAR FERRAMENTAS DE DESENVOLVEDOR ABERTAS (SÓ ATIVA SE TENTAR USAR)
+    let devToolsOpenedCount = 0;
+    const checkDevTools = () => {
+        const threshold = 160;
+        const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+        const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        
+        if ((window.Firebug && window.Firebug.chrome && window.Firebug.chrome.isInitialized) || 
+            widthThreshold || heightThreshold) {
+            devToolsOpenedCount++;
+            
+            // SÓ ATIVA MODO HACKER SE DEVTOOLS FICAR ABERTO POR MAIS DE 5 SEGUNDOS
+            if (devToolsOpenedCount > 10) { // Verifica a cada 500ms, 10x = 5 segundos
+                hackerDetected = true;
+                activateHackerMode();
+            }
+        } else {
+            devToolsOpenedCount = 0;
+        }
+    };
+    
+    // VERIFICAR DEVTOOLS A CADA 500ms
+    setInterval(checkDevTools, 500);
+    
+    // BLOQUEAR TECLAS DE DESENVOLVEDOR (SÓ SE PRESSIONAR MÚLTIPLAS VEZES)
+    let devKeyPressCount = 0;
+    let lastDevKeyPress = 0;
+    
     document.addEventListener('keydown', e => {
         // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
-        if (e.keyCode === 123 || 
+        const isDevKey = (
+            e.keyCode === 123 || 
             (e.ctrlKey && e.shiftKey && e.keyCode === 73) ||
             (e.ctrlKey && e.shiftKey && e.keyCode === 74) ||
             (e.ctrlKey && e.shiftKey && e.keyCode === 67) ||
-            (e.ctrlKey && e.keyCode === 85)) {
+            (e.ctrlKey && e.keyCode === 85)
+        );
+        
+        if (isDevKey) {
+            const now = Date.now();
+            
+            // SÓ BLOQUEIA SE PRESSIONAR RAPIDAMENTE (tentativa de abrir devtools)
+            if (now - lastDevKeyPress < 1000) {
+                devKeyPressCount++;
+            } else {
+                devKeyPressCount = 1;
+            }
+            
+            lastDevKeyPress = now;
+            
+            // SÓ ATIVA SE PRESSIONAR 3 VEZES RAPIDAMENTE
+            if (devKeyPressCount >= 3) {
+                e.preventDefault();
+                e.stopPropagation();
+                hackerDetected = true;
+                activateHackerMode();
+                return false;
+            }
+            
+            // Para o primeiro pressionamento, apenas previne mas não bloqueia totalmente
+            e.preventDefault();
+            return false;
+        }
+    });
+    
+    // BLOQUEAR BOTÃO DIREITO (SÓ SE CLICAR MÚLTIPLAS VEZES)
+    let rightClickCount = 0;
+    let lastRightClick = 0;
+    
+    document.addEventListener('contextmenu', e => {
+        const now = Date.now();
+        
+        // SÓ BLOQUEIA SE CLICAR RAPIDAMENTE (tentativa de inspecionar)
+        if (now - lastRightClick < 1000) {
+            rightClickCount++;
+        } else {
+            rightClickCount = 1;
+        }
+        
+        lastRightClick = now;
+        
+        // SÓ ATIVA SE CLICAR 5 VEZES RAPIDAMENTE
+        if (rightClickCount >= 5) {
             e.preventDefault();
             e.stopPropagation();
             hackerDetected = true;
             activateHackerMode();
             return false;
         }
+        
+        // Para cliques normais, permite mas mostra mensagem no console
+        console.log('%c⚠️ Inspeção desabilitada por segurança', 'color: #ff0; font-size: 14px;');
+        return true;
     });
     
-    // BLOQUEAR BOTÃO DIREITO
-    document.addEventListener('contextmenu', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        hackerDetected = true;
-        activateHackerMode();
-        return false;
-    });
-    
-    // INTERCEPTAR CONSOLE PARA ENGANAR HACKERS
-    const originalConsole = console;
-    const hackerConsole = {
-        log: function() {
-            if (hackerDetected) {
-                originalConsole.log('%c⚠️ @cybersecofc nao deixa rastro bb ⚠️', 
-                    'color: #f00; font-size: 24px; font-weight: bold;');
-                originalConsole.log('%c🎁 Seu prêmio: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/', 
-                    'color: #0ff; font-size: 18px;');
-            } else {
-                originalConsole.log.apply(originalConsole, arguments);
-            }
-        },
-        warn: function() {
-            if (hackerDetected) {
-                originalConsole.warn('%c🚫 ACESSO BLOQUEADO POR SEGURANÇA', 
-                    'color: #ff0; font-size: 20px;');
-            } else {
-                originalConsole.warn.apply(originalConsole, arguments);
-            }
-        },
-        error: function() {
-            if (hackerDetected) {
-                originalConsole.error('%c🔥 SISTEMA PROTEGIDO POR @cybersecofc', 
-                    'color: #f00; font-size: 22px;');
-            } else {
-                originalConsole.error.apply(originalConsole, arguments);
-            }
-        },
-        info: originalConsole.info,
-        debug: originalConsole.debug,
-        table: originalConsole.table,
-        clear: originalConsole.clear
-    };
-    
-    // SOBRESCREVER CONSOLE APENAS SE FOR HACKER
-    Object.defineProperty(window, 'console', {
-        get: function() {
-            return hackerDetected ? hackerConsole : originalConsole;
-        },
-        set: function() {}
-    });
-    
-    // DETECTAR PROXY (CHARLES, FIDDLER, ETC)
-    const detectProxy = () => {
-        // DETECTAR CHARLES PROXY ESPECIFICAMENTE
-        const charlesKeywords = ['Charles', 'chproxy', 'chls.pro', 'charlesproxy'];
-        const userAgent = navigator.userAgent.toLowerCase();
-        
-        for (const keyword of charlesKeywords) {
-            if (userAgent.includes(keyword.toLowerCase())) {
-                hackerDetected = true;
-                activateHackerMode();
-                return;
-            }
-        }
-        
-        // CRIAR IMAGEM COM URL QUE SÓ PROXY VAI VER
-        const proxyImg = new Image();
-        proxyImg.onload = function() {
-            // SE CARREGOU, É PROXY
-            hackerDetected = true;
-            activateHackerMode();
-        };
-        
-        // URL QUE PROXYS NORMALMENTE INTERCEPTAM
-        proxyImg.src = '/?proxy_test=' + Date.now();
-        
-        // VERIFICAR HEADERS DE PROXY
+    // DETECTAR PROXY DE ATAQUE (CHARLES, FIDDLER, ETC) - SÓ SE FOR CLARAMENTE FERRAMENTA DE HACKING
+    const detectMaliciousProxy = () => {
+        // VERIFICAR HEADERS DE PROXY SUSPEITOS
         const xhr = new XMLHttpRequest();
         xhr.open('GET', window.location.href);
         xhr.onreadystatechange = function() {
             if (this.readyState === 2) { // HEADERS RECEBIDOS
-                const viaHeader = this.getResponseHeader('Via');
-                const xForwardedFor = this.getResponseHeader('X-Forwarded-For');
-                const xProxyDetect = this.getResponseHeader('X-Hacker-Redirect');
+                const hackerHeader = this.getResponseHeader('X-Hacker-Message');
+                const hackerRedirect = this.getResponseHeader('X-Hacker-Redirect');
                 
-                if (viaHeader || xForwardedFor || xProxyDetect) {
+                // SÓ ATIVA SE O SERVIDOR MANDAR HEADER EXPLÍCITO
+                if (hackerHeader || hackerRedirect) {
                     hackerDetected = true;
                     activateHackerMode();
                 }
@@ -513,12 +499,12 @@ $security_script = <<<'HTML'
         xhr.send();
     };
     
-    // INTERCEPTAR FETCH PARA DETECTAR HACKERS
+    // INTERCEPTAR FETCH PARA DETECTAR HACKERS (SÓ SE RECEBER RESPOSTA ESPECIAL)
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
         const [url, options] = args;
         
-        // SE HACKER DETECTADO, RETORNAR DADOS FALSOS
+        // SE HACKER JÁ DETECTADO, RETORNAR DADOS FALSOS
         if (hackerDetected) {
             return Promise.resolve(new Response(
                 JSON.stringify({
@@ -537,7 +523,7 @@ $security_script = <<<'HTML'
         }
         
         return originalFetch.apply(this, args).then(response => {
-            // VERIFICAR HEADERS DE SEGURANÇA
+            // VERIFICAR HEADERS DE SEGURANÇA (SÓ ATIVA SE O SERVIDOR INDICAR)
             const hackerHeader = response.headers.get('X-Hacker-Message');
             const hackerRedirect = response.headers.get('X-Hacker-Redirect');
             
@@ -547,10 +533,14 @@ $security_script = <<<'HTML'
             }
             
             return response;
+        }).catch(error => {
+            // IGNORAR ERROS NORMALES
+            console.error('Fetch error:', error);
+            throw error;
         });
     };
     
-    // INTERCEPTAR XMLHttpRequest TAMBÉM
+    // INTERCEPTAR XMLHttpRequest TAMBÉM (MESMA LÓGICA)
     const originalXHROpen = XMLHttpRequest.prototype.open;
     const originalXHRSend = XMLHttpRequest.prototype.send;
     
@@ -561,7 +551,7 @@ $security_script = <<<'HTML'
     
     XMLHttpRequest.prototype.send = function(body) {
         if (hackerDetected) {
-            // SE HACKER, SIMULAR RESPOSTA COM LINK
+            // SE HACKER DETECTADO, SIMULAR RESPOSTA COM LINK
             setTimeout(() => {
                 if (this.onreadystatechange) {
                     this.readyState = 4;
@@ -583,6 +573,7 @@ $security_script = <<<'HTML'
                 const hackerHeader = this.getResponseHeader('X-Hacker-Message');
                 const hackerRedirect = this.getResponseHeader('X-Hacker-Redirect');
                 
+                // SÓ ATIVA SE O SERVIDOR INDICAR
                 if (hackerHeader || hackerRedirect) {
                     hackerDetected = true;
                     activateHackerMode();
@@ -597,43 +588,14 @@ $security_script = <<<'HTML'
         return originalXHRSend.call(this, body);
     };
     
-    // MONITORAR ALTERAÇÕES NO DOM (TENTATIVAS DE INJEÇÃO)
-    const observer = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
-            if (mutation.addedNodes.length) {
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === 1 && 
-                        (node.innerHTML.includes('script') || 
-                         node.innerHTML.includes('iframe') ||
-                         node.innerHTML.includes('onload') ||
-                         node.innerHTML.includes('onerror'))) {
-                        // HACKER DETECTADO
-                        hackerDetected = true;
-                        activateHackerMode();
-                    }
-                });
-            }
-        });
-    });
+    // INICIAR DETECÇÃO DE PROXY (APENAS UMA VEZ)
+    setTimeout(detectMaliciousProxy, 1000);
     
-    observer.observe(document.documentElement, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        characterData: true
-    });
-    
-    // INICIAR SISTEMA DE SEGURANÇA
-    blockDevTools();
-    detectProxy();
-    
-    // MENSAGEM INICIAL NO CONSOLE (APENAS SE NÃO FOR HACKER)
-    if (!hackerDetected) {
-        console.log('%c🔒 SISTEMA PROTEGIDO POR @cybersecofc', 
-            'color: #0f0; font-size: 20px; font-weight: bold;');
-        console.log('%c⚠️ Qualquer tentativa de invasão será punida', 
-            'color: #ff0; font-size: 16px;');
-    }
+    // MENSAGEM INICIAL NO CONSOLE (INOFENSIVA)
+    console.log('%c🔒 SISTEMA PROTEGIDO POR @cybersecofc', 
+        'color: #0f0; font-size: 16px; font-weight: bold;');
+    console.log('%c⚠️ Acesso seguro garantido', 
+        'color: #0ff; font-size: 12px;');
 })();
 </script>
 <!-- FIM DO SISTEMA DE SEGURANÇA -->
@@ -1697,7 +1659,7 @@ if (isset($_GET['tool'])) {
         .example-section {
             background: rgba(255, 255, 0, 0.05);
             border: 1px solid #ff0;
-            border-radius: 8px;
+            border-radius = 8px;
             padding: 20px;
             margin-bottom: 20px;
         }
