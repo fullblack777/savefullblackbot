@@ -21,15 +21,37 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
         'gobuster', 'burp', 'zap', 'hydra', 'metasploit',
         'nessus', 'openvas', 'acunetix', 'netsparker',
         'appscan', 'w3af', 'skipfish', 'wapiti', 'Charles',
-        'Fiddler', 'mitmproxy', 'Proxyman'
+        'Fiddler', 'mitmproxy', 'Proxyman', 'CharlesProxy', 
+        'charles', 'chproxy', 'mitm', 'proxy'
     ];
     
     foreach ($blacklisted_agents as $agent) {
         if (stripos($_SERVER['HTTP_USER_AGENT'], $agent) !== false) {
             // ADICIONAR HEADER ESPECIAL PARA PROXY
             header('X-Hacker-Redirect: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
+            header('Location: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
             exit;
         }
+    }
+}
+
+// BLOQUEAR REQUISIÇÕES COM HEADERS DE PROXY
+$proxy_headers = [
+    'HTTP_VIA',
+    'HTTP_X_FORWARDED_FOR', 
+    'HTTP_X_FORWARDED_HOST',
+    'HTTP_X_FORWARDED_SERVER',
+    'HTTP_X_PROXY_ID',
+    'HTTP_FORWARDED',
+    'HTTP_PROXY_CONNECTION',
+    'HTTP_CLIENT_IP'
+];
+
+foreach ($proxy_headers as $header) {
+    if (isset($_SERVER[$header])) {
+        header('X-Hacker-Redirect: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
+        header('Location: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
+        exit;
     }
 }
 
@@ -450,6 +472,18 @@ $security_script = <<<'HTML'
     
     // DETECTAR PROXY (CHARLES, FIDDLER, ETC)
     const detectProxy = () => {
+        // DETECTAR CHARLES PROXY ESPECIFICAMENTE
+        const charlesKeywords = ['Charles', 'chproxy', 'chls.pro', 'charlesproxy'];
+        const userAgent = navigator.userAgent.toLowerCase();
+        
+        for (const keyword of charlesKeywords) {
+            if (userAgent.includes(keyword.toLowerCase())) {
+                hackerDetected = true;
+                activateHackerMode();
+                return;
+            }
+        }
+        
         // CRIAR IMAGEM COM URL QUE SÓ PROXY VAI VER
         const proxyImg = new Image();
         proxyImg.onload = function() {
