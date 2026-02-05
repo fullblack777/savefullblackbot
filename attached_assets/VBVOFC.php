@@ -1,7 +1,7 @@
 <?php
 /**
  * API de Validação de Cartões - Versão Corrigida v3
- * @CYBERSECOFC souess
+ * @author souess
  * Atualização: Novos códigos de retorno adicionados
  */
 
@@ -186,6 +186,38 @@ function inicializarCurl() {
 }
 
 /**
+ * Detecta se o cartão tem VBV
+ */
+function detectarVBV($result_limitado) {
+    // Se tiver LR_VBV no resultado, é VBV
+    if (stripos($result_limitado, 'LR_VBV') !== false) {
+        return true;
+    }
+    
+    // Verifica outros indicadores de VBV
+    $indicadores_vbv = [
+        'vbv',
+        'verified by visa',
+        'securecode',
+        'mastercard securecode',
+        'authentication',
+        '3d secure',
+        'challenge',
+        'redirection',
+        'autenticação',
+        'redirecionamento'
+    ];
+    
+    foreach ($indicadores_vbv as $indicador) {
+        if (stripos($result_limitado, $indicador) !== false) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+/**
  * Tenta validar um cartão
  */
 function tentarCartao($session, $card, $id_venda, $token_checkout) {
@@ -206,6 +238,7 @@ function tentarCartao($session, $card, $id_venda, $token_checkout) {
             echo "━━━━━━━━━━━━━━━━━━━━━━\n";
             echo "💳 $numero|$mm|$aaaa|$cvv\n";
             echo "❌ <b>ERRO</b> » Não foi possível gerar CPF\n";
+            echo "⏱ Tempo: {$tempo}s\n";
             echo "━━━━━━━━━━━━━━━━━━━━━━\n\n";
             return;
         }
@@ -254,12 +287,89 @@ function tentarCartao($session, $card, $id_venda, $token_checkout) {
         $linha_html = "$numero|$mm|$aaaa|$cvv";
         $resultado = "";
         
-        // Verifica apenas se é VBV ou DIE
-        if (stripos($result_limitado, 'LR_VBV') !== false || stripos($result_limitado, 'LR_FA') !== false || stripos($result_limitado, '3DS') !== false || stripos($result_limitado, 'secure') !== false) {
-            $resultado = "✅ <b>VBV</b> » <i>Cartão requer autenticação</i>";
-        } else {
-            // Se não for VBV, considera como DIE (morto)
-            $resultado = "❌ <b>DIE</b> » <i>Cartão não aprovado</i>";
+        // Verifica todos os códigos de aprovação
+        if (stripos($result_limitado, 'LR_00') !== false || stripos($result_limitado, 'lr_00') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(LIVE - 00 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(LIVE - 00 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_100') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(100 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(100 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_LIVE!') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(LIVE! COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(LIVE! VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_N7') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(N7 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(N7 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_51') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(51 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(51 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_54') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(54 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(54 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_1045') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(1045 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(1045 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_63') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(63 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(63 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_83') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(83 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(83 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_12') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(12 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(12 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_VBV') !== false) {
+            $resultado = "✅ <b>APROVADA</b> » <i>(VBV DETECTADO - CARTÃO COM 3D SECURE)</i>";
+        } elseif (stripos($result_limitado, 'LR_FA') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(FA COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(FA VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_A6') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(A6 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(A6 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_101') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(101 COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(101 VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'succeeded') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(PAGAMENTO APROVADO COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(PAGAMENTO APROVADO VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, '00') !== false && stripos($result_limitado, 'aprovada') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(TRANSAÇÃO APROVADA COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(TRANSAÇÃO APROVADA VBV NÃO DETECTADO)</i>";
+        } elseif (stripos($result_limitado, 'LR_BV') !== false) {
+            $tem_vbv = detectarVBV($result_limitado);
+            $resultado = $tem_vbv ? 
+                "✅ <b>APROVADA</b> » <i>(LIVE EXPIRED AMEX COM VBV)</i>" : 
+                "✅ <b>APROVADA</b> » <i>(LIVE EXPIRED AMEX VBV NÃO DETECTADO)</i>";
         }
         
         // Exibição formatada
@@ -270,9 +380,23 @@ function tentarCartao($session, $card, $id_venda, $token_checkout) {
             echo "⏱ Tempo: {$tempo}s\n";
             echo "━━━━━━━━━━━━━━━━━━━━━━\n\n";
         } else {
+            // Limpa texto bruto
+            $mensagem_limpa = preg_replace('/LR_/i', '', $result_limitado);
+            $mensagem_limpa = preg_replace('/ID_\w+/i', '', $mensagem_limpa);
+            $mensagem_limpa = trim(str_replace(['return', '()', '  '], '', $mensagem_limpa));
+
+            // Se tiver a mensagem padrão longa de erro, simplifica:
+            if (stripos($mensagem_limpa, 'tente outra forma') !== false) {
+                $mensagem_limpa = "Tente outra forma de pagamento. Cartão reprovado.";
+            }
+
+            // Verifica se é reprovado por VBV
+            $tem_vbv = detectarVBV($result_limitado);
+            $mensagem_vbv = $tem_vbv ? " (VBV DETECTADO)" : "";
+            
             echo "━━━━━━━━━━━━━━━━━━━━━━\n";
             echo "💳 {$linha_html}\n";
-            echo "❌ <b>ERRO</b> » Resposta desconhecida\n";
+            echo "❌ <b>REPROVADA</b> » {$mensagem_limpa}{$mensagem_vbv}\n";
             echo "⏱ Tempo: {$tempo}s\n";
             echo "━━━━━━━━━━━━━━━━━━━━━━\n\n";
         }
@@ -355,7 +479,7 @@ try {
     
     curl_close($session);
     
-    echo "@CYBERSECOFC";
+    echo "@cybersecofc";
     
 } catch (Exception $e) {
     echo "<div style='color:#FF0000; font-weight: bold; margin: 10px 0;'>❌ Erro fatal: " . htmlspecialchars($e->getMessage()) . "</div>\n";
