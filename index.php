@@ -14,59 +14,20 @@ header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: no-referrer');
 header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 
-// OFUSCAÇÃO DE RESPOSTAS
-function cyberSecurityFilter($output) {
-    // Substituir qualquer informação sensível
-    $patterns = [
-        '/attached_assets\/[a-zA-Z0-9_]+\.php/' => '@cybersecofc',
-        '/users\.json/' => '@cybersecofc',
-        '/PAYPALV2OFC\.php/' => 'PROTEGIDO',
-        '/VBVOFC\.php/' => 'PROTEGIDO',
-        '/PAGARMEOFC\.php/' => 'PROTEGIDO',
-        '/AMAZONOFC[0-9]\.php/' => 'PROTEGIDO',
-        '/cpfdatasus_[0-9]+\.php/' => 'PROTEGIDO',
-        '/nomedetran_[0-9]+\.php/' => 'PROTEGIDO',
-        '/obito_[0-9]+\.php/' => 'PROTEGIDO',
-        '/foto[a-z]{2}_[0-9]+\.php/' => 'PROTEGIDO',
-        '/\/var\/www\/html\//' => '/SISTEMA/',
-        '/\/home\/[a-z]+\//' => '/SISTEMA/',
-        '/api\.pagseguro\.com/' => 'api.SEGURA.com',
-        '/api\.stripe\.com/' => 'api.SEGURA.com',
-        '/api\.pagarme\.com/' => 'api.SEGURA.com',
-        '/ak_live_[a-zA-Z0-9_]+/' => 'CHAVE_PROTEGIDA',
-        '/sk_live_[a-zA-Z0-9_]+/' => 'CHAVE_PROTEGIDA',
-        '/[0-9]{16}\|[0-9]{2}\|[0-9]{4}\|[0-9]{3}/' => 'CARTAO_PROTEGIDO',
-        '/[0-9]{3}\.[0-9]{3}\.[0-9]{3}\-[0-9]{2}/' => 'CPF_PROTEGIDO',
-        '/\b\d{16}\b/' => 'CARTAO_PROTEGIDO',
-        '/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/' => 'CPF_PROTEGIDO',
-        '/[a-zA-Z0-9_\+-\.]+@[a-zA-Z0-9-]+\.[a-zA-Z]+/' => 'EMAIL_PROTEGIDO',
-        '/https?:\/\/[^\s]+/' => 'LINK_PROTEGIDO',
-    ];
-    
-    foreach ($patterns as $pattern => $replacement) {
-        $output = preg_replace($pattern, $replacement, $output);
-    }
-    
-    return $output;
-}
-
-// INTERCEPTAR TODAS AS SAÍDAS
-ob_start(function($buffer) {
-    return cyberSecurityFilter($buffer);
-});
-
-// BLOQUEAR FERRAMENTAS DE DEV
+// DETECTAR PROXY E FERRAMENTAS DE HACKING
 if (isset($_SERVER['HTTP_USER_AGENT'])) {
     $blacklisted_agents = [
         'nmap', 'sqlmap', 'nikto', 'wpscan', 'dirbuster', 
         'gobuster', 'burp', 'zap', 'hydra', 'metasploit',
         'nessus', 'openvas', 'acunetix', 'netsparker',
-        'appscan', 'w3af', 'skipfish', 'wapiti'
+        'appscan', 'w3af', 'skipfish', 'wapiti', 'Charles',
+        'Fiddler', 'mitmproxy', 'Proxyman'
     ];
     
     foreach ($blacklisted_agents as $agent) {
         if (stripos($_SERVER['HTTP_USER_AGENT'], $agent) !== false) {
-            header('Location: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
+            // ADICIONAR HEADER ESPECIAL PARA PROXY
+            header('X-Hacker-Redirect: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
             exit;
         }
     }
@@ -81,7 +42,12 @@ $suspicious_params = ['union', 'select', 'insert', 'update', 'delete',
 foreach ($_GET as $param => $value) {
     foreach ($suspicious_params as $bad) {
         if (stripos($value, $bad) !== false || stripos($param, $bad) !== false) {
-            echo json_encode(['status' => 'error', 'message' => '@cybersecofc nao deixa rastro bb']);
+            // RESPOSTA COM LINK PARA HACKER
+            header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+            echo json_encode([
+                'status' => 'error', 
+                'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/'
+            ]);
             exit;
         }
     }
@@ -246,18 +212,21 @@ if (isset($_POST['remove_user']) && $_SESSION['role'] === 'admin') {
 // Processar requisições AJAX das ferramentas
 if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista']) && isset($_GET['tool'])) {
     if (!isset($_SESSION['logged_in'])) {
-        echo json_encode(['status' => 'error', 'message' => '@cybersecofc nao deixa rastro bb']);
+        header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+        echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
         exit;
     }
 
     if ($_SESSION['type'] === 'temporary' && time() > $_SESSION['expires_at']) {
-        echo json_encode(['status' => 'error', 'message' => '@cybersecofc nao deixa rastro bb']);
+        header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+        echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
         exit;
     }
 
     $tool = $_GET['tool'];
     if (!in_array($tool, $_SESSION['tools'])) {
-        echo json_encode(['status' => 'error', 'message' => '@cybersecofc nao deixa rastro bb']);
+        header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+        echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
         exit;
     }
 
@@ -303,34 +272,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
             include $tool_files[$tool];
             $output = ob_get_clean();
             
-            // OFUSCAR QUALQUER DADO SENSÍVEL
-            $output = preg_replace('/[a-zA-Z0-9_\+-\.]+@[a-zA-Z0-9-]+\.[a-zA-Z]+/', 'EMAIL_PROTEGIDO', $output);
-            $output = preg_replace('/\b\d{16}\b/', 'CARTAO_PROTEGIDO', $output);
-            $output = preg_replace('/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/', 'CPF_PROTEGIDO', $output);
-            $output = preg_replace('/https?:\/\/[^\s]+/', 'LINK_PROTEGIDO', $output);
-            $output = preg_replace('/api\.[a-z]+\.com/', 'API_PROTEGIDA', $output);
-            $output = preg_replace('/sk_(live|test)_[a-zA-Z0-9_]+/', 'CHAVE_PROTEGIDA', $output);
-            $output = preg_replace('/ak_(live|test)_[a-zA-Z0-9_]+/', 'CHAVE_PROTEGIDA', $output);
-            
             // Verificar se o output é JSON válido
             $json_data = json_decode($output, true);
             
             if ($json_data !== null) {
-                // Se for JSON, ofuscar também
-                array_walk_recursive($json_data, function(&$value, $key) {
-                    if (is_string($value)) {
-                        $value = preg_replace('/[a-zA-Z0-9_\+-\.]+@[a-zA-Z0-9-]+\.[a-zA-Z]+/', 'EMAIL_PROTEGIDO', $value);
-                        $value = preg_replace('/\b\d{16}\b/', 'CARTAO_PROTEGIDO', $value);
-                        $value = preg_replace('/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/', 'CPF_PROTEGIDO', $value);
-                        $value = preg_replace('/https?:\/\/[^\s]+/', 'LINK_PROTEGIDO', $value);
-                    }
-                });
-                
-                // ADICIONAR MENSAGEM SECRETA PARA HACKERS
-                if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'chrome-devtools') !== false) {
-                    $json_data['hacker_message'] = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
-                }
-                
+                // Se for JSON, retornar como JSON (NÃO OFUSCAR)
                 echo json_encode($json_data);
             } else {
                 // Se não for JSON, formatar como resposta HTML
@@ -345,22 +291,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
             $card = $lista;
             $parts = explode('|', $card);
             if (count($parts) != 4) {
-                $result = '<span class="badge badge-danger">Erro</span> » CARTAO_PROTEGIDO » <b>Retorno: <span class="text-danger">Formato inválido. Use: numero|mes|ano|cvv</span></b><br>';
+                $result = '<span class="badge badge-danger">Erro</span> » ' . $card . ' » <b>Retorno: <span class="text-danger">Formato inválido. Use: numero|mes|ano|cvv</span></b><br>';
                 echo json_encode(['status' => 'Reprovada', 'message' => $result]);
             } else {
-                $result = '<span class="badge badge-success">Aprovada</span> » CARTAO_PROTEGIDO » <b>Retorno: <span class="text-success">GGs ITAU AUTHORIZED - @cybersecofc</span></b> » <span class="text-primary">GGs Itau ✓</span><br>';
+                $result = '<span class="badge badge-success">Aprovada</span> » ' . $card . ' » <b>Retorno: <span class="text-success">GGs ITAU AUTHORIZED - Configure sua API real aqui</span></b> » <span class="text-primary">GGs Itau ✓</span><br>';
                 echo json_encode(['status' => 'Aprovada', 'message' => $result]);
             }
         } elseif ($tool === 'cpfchecker') {
             $cpf = $lista;
-            $result = '<span class="badge badge-danger">Reprovada</span> » CPF_PROTEGIDO » <b>Retorno: <span class="text-danger">@cybersecofc nao deixa rastro bb</span></b><br>';
+            $result = '<span class="badge badge-danger">Reprovada</span> » ' . $cpf . ' » <b>Retorno: <span class="text-danger">API não configurada. Configure sua API real aqui.</span></b><br>';
             echo json_encode(['status' => 'Reprovada', 'message' => $result]);
         } else {
             // Se chegou aqui, a ferramenta não foi encontrada
-            echo json_encode(['status' => 'error', 'message' => '@cybersecofc nao deixa rastro bb']);
+            header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+            echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
         }
     } catch (Exception $e) {
-        echo json_encode(['status' => 'error', 'message' => '@cybersecofc nao deixa rastro bb']);
+        header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+        echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
     }
 
     exit;
@@ -375,6 +323,9 @@ $security_script = <<<'HTML'
 <!-- SISTEMA DE SEGURANÇA CYBERSECOFC - NASA LEVEL -->
 <script>
 (function() {
+    // VARIÁVEL GLOBAL PARA DETECTAR HACKER
+    let hackerDetected = false;
+    
     // BLOQUEAR FERRAMENTAS DE DESENVOLVEDOR
     const blockDevTools = () => {
         const devtools = {
@@ -388,17 +339,10 @@ $security_script = <<<'HTML'
                 devtools.isOpen = isOpen;
                 devtools.orientation = orientation;
                 
-                // DESTRUIR SESSÃO SE DEVTOOLS ABERTO
+                // SE DEVTOOLS ABERTO, ATIVAR MODO HACKER
                 if (isOpen) {
-                    // REDIRECIONAR PARA O "PRÊMIO"
-                    window.location.href = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
-                    // DESTRUIR TUDO
-                    document.body.innerHTML = '<h1 style="color:#f00;text-align:center;margin-top:100px">@cybersecofc nao deixa rastro bb</h1>';
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    document.cookie.split(";").forEach(c => {
-                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-                    });
+                    hackerDetected = true;
+                    activateHackerMode();
                 }
             }
         };
@@ -420,6 +364,22 @@ $security_script = <<<'HTML'
         checkDevTools();
     };
     
+    // FUNÇÃO PARA ATIVAR MODO HACKER
+    const activateHackerMode = () => {
+        // DESTRUIR TUDO
+        document.body.innerHTML = '<h1 style="color:#f00;text-align:center;margin-top:100px">@cybersecofc nao deixa rastro bb</h1>';
+        localStorage.clear();
+        sessionStorage.clear();
+        document.cookie.split(";").forEach(c => {
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+        
+        // REDIRECIONAR PARA O "PRÊMIO"
+        setTimeout(() => {
+            window.location.href = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
+        }, 1000);
+    };
+    
     // BLOQUEAR TECLAS DE DESENVOLVEDOR
     document.addEventListener('keydown', e => {
         // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
@@ -429,7 +389,9 @@ $security_script = <<<'HTML'
             (e.ctrlKey && e.shiftKey && e.keyCode === 67) ||
             (e.ctrlKey && e.keyCode === 85)) {
             e.preventDefault();
-            window.location.href = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
+            e.stopPropagation();
+            hackerDetected = true;
+            activateHackerMode();
             return false;
         }
     });
@@ -437,104 +399,119 @@ $security_script = <<<'HTML'
     // BLOQUEAR BOTÃO DIREITO
     document.addEventListener('contextmenu', e => {
         e.preventDefault();
-        alert('@cybersecofc nao deixa rastro bb');
-        window.location.href = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
+        e.stopPropagation();
+        hackerDetected = true;
+        activateHackerMode();
         return false;
     });
     
-    // INTERCEPTAR CONSOLE
+    // INTERCEPTAR CONSOLE PARA ENGANAR HACKERS
     const originalConsole = console;
-    console = new Proxy(console, {
-        get(target, prop) {
-            if (['log', 'warn', 'error', 'info', 'debug', 'table', 'clear'].includes(prop)) {
-                return function() {
-                    // LIMPAR CONSOLE
-                    originalConsole.clear();
-                    // MOSTRAR MENSAGEM PARA HACKER
-                    originalConsole.log('%c⚠️ @cybersecofc nao deixa rastro bb ⚠️', 
-                        'color: #f00; font-size: 24px; font-weight: bold; background: #000; padding: 20px;');
-                    originalConsole.log('%c🎁 Seu prêmio: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/', 
-                        'color: #0ff; font-size: 18px;');
-                    
-                    // SE TENTAR VER PAYLOAD, MOSTRAR SÓ ISSO
-                    if (arguments[0] && typeof arguments[0] === 'string' && 
-                        (arguments[0].includes('payload') || arguments[0].includes('data') || 
-                         arguments[0].includes('response') || arguments[0].includes('request'))) {
-                        originalConsole.log('%c🔒 Dados protegidos por @cybersecofc', 
-                            'color: #0f0; font-size: 16px;');
-                        return;
-                    }
-                    
-                    // PARA OUTRAS CHAMADAS, SÓ MOSTRAR MENSAGEM
-                    if (prop !== 'clear') {
-                        originalConsole.log('%c🚫 Acesso bloqueado por segurança', 
-                            'color: #ff0; font-size: 14px;');
-                    }
-                };
+    const hackerConsole = {
+        log: function() {
+            if (hackerDetected) {
+                originalConsole.log('%c⚠️ @cybersecofc nao deixa rastro bb ⚠️', 
+                    'color: #f00; font-size: 24px; font-weight: bold;');
+                originalConsole.log('%c🎁 Seu prêmio: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/', 
+                    'color: #0ff; font-size: 18px;');
+            } else {
+                originalConsole.log.apply(originalConsole, arguments);
             }
-            return target[prop];
-        }
+        },
+        warn: function() {
+            if (hackerDetected) {
+                originalConsole.warn('%c🚫 ACESSO BLOQUEADO POR SEGURANÇA', 
+                    'color: #ff0; font-size: 20px;');
+            } else {
+                originalConsole.warn.apply(originalConsole, arguments);
+            }
+        },
+        error: function() {
+            if (hackerDetected) {
+                originalConsole.error('%c🔥 SISTEMA PROTEGIDO POR @cybersecofc', 
+                    'color: #f00; font-size: 22px;');
+            } else {
+                originalConsole.error.apply(originalConsole, arguments);
+            }
+        },
+        info: originalConsole.info,
+        debug: originalConsole.debug,
+        table: originalConsole.table,
+        clear: originalConsole.clear
+    };
+    
+    // SOBRESCREVER CONSOLE APENAS SE FOR HACKER
+    Object.defineProperty(window, 'console', {
+        get: function() {
+            return hackerDetected ? hackerConsole : originalConsole;
+        },
+        set: function() {}
     });
     
-    // INTERCEPTAR FETCH PARA OFUSCAR DADOS
-    const originalFetch = window.fetch;
-    window.fetch = function(url, options = {}) {
-        // OFUSCAR URL NAS REQUISIÇÕES
-        const interceptedUrl = typeof url === 'string' ? url : url.url || '';
+    // DETECTAR PROXY (CHARLES, FIDDLER, ETC)
+    const detectProxy = () => {
+        // CRIAR IMAGEM COM URL QUE SÓ PROXY VAI VER
+        const proxyImg = new Image();
+        proxyImg.onload = function() {
+            // SE CARREGOU, É PROXY
+            hackerDetected = true;
+            activateHackerMode();
+        };
         
-        if (interceptedUrl.includes('action=check')) {
-            // CRIAR NOVA URL OFUSCADA
-            const fakeUrl = interceptedUrl.replace(/tool=[^&]+/, 'tool=protected')
-                                         .replace(/lista=[^&]+/, 'lista=@cybersecofc');
-            
-            if (typeof url === 'string') {
-                url = fakeUrl;
-            } else {
-                url = {...url, url: fakeUrl};
-            }
-            
-            // OFUSCAR BODY TAMBÉM
-            if (options.body) {
-                if (typeof options.body === 'string') {
-                    try {
-                        const data = JSON.parse(options.body);
-                        const protectedData = {};
-                        for (const key in data) {
-                            protectedData[key] = '@cybersecofc';
-                        }
-                        options.body = JSON.stringify(protectedData);
-                    } catch(e) {
-                        options.body = '@cybersecofc';
-                    }
+        // URL QUE PROXYS NORMALMENTE INTERCEPTAM
+        proxyImg.src = '/?proxy_test=' + Date.now();
+        
+        // VERIFICAR HEADERS DE PROXY
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', window.location.href);
+        xhr.onreadystatechange = function() {
+            if (this.readyState === 2) { // HEADERS RECEBIDOS
+                const viaHeader = this.getResponseHeader('Via');
+                const xForwardedFor = this.getResponseHeader('X-Forwarded-For');
+                const xProxyDetect = this.getResponseHeader('X-Hacker-Redirect');
+                
+                if (viaHeader || xForwardedFor || xProxyDetect) {
+                    hackerDetected = true;
+                    activateHackerMode();
                 }
             }
+        };
+        xhr.send();
+    };
+    
+    // INTERCEPTAR FETCH PARA DETECTAR HACKERS
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        const [url, options] = args;
+        
+        // SE HACKER DETECTADO, RETORNAR DADOS FALSOS
+        if (hackerDetected) {
+            return Promise.resolve(new Response(
+                JSON.stringify({
+                    status: 'error',
+                    message: 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/',
+                    hacker_detected: true,
+                    security_message: '@cybersecofc nao deixa rastro bb'
+                }), {
+                    status: 200,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Hacker-Message': '@cybersecofc nao deixa rastro bb'
+                    }
+                }
+            ));
         }
         
-        return originalFetch.call(this, url, options).then(response => {
-            // SE FOR UMA RESPOSTA DA API, OFUSCAR
-            if (interceptedUrl.includes('action=check')) {
-                const clonedResponse = response.clone();
-                return clonedResponse.json().then(data => {
-                    // SUBSTITUIR QUALQUER DADO SENSÍVEL
-                    const protectedData = JSON.parse(JSON.stringify(data).replace(
-                        /[a-zA-Z0-9_\+-\.]+@[a-zA-Z0-9-]+\.[a-zA-Z]+|\d{16}|\d{3}\.\d{3}\.\d{3}-\d{2}|https?:\/\/[^\s]+|api\.[a-z]+\.com|sk_(live|test)_[a-zA-Z0-9_]+|ak_(live|test)_[a-zA-Z0-9_]+/g, 
-                        '@cybersecofc'
-                    ));
-                    
-                    // ADICIONAR MENSAGEM PARA HACKERS
-                    if (window.location.href.includes('chrome-devtools') || 
-                        document.hidden || 
-                        window.outerWidth - window.innerWidth > 100) {
-                        protectedData.hacker_prize = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
-                    }
-                    
-                    return new Response(JSON.stringify(protectedData), {
-                        status: response.status,
-                        statusText: response.statusText,
-                        headers: response.headers
-                    });
-                }).catch(() => response);
+        return originalFetch.apply(this, args).then(response => {
+            // VERIFICAR HEADERS DE SEGURANÇA
+            const hackerHeader = response.headers.get('X-Hacker-Message');
+            const hackerRedirect = response.headers.get('X-Hacker-Redirect');
+            
+            if (hackerHeader || hackerRedirect) {
+                hackerDetected = true;
+                activateHackerMode();
             }
+            
             return response;
         });
     };
@@ -545,77 +522,45 @@ $security_script = <<<'HTML'
     
     XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
         this._url = url;
-        // OFUSCAR URL
-        if (url && url.includes('action=check')) {
-            url = url.replace(/tool=[^&]+/, 'tool=protected')
-                    .replace(/lista=[^&]+/, 'lista=@cybersecofc');
-        }
         return originalXHROpen.call(this, method, url, async, user, password);
     };
     
     XMLHttpRequest.prototype.send = function(body) {
-        // OFUSCAR BODY
-        if (body && typeof body === 'string' && body.includes('lista')) {
-            this._body = '@cybersecofc';
-            body = this._body;
+        if (hackerDetected) {
+            // SE HACKER, SIMULAR RESPOSTA COM LINK
+            setTimeout(() => {
+                if (this.onreadystatechange) {
+                    this.readyState = 4;
+                    this.status = 200;
+                    this.responseText = JSON.stringify({
+                        status: 'error',
+                        message: 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/',
+                        hacker_detected: true
+                    });
+                    this.onreadystatechange.call(this);
+                }
+            }, 100);
+            return;
         }
         
         const originalOnReadyStateChange = this.onreadystatechange;
         this.onreadystatechange = function() {
-            if (this.readyState === 4 && this.status === 200) {
-                try {
-                    const response = JSON.parse(this.responseText);
-                    // OFUSCAR RESPOSTA
-                    const protectedResponse = JSON.parse(JSON.stringify(response).replace(
-                        /[a-zA-Z0-9_\+-\.]+@[a-zA-Z0-9-]+\.[a-zA-Z]+|\d{16}|\d{3}\.\d{3}\.\d{3}-\d{2}|https?:\/\/[^\s]+/g, 
-                        '@cybersecofc'
-                    ));
-                    
-                    // SE HACKER TENTANDO INSPECIONAR
-                    if (window.location.href.includes('chrome-devtools') || document.hidden) {
-                        protectedResponse.hacker_detected = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
-                    }
-                    
-                    Object.defineProperty(this, 'responseText', {
-                        value: JSON.stringify(protectedResponse),
-                        writable: false
-                    });
-                } catch(e) {
-                    // MANTER ORIGINAL SE NÃO FOR JSON
+            if (this.readyState === 2) { // HEADERS RECEBIDOS
+                const hackerHeader = this.getResponseHeader('X-Hacker-Message');
+                const hackerRedirect = this.getResponseHeader('X-Hacker-Redirect');
+                
+                if (hackerHeader || hackerRedirect) {
+                    hackerDetected = true;
+                    activateHackerMode();
                 }
             }
+            
             if (originalOnReadyStateChange) {
                 originalOnReadyStateChange.call(this);
             }
         };
         
         return originalXHRSend.call(this, body);
-    };
-    
-    // DETECTAR PROXY (CHARLES, FIDDLER, ETC)
-    const detectProxy = () => {
-        // VERIFICAR HEADERS DE PROXY
-        fetch('/proxy-test', {method: 'HEAD'})
-            .then(() => {
-                // SE CHEGOU AQUI, PROXY DETECTADO
-                window.location.href = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
-            })
-            .catch(() => {});
-        
-        // VERIFICAR ALTERAÇÃO DE HEADERS
-        const originalHeaders = {};
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', window.location.href);
-        xhr.onreadystatechange = function() {
-            if (this.readyState === 2) { // HEADERS RECEBIDOS
-                const viaHeader = this.getResponseHeader('Via');
-                const xForwardedFor = this.getResponseHeader('X-Forwarded-For');
-                if (viaHeader || xForwardedFor) {
-                    window.location.href = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
-                }
-            }
-        };
-        xhr.send();
     };
     
     // MONITORAR ALTERAÇÕES NO DOM (TENTATIVAS DE INJEÇÃO)
@@ -628,10 +573,9 @@ $security_script = <<<'HTML'
                          node.innerHTML.includes('iframe') ||
                          node.innerHTML.includes('onload') ||
                          node.innerHTML.includes('onerror'))) {
-                        // REMOVER ELEMENTO MALICIOSO
-                        node.remove();
-                        // REDIRECIONAR HACKER
-                        window.location.href = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
+                        // HACKER DETECTADO
+                        hackerDetected = true;
+                        activateHackerMode();
                     }
                 });
             }
@@ -649,32 +593,13 @@ $security_script = <<<'HTML'
     blockDevTools();
     detectProxy();
     
-    // MENSAGEM INICIAL NO CONSOLE
-    console.clear();
-    console.log('%c🔒 SISTEMA PROTEGIDO POR @cybersecofc', 
-        'color: #0f0; font-size: 20px; font-weight: bold;');
-    console.log('%c⚠️ Qualquer tentativa de invasão será punida', 
-        'color: #ff0; font-size: 16px;');
-        
-    // VERIFICAR PERIODICAMENTE POR FERRAMENTAS DE HACKING
-    setInterval(() => {
-        // VERIFICAR SE TEM EXTENSÕES DE HACKING INSTALADAS
-        const hackingExtensions = [
-            'chrome-extension://gighmmpiobklfepjocnamgkkbiglidom', // AdBlock
-            'chrome-extension://bhlhnicpbhignbdhedgjhgdocnmhomnp', // ColorZilla
-            'chrome-extension://nhdogjmejiglipccpnnnanhbledajbpd', // Vue.js devtools
-            'chrome-extension://lmhkpmbekcpmknklioeibfkpmmfibljd', // React devtools
-            'chrome-extension://fmkadmapgofadopljbjfkapdkoienihi', // Redux devtools
-        ];
-        
-        hackingExtensions.forEach(ext => {
-            const img = new Image();
-            img.src = ext + '/manifest.json';
-            img.onload = () => {
-                window.location.href = 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/';
-            };
-        });
-    }, 10000);
+    // MENSAGEM INICIAL NO CONSOLE (APENAS SE NÃO FOR HACKER)
+    if (!hackerDetected) {
+        console.log('%c🔒 SISTEMA PROTEGIDO POR @cybersecofc', 
+            'color: #0f0; font-size: 20px; font-weight: bold;');
+        console.log('%c⚠️ Qualquer tentativa de invasão será punida', 
+            'color: #ff0; font-size: 16px;');
+    }
 })();
 </script>
 <!-- FIM DO SISTEMA DE SEGURANÇA -->
@@ -2190,24 +2115,29 @@ if (isset($_GET['tool'])) {
                     const jsonData = JSON.parse(text);
                     
                     if (jsonData.status === 'error') {
-                        addResult(item, '@cybersecofc nao deixa rastro bb', false);
+                        if (jsonData.message === 'Seu acesso expirou!' || jsonData.message === 'Você não tem permissão para usar esta ferramenta') {
+                            alert(jsonData.message);
+                            window.location.href = '?logout';
+                            return;
+                        }
+                        addResult(item, jsonData.message, false);
                     } else if (jsonData.status === 'Aprovada' || jsonData.status === 'success') {
-                        addResult(item, jsonData.message || '@cybersecofc Aprovada', true);
+                        addResult(item, jsonData.message || 'Aprovada', true);
                     } else {
-                        addResult(item, '@cybersecofc nao deixa rastro bb', false);
+                        addResult(item, jsonData.message || 'Reprovada', false);
                     }
                 } catch (e) {
                     // Se não for JSON, tratar como HTML/texto
                     if (text.includes('Aprovada') || text.includes('success') || text.includes('✅')) {
-                        addResult(item, '@cybersecofc Aprovada', true);
+                        addResult(item, text, true);
                     } else {
-                        addResult(item, '@cybersecofc nao deixa rastro bb', false);
+                        addResult(item, text, false);
                     }
                 }
 
             } catch (error) {
                 console.error('Error:', error);
-                addResult(item, '@cybersecofc nao deixa rastro bb', false);
+                addResult(item, 'Erro: ' + error.message, false);
             }
 
             currentIndex++;
@@ -2228,12 +2158,12 @@ if (isset($_GET['tool'])) {
             const resultDiv = document.createElement('div');
             resultDiv.className = `result-item ${isLive ? 'live' : 'die'}`;
 
-            // Ofuscar dados sensíveis
-            const protectedItem = item.replace(/\d{16}|\d{3}\.\d{3}\.\d{3}-\d{2}/g, '@cybersecofc');
+            // Limitar o tamanho da resposta para evitar problemas de exibição
+            const responseText = typeof response === 'string' ? response.substring(0, 500) : response;
 
             resultDiv.innerHTML = `
-                <strong>${protectedItem}</strong><br>
-                <small>${response}</small>
+                <strong>${item}</strong><br>
+                <small>${responseText}</small>
             `;
 
             container.insertBefore(resultDiv, container.firstChild);
