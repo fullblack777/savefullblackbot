@@ -46,7 +46,7 @@ $lista = str_replace(array(" "), '/', $_GET['lista']);
   $regex = str_replace(array(':',";","|",",","=>","-"," ",'/','|||'), "|", $lista);
 
   if (!preg_match("/[0-9]{15,16}\|[0-9]{2}\|[0-9]{2,4}\|[0-9]{3,4}/", $regex,$lista)){
-  die('<span class="text-danger">Reprovada</span> ➔ <span class="text-white">'.$lista.'</span> ➔ <span class="text-danger"> Lista inválida. </span> ➔ <span class="text-warning">@savefullblack</span><br>');
+  die('<span class="text-danger">Reprovada</span> ➔ <span class="text-white">'.$lista.'</span> ➔ <span class="text-danger"> Lista inválida. </span> ➔ <span class="text-warning">@cybersecofc</span><br>');
   }
 
 if ($_SERVER['REQUEST_METHOD'] == "POST") {
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 }
 
 function gerarLetrasAleatorias($quantidade) {
-$letras = 'savefullblack';
+$letras = 'cybersecofc';
 $tamanhoLetras = strlen($letras);
 $resultado = '';
 
@@ -158,7 +158,7 @@ curl_setopt_array($ch, [
   $r = curl_exec($ch);
 if (strpos($r, "Sorry, your passkey isn't working. There might be a problem with the server. Sign in with your password or try your passkey again later.")) {
 
-die('<span class="text-danger">Erros</span> ➪ <span class="text-white">'.$lista.'</span> ➪ <span class="text-danger"> 𝐂𝐨𝐨𝐤𝐢𝐞𝐬 𝐧𝐚𝐨 𝐝𝐞𝐭𝐞𝐜𝐭𝐚𝐝𝐨𝐬, 𝐞𝐧𝐭𝐫𝐞 𝐞𝐦 𝐦𝐢𝐦𝐡𝐚 𝐜𝐨𝐧𝐭𝐚 𝐞 𝐝𝐞𝐩𝐨𝐢𝐬 𝐞𝐦 𝐬𝐞𝐠𝐮𝐫𝐚𝐧𝐜̧𝐚 𝐞 𝐢𝐧𝐬𝐢𝐫𝐚 𝐬𝐮𝐚 𝐬𝐞𝐧𝐡𝐚 𝐩𝐚𝐫𝐚 𝐯𝐞𝐫 𝐬𝐞 𝐯𝐨𝐥𝐭𝐚 𝐚 𝐟𝐮𝐧𝐜𝐢𝐨𝐧𝐚𝐫. </span> ➪ 𝐓𝐢𝐦𝐞: (' . (time() - $time) . 's) ➪ <span class="text-warning">@savefullblack</span><br>');
+die('<span class="text-danger">Erros</span> ➪ <span class="text-white">'.$lista.'</span> ➪ <span class="text-danger"> 𝐂𝐨𝐨𝐤𝐢𝐞𝐬 𝐧𝐚𝐨 𝐝𝐞𝐭𝐞𝐜𝐭𝐚𝐝𝐨𝐬, 𝐞𝐧𝐭𝐫𝐞 𝐞𝐦 𝐦𝐢𝐦𝐡𝐚 𝐜𝐨𝐧𝐭𝐚 𝐞 𝐝𝐞𝐩𝐨𝐢𝐬 𝐞𝐦 𝐬𝐞𝐠𝐮𝐫𝐚𝐧𝐜̧𝐚 𝐞 𝐢𝐧𝐬𝐢𝐫𝐚 𝐬𝐮𝐚 𝐬𝐞𝐧𝐡𝐚 𝐩𝐚𝐫𝐚 𝐯𝐞𝐫 𝐬𝐞 𝐯𝐨𝐥𝐭𝐚 𝐚 𝐟𝐮𝐧𝐜𝐢𝐨𝐧𝐚𝐫. </span> ➪ 𝐓𝐢𝐦𝐞: (' . (time() - $time) . 's) ➪ <span class="text-warning">@cybersecofc</span><br>');
 
     } else {
 
@@ -225,7 +225,7 @@ if (strpos($r, 'paymentInstrumentId')) {
 else{
 
 
-die('<span class="text-danger">Erros</span> ➪ <span class="text-white">'.$lista.'</span> ➪ <span class="text-danger"> 𝐂𝐨𝐨𝐤𝐢𝐞𝐬 𝐧𝐚𝐨 𝐝𝐞𝐭𝐞𝐜𝐭𝐚𝐝𝐨𝐬, 𝐞𝐧𝐭𝐫𝐞 𝐞𝐦 𝐦𝐢𝐦𝐡𝐚 𝐜𝐨𝐧𝐭𝐚 𝐞 𝐝𝐞𝐩𝐨𝐢𝐬 𝐞𝐦 𝐬𝐞𝐠𝐮𝐫𝐚𝐧𝐜̧𝐚 𝐞 𝐢𝐧𝐬𝐢𝐫𝐚 𝐬𝐮𝐚 𝐬𝐞𝐧𝐡𝐚 𝐩𝐚𝐫𝐚 𝐯𝐞𝐫 𝐬𝐞 𝐯𝐨𝐥𝐭𝐚 𝐚 𝐟𝐮𝐧𝐜𝐢𝐨𝐧𝐚𝐫. </span> ➪ 𝐓𝐢𝐦𝐞: (' . (time() - $time) . 's) ➪ <span class="text-warning">@savefullblack</span><br>');
+die('<span class="text-danger">Erros</span> ➪ <span class="text-white">'.$lista.'</span> ➪ <span class="text-danger"> 𝐂𝐨𝐨𝐤𝐢𝐞𝐬 𝐧𝐚𝐨 𝐝𝐞𝐭𝐞𝐜𝐭𝐚𝐝𝐨𝐬, 𝐞𝐧𝐭𝐫𝐞 𝐞𝐦 𝐦𝐢𝐦𝐡𝐚 𝐜𝐨𝐧𝐭𝐚 𝐞 𝐝𝐞𝐩𝐨𝐢𝐬 𝐞𝐦 𝐬𝐞𝐠𝐮𝐫𝐚𝐧𝐜̧𝐚 𝐞 𝐢𝐧𝐬𝐢𝐫𝐚 𝐬𝐮𝐚 𝐬𝐞𝐧𝐡𝐚 𝐩𝐚𝐫𝐚 𝐯𝐞𝐫 𝐬𝐞 𝐯𝐨𝐥𝐭𝐚 𝐚 𝐟𝐮𝐧𝐜𝐢𝐨𝐧𝐚𝐫. </span> ➪ 𝐓𝐢𝐦𝐞: (' . (time() - $time) . 's) ➪ <span class="text-warning">@cybersecofc</span><br>');
 }
 
 $ch = curl_init(); 
@@ -257,7 +257,7 @@ $addresid = getStr($r, 'AddressId":"','"');
 
 if(empty($addresid)) {
 
-die('<span class="text-danger">Erros</span> ➔ <span class="text-white">'.$lista.'</span> ➔ <span class="text-danger"> Conta sem endereço, adicione um endereço na conta antes de fazer os testes. </span> ➔ Tempo de resposta: (' . (time() - $time) . 's) ➔ <span class="text-warning">@savefullblack</span><br>');
+die('<span class="text-danger">Erros</span> ➔ <span class="text-white">'.$lista.'</span> ➔ <span class="text-danger"> Conta sem endereço, adicione um endereço na conta antes de fazer os testes. </span> ➔ Tempo de resposta: (' . (time() - $time) . 's) ➔ <span class="text-warning">@cybersecofck</span><br>');
 
 }
 
@@ -686,3 +686,4 @@ die('<span class="text-danger">Erros</span> ➪ <span class="text-white">'.$list
 }
 
 ?>
+
