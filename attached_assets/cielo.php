@@ -23,11 +23,15 @@ if (isset($_GET['lista'])) {
     $response_time = isset($result['request_info']['response_time']) ? 
                     round($result['request_info']['response_time'], 2) . 's' : 'N/A';
     
+    // Retornar com os dados do cartão
+    $cartao_dados = explode('|', $lista);
+    $cartao_formatado = substr($cartao_dados[0], 0, 4) . '********' . substr($cartao_dados[0], -4);
+    
     $formatted_response = [
         'error' => $result['error'],
         'success' => $result['success'],
         'actual_message' => $result['actual_message'],
-        'message' => $result['message'] . ' @cybersecofc - Tempo: ' . $response_time
+        'message' => $cartao_formatado . '|' . $cartao_dados[1] . '|' . $cartao_dados[2] . '|' . $cartao_dados[3] . ' -> ' . $result['message'] . ' @cybersecofc - Tempo: ' . $response_time
     ];
     
     echo json_encode($formatted_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
@@ -106,7 +110,7 @@ function testar_cartao($lista) {
     $result = fazer_requisicao_gateway($cartao, $mes, $ano, $cvv, $dados_unicos);
     
     // Analisar resposta
-    return analisar_resposta($result);
+    return analisar_resposta($result, $lista);
 }
 
 function gerar_dados_unicos() {
@@ -364,10 +368,15 @@ function fazer_requisicao_gateway($cartao, $mes, $ano, $cvv, $dados_unicos) {
     ];
 }
 
-function analisar_resposta($result) {
+function analisar_resposta($result, $lista_original) {
     // Logar resposta bruta para debug
     $raw_response = $result['response'];
     $http_code = $result['http_code'];
+    
+    // Formatar cartão para exibição
+    $dados_cartao = explode('|', $lista_original);
+    $cartao_formatado = substr($dados_cartao[0], 0, 4) . '********' . substr($dados_cartao[0], -4);
+    $cartao_info = $cartao_formatado . '|' . $dados_cartao[1] . '|' . $dados_cartao[2] . '|' . $dados_cartao[3];
     
     // Verificar se houve erro de permissão
     if (strpos($raw_response, "don't have permissions") !== false || 
@@ -379,13 +388,13 @@ function analisar_resposta($result) {
             'error' => true,
             'success' => false,
             'actual_message' => '',
-            'message' => 'ERRO DE PERMISSÃO - Site bloqueando acesso'
-        ], JSON_PRETTY_PRINT));
+            'message' => $cartao_info . ' -> ERRO DE PERMISSÃO - Site bloqueando acesso'
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
     
     $response_data = json_decode($raw_response, true);
     
-    // Mapeamento de códigos de retorno para os que você forneceu
+    // Mapeamento de códigos de retorno
     $codigos_retorno = [
         0 => 'Autorizada - Transação aprovada na hora.',
         1 => 'Negada - Cartão recusado pela operadora (motivo genérico).',
@@ -398,6 +407,11 @@ function analisar_resposta($result) {
         9 => 'Em Andamento - Aguardando ação do cliente (inserir cartão, digitar senha, aproximar).',
         80 => 'Pré-autorizada - Pré-autorização confirmada (cartão crédito).'
     ];
+    
+    // Códigos que são considerados APROVADOS (live)
+    $codigos_aprovados = [0, 6, 9, 80];
+    // Códigos que são considerados REPROVADOS
+    $codigos_reprovados = [1, 2, 4, 5, 7, 8];
     
     if ($response_data && json_last_error() === JSON_ERROR_NONE) {
         // Verificar se há código de retorno específico na resposta
@@ -419,127 +433,140 @@ function analisar_resposta($result) {
             $status_cielo = $codigos_retorno[$codigo_retorno];
         }
         
-        // Verificar se é reprovado
-        $is_reprovado = false;
-        $reprovado_codes = [1, 2, 4, 5, 7, 8]; // Códigos de reprovação
+        // Obter mensagem do gateway
+        $mensagem_gateway = '';
+        if (isset($response_data['message'])) {
+            $mensagem_gateway = $response_data['message'];
+        } elseif (isset($response_data['decline_message'])) {
+            $mensagem_gateway = $response_data['decline_message'];
+        } elseif (isset($response_data['actual_message'])) {
+            $mensagem_gateway = $response_data['actual_message'];
+        }
         
+        // Verificar código de retorno primeiro
         if ($codigo_retorno !== null) {
             // Se for código de reprovação, retornar die
-            if (in_array($codigo_retorno, $reprovado_codes)) {
+            if (in_array($codigo_retorno, $codigos_reprovados)) {
                 die(json_encode([
                     'error' => true,
                     'success' => false,
                     'actual_message' => '',
-                    'message' => 'REPROVADO - ' . $status_cielo,
-                    'codigo_retorno' => $codigo_retorno,
-                    'status_cielo' => $status_cielo
-                ], JSON_PRETTY_PRINT));
+                    'message' => $cartao_info . ' -> REPROVADO - ' . $status_cielo
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             }
             
-            // Verificar se é live (aprovado ou pendente)
-            $codigos_live = [0, 6, 9, 80];
-            if (!in_array($codigo_retorno, $codigos_live)) {
-                // Se não for nem live nem reprovado (outro código não mapeado)
-                die(json_encode([
-                    'error' => true,
-                    'success' => false,
-                    'actual_message' => '',
-                    'message' => 'CÓDIGO NÃO RECONHECIDO: ' . $codigo_retorno
-                ], JSON_PRETTY_PRINT));
+            // Se for código aprovado, continuar processamento
+            if (in_array($codigo_retorno, $codigos_aprovados)) {
+                $formatted = [
+                    'error' => false,
+                    'success' => true,
+                    'actual_message' => $mensagem_gateway,
+                    'message' => $status_cielo,
+                    'payment_status' => isset($response_data['payment_status']) ? $response_data['payment_status'] : '',
+                    'payment_actual_status' => isset($response_data['payment_actual_status']) ? $response_data['payment_actual_status'] : '',
+                    'http_code' => $http_code,
+                    'codigo_retorno' => $codigo_retorno,
+                    'status_cielo' => $status_cielo
+                ];
+                
+                $formatted['request_info'] = [
+                    'http_code' => $http_code,
+                    'curl_error' => $result['curl_error'],
+                    'response_time' => isset($result['curl_info']['total_time']) ? $result['curl_info']['total_time'] : 0
+                ];
+                
+                return $formatted;
             }
         }
         
-        // VERIFICAÇÃO CRÍTICA: Se a mensagem contém palavras de negação, retornar DIE
-        $mensagem_negacao = '';
-        if (isset($response_data['message'])) {
-            $mensagem_negacao = strtolower($response_data['message']);
-        } elseif (isset($response_data['decline_message'])) {
-            $mensagem_negacao = strtolower($response_data['decline_message']);
-        }
+        // Se não tiver código, verificar pela mensagem
+        $mensagem_lower = strtolower($mensagem_gateway);
         
-        // Palavras-chave que indicam reprovação
+        // Palavras-chave que indicam REPROVAÇÃO
         $palavras_reprovacao = [
             'negado', 'negada', 'rejeitado', 'rejeitada', 'recusado', 'recusada',
             'recuse', 'denied', 'declined', 'failed', 'falhou', 'recusa',
             'pagamento negado', 'cartão recusado', 'transação recusada',
-            'tente outro cartão', 'escolha outro método'
+            'tente outro cartão', 'escolha outro método', 'não aprovado',
+            'recusada pela operadora', 'cartão inválido', 'dados inválidos',
+            'saldo insuficiente', 'limite excedido', 'bloqueado', 'cancelado'
         ];
         
+        // Verificar se a mensagem contém palavras de reprovação
         foreach ($palavras_reprovacao as $palavra) {
-            if (strpos($mensagem_negacao, $palavra) !== false) {
+            if (strpos($mensagem_lower, $palavra) !== false) {
                 die(json_encode([
                     'error' => true,
                     'success' => false,
                     'actual_message' => '',
-                    'message' => 'REPROVADO - ' . (isset($response_data['message']) ? $response_data['message'] : 'Cartão recusado')
-                ], JSON_PRETTY_PRINT));
+                    'message' => $cartao_info . ' -> REPROVADO - ' . $mensagem_gateway
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             }
         }
         
-        $formatted = [
-            'error' => isset($response_data['error']) ? (bool)$response_data['error'] : true,
-            'success' => isset($response_data['success']) ? (bool)$response_data['success'] : false,
-            'actual_message' => isset($response_data['actual_message']) ? $response_data['actual_message'] : '',
-            'message' => isset($response_data['message']) ? $response_data['message'] : 
-                        (isset($response_data['decline_message']) ? $response_data['decline_message'] : ''),
-            'payment_status' => isset($response_data['payment_status']) ? $response_data['payment_status'] : '',
-            'payment_actual_status' => isset($response_data['payment_actual_status']) ? $response_data['payment_actual_status'] : '',
-            'decline_message' => isset($response_data['decline_message']) ? $response_data['decline_message'] : '',
-            'thankyouID' => isset($response_data['thankyouID']) ? $response_data['thankyouID'] : '',
-            'payment_id' => isset($response_data['payment_id']) ? $response_data['payment_id'] : '',
-            'transaction_id' => isset($response_data['transaction_id']) ? $response_data['transaction_id'] : '',
-            'authorization_code' => isset($response_data['authorization_code']) ? $response_data['authorization_code'] : '',
-            'http_code' => $http_code,
-            'gateway_response' => $response_data,
-            'codigo_retorno' => $codigo_retorno,
-            'status_cielo' => $status_cielo
+        // Palavras-chave que indicam APROVAÇÃO
+        $palavras_aprovacao = [
+            'aprovado', 'aprovada', 'approved', 'success', 'sucesso',
+            'autorizada', 'autorizado', 'transação aprovada',
+            'pagamento realizado', 'compra confirmada', 'sucesso no pagamento'
         ];
         
-        // CORREÇÃO CRÍTICA: Ajustar lógica de sucesso/erro baseado na mensagem real
-        // Se a mensagem contém "negado" mas error=false, forçar error=true
-        $mensagem_lower = strtolower($formatted['message']);
-        if (strpos($mensagem_lower, 'negado') !== false || 
-            strpos($mensagem_lower, 'recusado') !== false ||
-            strpos($mensagem_lower, 'rejeitado') !== false) {
-            $formatted['error'] = true;
-            $formatted['success'] = false;
-            // Não retornar die aqui ainda, vamos deixar o fluxo continuar para ver o resultado final
+        // Verificar se a mensagem contém palavras de aprovação
+        $is_aprovado = false;
+        foreach ($palavras_aprovacao as $palavra) {
+            if (strpos($mensagem_lower, $palavra) !== false) {
+                $is_aprovado = true;
+                break;
+            }
         }
         
-        // Determinar status final
-        if (stripos($formatted['payment_status'], 'aprovado') !== false || 
-            stripos($formatted['payment_actual_status'], 'approve') !== false ||
-            stripos($formatted['message'], 'aprovado') !== false ||
-            ($codigo_retorno === 0)) {
-            $formatted['error'] = false;
-            $formatted['success'] = true;
-            $formatted['status'] = 'APROVADO';
-        } elseif (in_array($codigo_retorno, [6, 9, 80])) {
-            $formatted['error'] = false;
-            $formatted['success'] = true;
-            $formatted['status'] = 'PENDENTE/EM ANDAMENTO';
-        } elseif (stripos($formatted['payment_status'], 'rejeitado') !== false || 
-                 stripos($formatted['payment_actual_status'], 'reject') !== false ||
-                 stripos($formatted['message'], 'negado') !== false ||
-                 stripos($formatted['decline_message'], 'negado') !== false) {
-            // AGORA RETORNA DIE se for reprovado
-            die(json_encode([
-                'error' => true,
-                'success' => false,
-                'actual_message' => '',
-                'message' => 'REPROVADO - ' . $formatted['message']
-            ], JSON_PRETTY_PRINT));
-        } else {
-            $formatted['status'] = 'INDEFINIDO';
+        // Verificar também nos campos de status
+        $payment_status = isset($response_data['payment_status']) ? strtolower($response_data['payment_status']) : '';
+        $payment_actual_status = isset($response_data['payment_actual_status']) ? strtolower($response_data['payment_actual_status']) : '';
+        
+        if (strpos($payment_status, 'aprovado') !== false || 
+            strpos($payment_actual_status, 'approve') !== false ||
+            strpos($payment_status, 'success') !== false) {
+            $is_aprovado = true;
         }
+        
+        // Se for aprovado, retornar sucesso
+        if ($is_aprovado) {
+            $formatted = [
+                'error' => false,
+                'success' => true,
+                'actual_message' => $mensagem_gateway,
+                'message' => 'APROVADO - ' . $mensagem_gateway,
+                'payment_status' => isset($response_data['payment_status']) ? $response_data['payment_status'] : '',
+                'payment_actual_status' => isset($response_data['payment_actual_status']) ? $response_data['payment_actual_status'] : '',
+                'http_code' => $http_code,
+                'codigo_retorno' => $codigo_retorno,
+                'status_cielo' => $status_cielo
+            ];
+            
+            $formatted['request_info'] = [
+                'http_code' => $http_code,
+                'curl_error' => $result['curl_error'],
+                'response_time' => isset($result['curl_info']['total_time']) ? $result['curl_info']['total_time'] : 0
+            ];
+            
+            return $formatted;
+        }
+        
+        // Se chegou aqui e não é nem aprovado nem reprovado, considerar como erro
+        die(json_encode([
+            'error' => true,
+            'success' => false,
+            'actual_message' => '',
+            'message' => $cartao_info . ' -> RESPOSTA NÃO RECONHECIDA: ' . $mensagem_gateway
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         
     } else {
+        // Se não for JSON válido, verificar no texto bruto
         
-        $message = 'Resposta inválida do servidor';
-        $status = 'ERRO';
-        
-        // Verificar se há mensagem de negação na resposta bruta
         $raw_lower = strtolower($raw_response);
+        
+        // Verificar se há mensagem de reprovação no texto bruto
         $palavras_reprovacao_raw = [
             'negado', 'negada', 'rejeitado', 'rejeitada', 'recusado', 'recusada',
             'recuse', 'denied', 'declined', 'failed', 'falhou', 'recusa',
@@ -552,110 +579,54 @@ function analisar_resposta($result) {
                     'error' => true,
                     'success' => false,
                     'actual_message' => '',
-                    'message' => 'REPROVADO - Cartão recusado'
-                ], JSON_PRETTY_PRINT));
+                    'message' => $cartao_info . ' -> REPROVADO - Cartão recusado'
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             }
         }
         
-        
-        $patterns = [
-            '/aprovado|approved|success/i' => 'APROVADO',
-            '/negado|rejeitado|rejected|declined|failed/i' => 'REPROVADO',
-            '/Cart Items Not Found/i' => 'CARRINHO_INVALIDO',
-            '/invalid|invalido/i' => 'INVALIDO',
-            '/error|erro/i' => 'ERRO',
-            '/pendente|pending|andamento/i' => 'PENDENTE'
+        // Verificar se há mensagem de aprovação no texto bruto
+        $palavras_aprovacao_raw = [
+            'aprovado', 'aprovada', 'approved', 'success', 'sucesso',
+            'autorizada', 'autorizado'
         ];
         
-        foreach ($patterns as $pattern => $pattern_status) {
-            if (preg_match($pattern, $raw_response)) {
-                $message = 'Status detectado: ' . $pattern_status;
-                $status = $pattern_status;
+        foreach ($palavras_aprovacao_raw as $palavra) {
+            if (strpos($raw_lower, $palavra) !== false) {
+                $formatted = [
+                    'error' => false,
+                    'success' => true,
+                    'actual_message' => '',
+                    'message' => 'APROVADO - Detecção por texto',
+                    'http_code' => $http_code
+                ];
                 
-                // Se for reprovado, die
-                if ($pattern_status === 'REPROVADO') {
-                    die(json_encode([
-                        'error' => true,
-                        'success' => false,
-                        'actual_message' => '',
-                        'message' => 'REPROVADO - Cartão recusado'
-                    ], JSON_PRETTY_PRINT));
-                }
-                break;
+                $formatted['request_info'] = [
+                    'http_code' => $http_code,
+                    'curl_error' => $result['curl_error'],
+                    'response_time' => isset($result['curl_info']['total_time']) ? $result['curl_info']['total_time'] : 0
+                ];
+                
+                return $formatted;
             }
         }
         
-        
+        // Extrair mensagem se possível
+        $message = 'Resposta inválida do servidor';
         if (preg_match('/"message":"([^"]+)"/', $raw_response, $matches)) {
             $message = $matches[1];
         } elseif (preg_match('/<title>([^<]+)<\/title>/', $raw_response, $matches)) {
             $message = $matches[1];
         } elseif (strlen($raw_response) < 500) {
-            $message = $raw_response;
+            $message = substr($raw_response, 0, 200);
         }
         
-        // Verificar se a resposta contém algum código de retorno numérico
-        if (preg_match('/"returnCode":\s*(\d+)/i', $raw_response, $matches)) {
-            $codigo_retorno = intval($matches[1]);
-            if (isset($codigos_retorno[$codigo_retorno])) {
-                $status_cielo = $codigos_retorno[$codigo_retorno];
-                
-                // Verificar se é reprovado
-                $reprovado_codes = [1, 2, 4, 5, 7, 8];
-                if (in_array($codigo_retorno, $reprovado_codes)) {
-                    die(json_encode([
-                        'error' => true,
-                        'success' => false,
-                        'actual_message' => '',
-                        'message' => 'REPROVADO - ' . $status_cielo,
-                        'codigo_retorno' => $codigo_retorno,
-                        'status_cielo' => $status_cielo
-                    ], JSON_PRETTY_PRINT));
-                }
-                
-                $message = $status_cielo;
-            }
-        }
-        
-        $formatted = [
-            'error' => true,
-            'success' => false,
-            'actual_message' => '',
-            'message' => $message,
-            'payment_status' => 'Pagamento ' . strtolower($status),
-            'payment_actual_status' => strtolower($status),
-            'decline_message' => $message,
-            'thankyouID' => '',
-            'payment_id' => '',
-            'transaction_id' => '',
-            'authorization_code' => '',
-            'http_code' => $http_code,
-            'status' => $status,
-            'raw_response_preview' => substr($raw_response, 0, 500)
-        ];
-    }
-    
-    // VERIFICAÇÃO FINAL: Se após toda análise ainda tiver "negado" na mensagem, retornar DIE
-    if (isset($formatted['message']) && 
-        (stripos($formatted['message'], 'negado') !== false ||
-         stripos($formatted['message'], 'recusado') !== false ||
-         stripos($formatted['message'], 'rejeitado') !== false ||
-         stripos($formatted['message'], 'tente outro cartão') !== false)) {
-        
+        // Se não conseguiu detectar nada, retornar como erro
         die(json_encode([
             'error' => true,
             'success' => false,
             'actual_message' => '',
-            'message' => 'REPROVADO - ' . $formatted['message']
-        ], JSON_PRETTY_PRINT));
+            'message' => $cartao_info . ' -> ERRO: ' . $message
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
-    
-    $formatted['request_info'] = [
-        'http_code' => $http_code,
-        'curl_error' => $result['curl_error'],
-        'response_time' => isset($result['curl_info']['total_time']) ? $result['curl_info']['total_time'] : 0
-    ];
-    
-    return $formatted;
 }
 ?>
