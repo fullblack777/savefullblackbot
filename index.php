@@ -337,7 +337,7 @@ if (isset($_POST['remove_user']) && $_SESSION['role'] === 'admin') {
 }
 
 // ============================================
-// MODIFICAÇÃO NA PARTE AJAX (PROTEÇÃO EXTRA)
+// MODIFICAÇÃO NA PARTE AJAX (PROTEÇÃO EXTRA) - CORRIGIDA
 // ============================================
 
 // Processar requisições AJAX das ferramentas
@@ -426,9 +426,32 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
             include $tool_files[$tool];
             $output = ob_get_clean();
             
+            // CORREÇÃO PRINCIPAL: Verificar se é LIVE de forma mais flexível
+            // Verificar múltiplos padrões que indicam sucesso
+            $isLive = false;
+            $live_patterns = [
+                'Aprovada', 'aprovada', 'APROVADA', 
+                'success', 'SUCCESS', 'Success',
+                '✅', '✓', '✔', '🟢',
+                'Live', 'LIVE', 'live',
+                'AUTHORIZED', 'Authorized', 'authorized',
+                'Válido', 'válido', 'VÁLIDO',
+                'Válida', 'válida', 'VÁLIDA',
+                'Valid', 'VALID',
+                'Aprovado', 'aprovado', 'APROVADO',
+                'ok', 'OK', 'Ok',
+                'Encontrado', 'encontrado', 'ENCONTRADO'
+            ];
+            
+            foreach ($live_patterns as $pattern) {
+                if (stripos($output, $pattern) !== false) {
+                    $isLive = true;
+                    break;
+                }
+            }
+            
             // Se for LIVE e usuário for tipo créditos, descontar
-            if ((strpos($output, 'Aprovada') !== false || strpos($output, 'success') !== false || strpos($output, '✅') !== false) && 
-                isset($users[$username]) && $users[$username]['type'] === 'credits') {
+            if ($isLive && isset($users[$username]) && $users[$username]['type'] === 'credits') {
                 $remainingCredits = deductCredits($username, 2);
                 if ($remainingCredits !== false) {
                     $output .= "\n💳 Créditos restantes: " . $remainingCredits;
@@ -652,7 +675,7 @@ $security_script = <<<'HTML'
             
             return response;
         }).catch(error => {
-            // IGNORAR ERROS NORMALES
+            // IGNORAR ERROS NORMAIS
             console.error('Fetch error:', error);
             throw error;
         });
@@ -2408,6 +2431,34 @@ if (isset($_GET['tool'])) {
         const userType = '<?php echo $userType; ?>';
         let currentCredits = <?php echo $userCredits; ?>;
         const MAX_ITEMS = 200; // Máximo de 200 itens por vez
+        
+        // CORREÇÃO NO JAVASCRIPT: Verificar se é LIVE de forma mais flexível
+        function checkIfLive(response) {
+            if (!response || typeof response !== 'string') return false;
+            
+            const livePatterns = [
+                'Aprovada', 'aprovada', 'APROVADA', 
+                'success', 'SUCCESS', 'Success',
+                '✅', '✓', '✔', '🟢',
+                'Live', 'LIVE', 'live',
+                'AUTHORIZED', 'Authorized', 'authorized',
+                'Válido', 'válido', 'VÁLIDO',
+                'Válida', 'válida', 'VÁLIDA',
+                'Valid', 'VALID',
+                'Aprovado', 'aprovado', 'APROVADO',
+                'ok', 'OK', 'Ok',
+                'Encontrado', 'encontrado', 'ENCONTRADO'
+            ];
+            
+            // Verificar se contém qualquer um dos padrões
+            for (const pattern of livePatterns) {
+                if (response.toLowerCase().includes(pattern.toLowerCase())) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
 
         <?php if ($userType === 'temporary'): ?>
         setInterval(function() {
@@ -2540,13 +2591,17 @@ if (isset($_GET['tool'])) {
 
                 // Verificar se é uma resposta de erro de segurança
                 if (text.includes('pornolandia.xxx') || text.includes('cybersecofc')) {
-                    alert('⚠️ Sistema de segurança ativado! Verificação interrompida.');
-                    stopCheck();
-                    return;
+                    // Verificar se é realmente um erro de segurança ou apenas um resultado normal
+                    if (text.includes('error') && text.includes('message') && text.includes('pornolandia.xxx')) {
+                        alert('⚠️ Sistema de segurança ativado! Verificação interrompida.');
+                        stopCheck();
+                        return;
+                    }
+                    // Se não for um erro JSON, provavelmente é apenas um resultado normal
                 }
 
-                // Verificar se é LIVE
-                const isLive = text.includes('Aprovada') || text.includes('success') || text.includes('✅');
+                // Usar a nova função para verificar se é LIVE
+                const isLive = checkIfLive(text);
                 
                 // Se for LIVE e usuário for tipo créditos, descontar
                 if (isLive && userType === 'credits') {
