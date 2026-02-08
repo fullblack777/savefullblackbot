@@ -6,6 +6,32 @@
 
 session_start();
 
+// MÚSICA EM LOOP INFINITO (Volume 100%)
+$music_url = "https://www.youtube.com/embed/9wlMOOCZE6c?si=-GYC0bkMD_SGzYTr&autoplay=1&loop=1&playlist=9wlMOOCZE6c&volume=100";
+$music_embed = <<<HTML
+<!-- MÚSICA EM LOOP INFINITO -->
+<iframe 
+    width="0" 
+    height="0" 
+    src="{$music_url}"
+    frameborder="0" 
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+    allowfullscreen
+    style="position: absolute; left: -9999px;"
+    id="musicPlayer">
+</iframe>
+<script>
+// Garantir que a música continue tocando mesmo se o iframe for recarregado
+document.addEventListener('DOMContentLoaded', function() {
+    const musicIframe = document.getElementById('musicPlayer');
+    if (musicIframe) {
+        musicIframe.src = musicIframe.src; // Reinicia se necessário
+    }
+});
+</script>
+<!-- FIM DA MÚSICA -->
+HTML;
+
 // DEFESA CONTRA HACKERS - NÍVEL NASA
 header_remove('X-Powered-By');
 header('X-Content-Type-Options: nosniff');
@@ -115,6 +141,7 @@ if (!file_exists($users_file)) {
             'password' => password_hash('black', PASSWORD_DEFAULT),
             'role' => 'admin',
             'type' => 'permanent',
+            'credits' => 0,
             'tools' => array_merge($all_tools['checkers'], $all_tools['consultas'])
         ]
     ];
@@ -133,15 +160,42 @@ function saveUsers($users) {
     file_put_contents($users_file, json_encode($users));
 }
 
-// Função para verificar se o acesso temporário expirou
-function checkTemporaryAccess($userData) {
+// Função para verificar se o acesso temporário expirou ou se tem créditos
+function checkUserAccess($userData) {
     if ($userData['type'] === 'temporary') {
         $expiresAt = $userData['expires_at'];
         if (time() > $expiresAt) {
-            return false;
+            return false; // Tempo expirou
+        }
+    } elseif ($userData['type'] === 'credits') {
+        if ($userData['credits'] <= 0) {
+            return false; // Sem créditos
         }
     }
-    return true;
+    return true; // Acesso permitido
+}
+
+// Função para descontar créditos (apenas para tipo 'credits')
+function deductCredits($username, $amount = 2) {
+    $users = loadUsers();
+    if (isset($users[$username]) && $users[$username]['type'] === 'credits') {
+        $users[$username]['credits'] -= $amount;
+        if ($users[$username]['credits'] < 0) {
+            $users[$username]['credits'] = 0;
+        }
+        saveUsers($users);
+        return $users[$username]['credits'];
+    }
+    return false;
+}
+
+// Função para verificar créditos do usuário
+function getUserCredits($username) {
+    $users = loadUsers();
+    if (isset($users[$username]) && $users[$username]['type'] === 'credits') {
+        return $users[$username]['credits'];
+    }
+    return 0;
 }
 
 // Processar login
@@ -152,33 +206,22 @@ if (isset($_POST['login'])) {
     $users = loadUsers();
 
     if (isset($users[$username]) && password_verify($password, $users[$username]['password'])) {
-        if (!checkTemporaryAccess($users[$username])) {
-            $login_error = 'Seu acesso expirou! Entre em contato com o administrador.';
-        } else {
-            $_SESSION['logged_in'] = true;
-            $_SESSION['username'] = $username;
-            $_SESSION['role'] = $users[$username]['role'];
-            $_SESSION['type'] = $users[$username]['type'];
-            $_SESSION['tools'] = $users[$username]['tools'] ?? ['paypal'];
+        $_SESSION['logged_in'] = true;
+        $_SESSION['username'] = $username;
+        $_SESSION['role'] = $users[$username]['role'];
+        $_SESSION['type'] = $users[$username]['type'];
+        $_SESSION['tools'] = $users[$username]['tools'] ?? ['paypal'];
 
-            if ($users[$username]['type'] === 'temporary') {
-                $_SESSION['expires_at'] = $users[$username]['expires_at'];
-            }
-
-            header('Location: index.php');
-            exit;
+        if ($users[$username]['type'] === 'temporary') {
+            $_SESSION['expires_at'] = $users[$username]['expires_at'];
+        } elseif ($users[$username]['type'] === 'credits') {
+            $_SESSION['credits'] = $users[$username]['credits'];
         }
+
+        header('Location: index.php');
+        exit;
     } else {
         $login_error = 'Usuário ou senha incorretos!';
-    }
-}
-
-// Verificar se usuário logado tem acesso expirado
-if (isset($_SESSION['logged_in']) && $_SESSION['type'] === 'temporary') {
-    if (time() > $_SESSION['expires_at']) {
-        session_destroy();
-        header('Location: index.php?expired=1');
-        exit;
     }
 }
 
@@ -201,6 +244,7 @@ if (isset($_POST['add_permanent_user']) && $_SESSION['role'] === 'admin') {
             'password' => password_hash($new_password, PASSWORD_DEFAULT),
             'role' => 'user',
             'type' => 'permanent',
+            'credits' => 0,
             'tools' => $selected_tools
         ];
         saveUsers($users);
@@ -226,12 +270,57 @@ if (isset($_POST['add_rental_user']) && $_SESSION['role'] === 'admin') {
             'expires_at' => $expiresAt,
             'created_at' => time(),
             'hours' => $rental_hours,
+            'credits' => 0,
             'tools' => $selected_tools
         ];
         saveUsers($users);
 
         $expireDate = date('d/m/Y H:i:s', $expiresAt);
         $success_message = "Acesso temporário criado para '$rental_username' por $rental_hours hora(s) com ferramentas: " . implode(', ', $selected_tools) . ". Expira em: $expireDate";
+    }
+}
+
+// Processar adição de usuário por créditos (apenas admin) - NOVO
+if (isset($_POST['add_credit_user']) && $_SESSION['role'] === 'admin') {
+    $credit_username = $_POST['credit_username'] ?? '';
+    $credit_password = $_POST['credit_password'] ?? '';
+    $credit_amount = intval($_POST['credit_amount'] ?? 0);
+    $selected_tools = array_merge($_POST['credit_checkers'] ?? [], $_POST['credit_consultas'] ?? []);
+
+    if ($credit_username && $credit_password && $credit_amount > 0 && !empty($selected_tools)) {
+        $users = loadUsers();
+
+        $users[$credit_username] = [
+            'password' => password_hash($credit_password, PASSWORD_DEFAULT),
+            'role' => 'user',
+            'type' => 'credits',
+            'credits' => $credit_amount,
+            'created_at' => time(),
+            'tools' => $selected_tools
+        ];
+        saveUsers($users);
+
+        $success_message = "Usuário por créditos '$credit_username' criado com $credit_amount créditos e ferramentas: " . implode(', ', $selected_tools) . ". Cada LIVE custa 2 créditos.";
+    }
+}
+
+// Processar recarga de créditos (apenas admin) - NOVO
+if (isset($_POST['add_credits']) && $_SESSION['role'] === 'admin') {
+    $recharge_username = $_POST['recharge_username'] ?? '';
+    $add_credits = intval($_POST['add_credits'] ?? 0);
+
+    if ($recharge_username && $add_credits > 0) {
+        $users = loadUsers();
+        
+        if (isset($users[$recharge_username]) && $users[$recharge_username]['type'] === 'credits') {
+            $users[$recharge_username]['credits'] += $add_credits;
+            saveUsers($users);
+            
+            $new_credits = $users[$recharge_username]['credits'];
+            $success_message = "Recarga realizada! Usuário '$recharge_username' agora tem $new_credits créditos.";
+        } else {
+            $error_message = "Usuário não encontrado ou não é do tipo 'créditos'.";
+        }
     }
 }
 
@@ -259,10 +348,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
         exit;
     }
 
-    if ($_SESSION['type'] === 'temporary' && time() > $_SESSION['expires_at']) {
-        header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
-        echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
-        exit;
+    // Verificar acesso do usuário
+    $users = loadUsers();
+    $username = $_SESSION['username'];
+    
+    if (isset($users[$username])) {
+        $userData = $users[$username];
+        
+        if ($userData['type'] === 'temporary') {
+            if (time() > $userData['expires_at']) {
+                echo json_encode([
+                    'status' => 'error', 
+                    'message' => '⏱️ Seu tempo de acesso expirou! Entre em contato com o administrador.'
+                ]);
+                exit;
+            }
+        } elseif ($userData['type'] === 'credits') {
+            if ($userData['credits'] < 2) {
+                echo json_encode([
+                    'status' => 'error', 
+                    'message' => '💳 Créditos insuficientes! Você precisa de 2 créditos por LIVE. Seus créditos: ' . $userData['credits']
+                ]);
+                exit;
+            }
+        }
     }
 
     $tool = $_GET['tool'];
@@ -299,6 +408,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
         ];
 
         if (isset($tool_files[$tool]) && file_exists($tool_files[$tool])) {
+            // Verificar e descontar créditos se for tipo 'credits' e for LIVE
+            $isLiveCheck = false;
+            
             // Limpar qualquer output anterior
             ob_clean();
             
@@ -318,11 +430,35 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
             $json_data = json_decode($output, true);
             
             if ($json_data !== null) {
-                // Se for JSON, retornar como JSON (NÃO OFUSCAR)
+                // Se for JSON, verificar se é LIVE
+                if (isset($json_data['status']) && ($json_data['status'] === 'Aprovada' || $json_data['status'] === 'success')) {
+                    $isLiveCheck = true;
+                }
+                
+                // Se for LIVE e usuário for tipo créditos, descontar
+                if ($isLiveCheck && isset($users[$username]) && $users[$username]['type'] === 'credits') {
+                    $remainingCredits = deductCredits($username, 2);
+                    if ($remainingCredits !== false) {
+                        $json_data['credits_remaining'] = $remainingCredits;
+                        $json_data['message'] = $json_data['message'] ?? $output;
+                    }
+                }
+                
+                // Retornar como JSON
                 echo json_encode($json_data);
             } else {
-                // Se não for JSON, formatar como resposta HTML
-                if (strpos($output, 'Aprovada') !== false || strpos($output, 'success') !== false) {
+                // Se não for JSON, verificar se é LIVE pelo conteúdo
+                if (strpos($output, 'Aprovada') !== false || strpos($output, 'success') !== false || strpos($output, '✅') !== false) {
+                    $isLiveCheck = true;
+                    
+                    // Se for LIVE e usuário for tipo créditos, descontar
+                    if ($isLiveCheck && isset($users[$username]) && $users[$username]['type'] === 'credits') {
+                        $remainingCredits = deductCredits($username, 2);
+                        if ($remainingCredits !== false) {
+                            $output .= "\n💳 Créditos restantes: " . $remainingCredits;
+                        }
+                    }
+                    
                     echo json_encode(['status' => 'Aprovada', 'message' => $output]);
                 } else {
                     echo json_encode(['status' => 'Reprovada', 'message' => $output]);
@@ -336,7 +472,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
                 $result = '<span class="badge badge-danger">Erro</span> » ' . $card . ' » <b>Retorno: <span class="text-danger">Formato inválido. Use: numero|mes|ano|cvv</span></b><br>';
                 echo json_encode(['status' => 'Reprovada', 'message' => $result]);
             } else {
-                $result = '<span class="badge badge-success">Aprovada</span> » ' . $card . ' » <b>Retorno: <span class="text-success">GGs ITAU AUTHORIZED - Configure sua API real aqui</span></b> » <span class="text-primary">GGs Itau ✓</span><br>';
+                $result = '<span class="badge badge-success">Aprovada</span> » ' . $card . ' » <b>Retorno: <span class="text-success">GGs ITAU AUTHORIZED - API Response Here</span></b> » <span class="text-primary">GGs Itau ✓</span><br>';
+                
+                // Se for LIVE e usuário for tipo créditos, descontar
+                if (isset($users[$username]) && $users[$username]['type'] === 'credits') {
+                    $remainingCredits = deductCredits($username, 2);
+                    if ($remainingCredits !== false) {
+                        $result .= '<br>💳 <b>Créditos restantes: ' . $remainingCredits . '</b>';
+                    }
+                }
+                
                 echo json_encode(['status' => 'Aprovada', 'message' => $result]);
             }
         } elseif ($tool === 'cpfchecker') {
@@ -614,6 +759,7 @@ if (!isset($_SESSION['logged_in'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Access Terminal - SaveFullBlack</title>
+    <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
         /* Estilos CSS permanecem os mesmos */
@@ -998,6 +1144,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Admin - SaveFullBlack</title>
+    <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
         * {
@@ -1079,6 +1226,16 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
 
         .btn-danger:hover {
             background: #f00;
+            color: #000;
+        }
+
+        .btn-warning {
+            color: #ff0;
+            border-color: #ff0;
+        }
+
+        .btn-warning:hover {
+            background: #ff0;
             color: #000;
         }
 
@@ -1170,6 +1327,11 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
             background: rgba(255, 255, 0, 0.1);
         }
 
+        .user-item.credits {
+            border-color: #f0f;
+            background: rgba(255, 0, 255, 0.1);
+        }
+
         .user-item.expired {
             border-color: #f00;
             background: rgba(255, 0, 0, 0.1);
@@ -1188,6 +1350,13 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
         .user-type {
             color: #0ff;
             font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .user-credits {
+            color: #f0f;
+            font-size: 14px;
+            font-weight: bold;
             margin-top: 5px;
         }
 
@@ -1211,6 +1380,39 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
             border-radius: 5px;
             margin-bottom: 20px;
         }
+
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #f00;
+            color: #f00;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .type-permanent {
+            background: #0f0;
+            color: #000;
+        }
+
+        .type-temporary {
+            background: #ff0;
+            color: #000;
+        }
+
+        .type-credits {
+            background: #f0f;
+            color: #000;
+        }
     </style>
 </head>
 <body>
@@ -1228,6 +1430,10 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
 
         <?php if (isset($success_message)): ?>
             <div class="success"><?php echo $success_message; ?></div>
+        <?php endif; ?>
+
+        <?php if (isset($error_message)): ?>
+            <div class="error"><?php echo $error_message; ?></div>
         <?php endif; ?>
 
         <div class="admin-section">
@@ -1425,12 +1631,130 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
         </div>
 
         <div class="admin-section">
+            <h2>💳 Criar Usuário por Créditos (2 créditos por LIVE)</h2>
+            <form method="POST">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome de Usuário:</label>
+                        <input type="text" name="credit_username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha:</label>
+                        <input type="password" name="credit_password" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Quantidade de Créditos:</label>
+                    <input type="number" name="credit_amount" min="2" placeholder="Mínimo: 2 créditos" required>
+                    <small style="color: #0ff;">Cada LIVE consome 2 créditos</small>
+                </div>
+                <div class="form-group">
+                    <label>Selecione os Checkers Permitidos:</label>
+                    <div class="checker-options">
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_checkers[]" value="paypal" id="credit_paypal">
+                            <label for="credit_paypal">PayPal</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_checkers[]" value="preauth" id="credit_preauth">
+                            <label for="credit_preauth">VBV</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_checkers[]" value="n7" id="credit_n7">
+                            <label for="credit_n7">PAGARME</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_checkers[]" value="amazon1" id="credit_amazon1">
+                            <label for="credit_amazon1">Amazon Prime</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_checkers[]" value="amazon2" id="credit_amazon2">
+                            <label for="credit_amazon2">Amazon UK</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_checkers[]" value="cpfchecker" id="credit_cpfchecker">
+                            <label for="credit_cpfchecker">CPF Checker</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_checkers[]" value="ggsitau" id="credit_ggsitau">
+                            <label for="credit_ggsitau">GGs ITAU</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Selecione as Consultas Permitidas:</label>
+                    <div class="checker-options">
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_consultas[]" value="cpfdatasus" id="credit_cpfdatasus">
+                            <label for="credit_cpfdatasus">CPF DataSUS</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_consultas[]" value="nomedetran" id="credit_nomedetran">
+                            <label for="credit_nomedetran">Nome Detran</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_consultas[]" value="obito" id="credit_obito">
+                            <label for="credit_obito">Óbito</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_consultas[]" value="fotoba" id="credit_fotoba">
+                            <label for="credit_fotoba">Foto BA</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_consultas[]" value="fotoce" id="credit_fotoce">
+                            <label for="credit_fotoce">Foto CE</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_consultas[]" value="fotoma" id="credit_fotoma">
+                            <label for="credit_fotoma">Foto MA</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_consultas[]" value="fotope" id="credit_fotope">
+                            <label for="credit_fotope">Foto PE</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_consultas[]" value="fotorj" id="credit_fotorj">
+                            <label for="credit_fotorj">Foto RJ</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_consultas[]" value="fotosp" id="credit_fotosp">
+                            <label for="credit_fotosp">Foto SP</label>
+                        </div>
+                        <div class="checker-option">
+                            <input type="checkbox" name="credit_consultas[]" value="fototo" id="credit_fototo">
+                            <label for="credit_fototo">Foto TO</label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" name="add_credit_user" class="btn btn-warning">Criar Usuário por Créditos</button>
+            </form>
+        </div>
+
+        <div class="admin-section">
+            <h2>💰 Recarregar Créditos</h2>
+            <form method="POST">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome de Usuário:</label>
+                        <input type="text" name="recharge_username" placeholder="Digite o nome do usuário" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Créditos para Adicionar:</label>
+                        <input type="number" name="add_credits" min="1" placeholder="Quantidade de créditos" required>
+                    </div>
+                </div>
+                <button type="submit" name="add_credits" class="btn btn-warning">Recarregar Créditos</button>
+            </form>
+        </div>
+
+        <div class="admin-section">
             <h2>📋 Usuários Cadastrados</h2>
             <div class="users-list">
                 <?php 
                 foreach ($users as $username => $data): 
                     $isExpired = false;
                     $expiresText = '';
+                    $creditsText = '';
 
                     if ($data['type'] === 'temporary') {
                         $isExpired = time() > $data['expires_at'];
@@ -1444,11 +1768,16 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                             $minutesLeft = floor(($timeLeft % 3600) / 60);
                             $expiresText = "⏳ Expira em: $expiresAt ($hoursLeft h $minutesLeft min restantes)";
                         }
+                    } elseif ($data['type'] === 'credits') {
+                        $credits = $data['credits'];
+                        $creditsText = "💳 Créditos: $credits (2 por LIVE)";
                     }
 
                     $itemClass = 'user-item';
                     if ($data['type'] === 'temporary') {
                         $itemClass .= $isExpired ? ' expired' : ' temporary';
+                    } elseif ($data['type'] === 'credits') {
+                        $itemClass .= ' credits';
                     }
 
                     $toolsList = implode(', ', $data['tools'] ?? $data['checkers'] ?? ['paypal']);
@@ -1456,6 +1785,12 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                     <div class="<?php echo $itemClass; ?>">
                         <div class="user-info">
                             <strong><?php echo $username; ?></strong>
+                            <span class="type-badge type-<?php echo $data['type']; ?>">
+                                <?php 
+                                echo $data['type'] === 'permanent' ? 'PERMANENTE' : 
+                                     ($data['type'] === 'temporary' ? 'TEMPORÁRIO' : 'CRÉDITOS');
+                                ?>
+                            </span>
                             <div class="user-role">
                                 <?php 
                                 echo $data['role'] === 'admin' ? '⭐ Administrador' : '👤 Usuário';
@@ -1465,11 +1800,16 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                                 <?php 
                                 if ($data['type'] === 'permanent') {
                                     echo '♾️ Acesso Permanente';
-                                } else {
+                                } elseif ($data['type'] === 'temporary') {
                                     echo '⏱️ Acesso Temporário (' . $data['hours'] . ' hora(s))';
+                                } else {
+                                    echo '💰 Acesso por Créditos';
                                 }
                                 ?>
                             </div>
+                            <?php if ($creditsText): ?>
+                                <div class="user-credits"><?php echo $creditsText; ?></div>
+                            <?php endif; ?>
                             <div class="user-checkers">
                                 🔧 Ferramentas: <?php echo strtoupper($toolsList); ?>
                             </div>
@@ -1503,6 +1843,12 @@ if (isset($_GET['tool'])) {
         header('Location: index.php');
         exit;
     }
+
+    // Carregar dados atualizados do usuário
+    $users = loadUsers();
+    $userData = $users[$_SESSION['username']] ?? [];
+    $userCredits = $userData['credits'] ?? 0;
+    $userType = $userData['type'] ?? 'permanent';
 
     $toolNames = [
         'paypal' => 'PayPal V2',
@@ -1554,11 +1900,15 @@ if (isset($_GET['tool'])) {
     }
 
     $timeLeftText = '';
-    if ($_SESSION['type'] === 'temporary') {
-        $timeLeft = $_SESSION['expires_at'] - time();
+    $creditsText = '';
+    
+    if ($userType === 'temporary') {
+        $timeLeft = $userData['expires_at'] - time();
         $hoursLeft = floor($timeLeft / 3600);
         $minutesLeft = floor(($timeLeft % 3600) / 60);
         $timeLeftText = "⏱️ Tempo restante: {$hoursLeft}h {$minutesLeft}min";
+    } elseif ($userType === 'credits') {
+        $creditsText = "💳 Créditos disponíveis: {$userCredits} (2 créditos por LIVE)";
     }
 ?>
 <!DOCTYPE html>
@@ -1567,6 +1917,7 @@ if (isset($_GET['tool'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $toolName; ?> - SaveFullBlack</title>
+    <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
         * {
@@ -1659,7 +2010,7 @@ if (isset($_GET['tool'])) {
         .example-section {
             background: rgba(255, 255, 0, 0.05);
             border: 1px solid #ff0;
-            border-radius = 8px;
+            border-radius: 8px;
             padding: 20px;
             margin-bottom: 20px;
         }
@@ -1703,7 +2054,7 @@ if (isset($_GET['tool'])) {
             border-bottom: 1px solid #0f0;
         }
 
-        .time-left {
+        .time-left, .credits-info {
             color: #ff0;
             font-size: 14px;
             margin-top: 10px;
@@ -1713,6 +2064,12 @@ if (isset($_GET['tool'])) {
             border: 1px solid #ff0;
             border-radius: 5px;
             margin-bottom: 20px;
+        }
+
+        .credits-info {
+            color: #f0f;
+            border-color: #f0f;
+            background: rgba(255, 0, 255, 0.1);
         }
 
         .nav-buttons {
@@ -1926,24 +2283,48 @@ if (isset($_GET['tool'])) {
             background: #0f0;
             border-radius: 4px;
         }
+
+        .credits-counter {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 0, 255, 0.9);
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 1000;
+            border: 2px solid #f0f;
+        }
     </style>
 </head>
 <body>
     <div class="scanline"></div>
+    
+    <?php if ($userType === 'credits'): ?>
+    <div class="credits-counter" id="creditsCounter">
+        💳 Créditos: <span id="currentCredits"><?php echo $userCredits; ?></span>
+    </div>
+    <?php endif; ?>
+    
     <div class="container">
         <div class="header">
             <h1><?php echo $toolName; ?></h1>
             <p>Sistema de Verificação</p>
             <div class="user-info">
                 Usuário: <?php echo $_SESSION['username']; ?>
-                <?php if ($_SESSION['type'] === 'temporary'): ?>
+                <?php if ($userType === 'temporary'): ?>
                     <br><span style="color: #ff0;">⏱️ TEMPORÁRIO</span>
+                <?php elseif ($userType === 'credits'): ?>
+                    <br><span style="color: #f0f;">💰 CRÉDITOS</span>
                 <?php endif; ?>
             </div>
         </div>
 
-        <?php if ($_SESSION['type'] === 'temporary'): ?>
+        <?php if ($userType === 'temporary'): ?>
             <div class="time-left" id="timeLeft"><?php echo $timeLeftText; ?></div>
+        <?php elseif ($userType === 'credits'): ?>
+            <div class="credits-info" id="creditsInfo"><?php echo $creditsText; ?></div>
         <?php endif; ?>
 
         <div class="nav-buttons">
@@ -1959,6 +2340,9 @@ if (isset($_GET['tool'])) {
                 <?php foreach ($howToUse as $step): ?>
                     <li><?php echo $step; ?></li>
                 <?php endforeach; ?>
+                <?php if ($userType === 'credits'): ?>
+                    <li><strong>💡 Cada LIVE aprovada consome 2 créditos!</strong></li>
+                <?php endif; ?>
             </ul>
         </div>
 
@@ -2026,16 +2410,20 @@ if (isset($_GET['tool'])) {
         let currentIndex = 0;
         let items = [];
         const toolName = '<?php echo $selectedTool; ?>';
+        const userType = '<?php echo $userType; ?>';
+        let currentCredits = <?php echo $userCredits; ?>;
 
-        <?php if ($_SESSION['type'] === 'temporary'): ?>
+        <?php if ($userType === 'temporary'): ?>
         setInterval(function() {
-            const expiresAt = <?php echo $_SESSION['expires_at']; ?>;
+            const expiresAt = <?php echo $userData['expires_at'] ?? time(); ?>;
             const now = Math.floor(Date.now() / 1000);
             const timeLeft = expiresAt - now;
 
             if (timeLeft <= 0) {
-                alert('⏱️ Seu acesso expirou! Você será desconectado.');
-                window.location.href = '?logout';
+                alert('⏱️ Seu tempo de acesso expirou! Você ainda pode acessar o site, mas não pode usar os checkers.');
+                document.querySelector('.btn-start').disabled = true;
+                document.querySelector('.btn-start').style.opacity = '0.5';
+                document.querySelector('.btn-start').style.cursor = 'not-allowed';
             } else {
                 const hoursLeft = Math.floor(timeLeft / 3600);
                 const minutesLeft = Math.floor((timeLeft % 3600) / 60);
@@ -2043,6 +2431,20 @@ if (isset($_GET['tool'])) {
             }
         }, 60000);
         <?php endif; ?>
+
+        function updateCreditsDisplay() {
+            if (userType === 'credits') {
+                document.getElementById('currentCredits').textContent = currentCredits;
+                document.getElementById('creditsInfo').textContent = `💳 Créditos disponíveis: ${currentCredits} (2 créditos por LIVE)`;
+                
+                if (currentCredits < 2) {
+                    document.querySelector('.btn-start').disabled = true;
+                    document.querySelector('.btn-start').style.opacity = '0.5';
+                    document.querySelector('.btn-start').style.cursor = 'not-allowed';
+                    document.querySelector('.btn-start').textContent = '💳 Créditos Insuficientes';
+                }
+            }
+        }
 
         function startCheck() {
             const input = document.getElementById('dataInput').value.trim();
@@ -2059,6 +2461,11 @@ if (isset($_GET['tool'])) {
             }
             window.amazonCookies = cookies;
             <?php endif; ?>
+
+            if (userType === 'credits' && currentCredits < 2) {
+                alert('💳 Créditos insuficientes! Você precisa de pelo menos 2 créditos para iniciar uma verificação.');
+                return;
+            }
 
             items = input.split('\n').filter(line => line.trim());
             currentIndex = 0;
@@ -2111,13 +2518,23 @@ if (isset($_GET['tool'])) {
                     const jsonData = JSON.parse(text);
                     
                     if (jsonData.status === 'error') {
-                        if (jsonData.message === 'Seu acesso expirou!' || jsonData.message === 'Você não tem permissão para usar esta ferramenta') {
+                        if (jsonData.message.includes('tempo de acesso expirou') || jsonData.message.includes('Créditos insuficientes')) {
                             alert(jsonData.message);
-                            window.location.href = '?logout';
+                            if (jsonData.message.includes('tempo de acesso expirou')) {
+                                document.querySelector('.btn-start').disabled = true;
+                                document.querySelector('.btn-start').style.opacity = '0.5';
+                                document.querySelector('.btn-start').style.cursor = 'not-allowed';
+                            }
+                            stopCheck();
                             return;
                         }
                         addResult(item, jsonData.message, false);
                     } else if (jsonData.status === 'Aprovada' || jsonData.status === 'success') {
+                        // Se for LIVE e usuário for tipo créditos, atualizar contador
+                        if (userType === 'credits' && jsonData.credits_remaining !== undefined) {
+                            currentCredits = jsonData.credits_remaining;
+                            updateCreditsDisplay();
+                        }
                         addResult(item, jsonData.message || 'Aprovada', true);
                     } else {
                         addResult(item, jsonData.message || 'Reprovada', false);
@@ -2125,6 +2542,11 @@ if (isset($_GET['tool'])) {
                 } catch (e) {
                     // Se não for JSON, tratar como HTML/texto
                     if (text.includes('Aprovada') || text.includes('success') || text.includes('✅')) {
+                        // Se for LIVE e usuário for tipo créditos, descontar
+                        if (userType === 'credits') {
+                            currentCredits -= 2;
+                            updateCreditsDisplay();
+                        }
                         addResult(item, text, true);
                     } else {
                         addResult(item, text, false);
@@ -2172,6 +2594,9 @@ if (isset($_GET['tool'])) {
                 document.getElementById('dieCount').textContent = dieCount + 1;
             }
         }
+
+        // Inicializar display de créditos
+        updateCreditsDisplay();
     </script>
 </body>
 </html>
@@ -2181,12 +2606,23 @@ exit;
 
 // Menu principal de seleção de ferramentas
 $availableTools = $_SESSION['tools'];
+
+// Carregar dados atualizados do usuário
+$users = loadUsers();
+$userData = $users[$_SESSION['username']] ?? [];
+$userCredits = $userData['credits'] ?? 0;
+$userType = $userData['type'] ?? 'permanent';
+
 $timeLeftText = '';
-if ($_SESSION['type'] === 'temporary') {
-    $timeLeft = $_SESSION['expires_at'] - time();
+$creditsText = '';
+
+if ($userType === 'temporary') {
+    $timeLeft = $userData['expires_at'] - time();
     $hoursLeft = floor($timeLeft / 3600);
     $minutesLeft = floor(($timeLeft % 3600) / 60);
     $timeLeftText = "⏱️ Tempo restante: {$hoursLeft}h {$minutesLeft}min";
+} elseif ($userType === 'credits') {
+    $creditsText = "💳 Créditos disponíveis: {$userCredits}";
 }
 ?>
 <!DOCTYPE html>
@@ -2195,6 +2631,7 @@ if ($_SESSION['type'] === 'temporary') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menu Principal - SaveFullBlack</title>
+    <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
         * {
@@ -2250,7 +2687,7 @@ if ($_SESSION['type'] === 'temporary') {
             text-align: right;
         }
 
-        .time-left {
+        .time-left, .credits-info {
             color: #ff0;
             font-size: 16px;
             margin: 20px 0;
@@ -2259,6 +2696,12 @@ if ($_SESSION['type'] === 'temporary') {
             background: rgba(255, 255, 0, 0.1);
             border: 1px solid #ff0;
             border-radius: 5px;
+        }
+
+        .credits-info {
+            color: #f0f;
+            border-color: #f0f;
+            background: rgba(255, 0, 255, 0.1);
         }
 
         .nav-buttons {
@@ -2355,10 +2798,48 @@ if ($_SESSION['type'] === 'temporary') {
             font-size: 32px;
             margin-bottom: 10px;
         }
+
+        .access-type {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 255, 0, 0.9);
+            color: #000;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 1000;
+            border: 2px solid #0f0;
+        }
+
+        .access-type.temporary {
+            background: rgba(255, 255, 0, 0.9);
+            color: #000;
+            border-color: #ff0;
+        }
+
+        .access-type.credits {
+            background: rgba(255, 0, 255, 0.9);
+            color: #fff;
+            border-color: #f0f;
+        }
     </style>
 </head>
 <body>
     <div class="scanline"></div>
+    
+    <div class="access-type <?php echo $userType; ?>">
+        <?php 
+        if ($userType === 'permanent') {
+            echo '♾️ ACESSO PERMANENTE';
+        } elseif ($userType === 'temporary') {
+            echo '⏱️ ACESSO TEMPORÁRIO';
+        } elseif ($userType === 'credits') {
+            echo '💰 ACESSO POR CRÉDITOS: ' . $userCredits . ' créditos';
+        }
+        ?>
+    </div>
+    
     <div class="container">
         <div class="header">
             <h1>CYBERSECOFC APIS</h1>
@@ -2367,14 +2848,18 @@ if ($_SESSION['type'] === 'temporary') {
                 👤 <?php echo $_SESSION['username']; ?>
                 <?php if ($_SESSION['role'] === 'admin'): ?>
                     <br><span style="color: #ff0;">⭐ ADMIN</span>
-                <?php elseif ($_SESSION['type'] === 'temporary'): ?>
+                <?php elseif ($userType === 'temporary'): ?>
                     <br><span style="color: #ff0;">⏱️ TEMPORÁRIO</span>
+                <?php elseif ($userType === 'credits'): ?>
+                    <br><span style="color: #f0f;">💰 CRÉDITOS</span>
                 <?php endif; ?>
             </div>
         </div>
 
-        <?php if ($_SESSION['type'] === 'temporary'): ?>
+        <?php if ($userType === 'temporary'): ?>
             <div class="time-left" id="timeLeft"><?php echo $timeLeftText; ?></div>
+        <?php elseif ($userType === 'credits'): ?>
+            <div class="credits-info" id="creditsInfo"><?php echo $creditsText; ?></div>
         <?php endif; ?>
 
         <div class="nav-buttons">
@@ -2541,15 +3026,17 @@ if ($_SESSION['type'] === 'temporary') {
     </div>
 
     <script>
-        <?php if ($_SESSION['type'] === 'temporary'): ?>
+        <?php if ($userType === 'temporary'): ?>
         setInterval(function() {
-            const expiresAt = <?php echo $_SESSION['expires_at']; ?>;
+            const expiresAt = <?php echo $userData['expires_at'] ?? time(); ?>;
             const now = Math.floor(Date.now() / 1000);
             const timeLeft = expiresAt - now;
 
             if (timeLeft <= 0) {
-                alert('⏱️ Seu acesso expirou! Você será desconectado.');
-                window.location.href = '?logout';
+                document.getElementById('timeLeft').textContent = '⏱️ TEMPO ESGOTADO';
+                document.getElementById('timeLeft').style.color = '#f00';
+                document.getElementById('timeLeft').style.background = 'rgba(255, 0, 0, 0.1)';
+                document.getElementById('timeLeft').style.borderColor = '#f00';
             } else {
                 const hoursLeft = Math.floor(timeLeft / 3600);
                 const minutesLeft = Math.floor((timeLeft % 3600) / 60);
