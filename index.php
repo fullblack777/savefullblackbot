@@ -391,7 +391,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
         // Mapear os nomes corretamente
         $tool_files = [
             'paypal' => 'attached_assets/PAYPALV2OFC.php',
-            'preauth' => 'attached_assets/VBVOFC.php',
+            'preauth' => 'attached_assets/cielo.php',
             'n7' => 'attached_assets/PAGARMEOFC.php',
             'amazon1' => 'attached_assets/AMAZONOFC1.php',
             'amazon2' => 'attached_assets/AMAZONOFC2.php',
@@ -1053,7 +1053,7 @@ if (!isset($_SESSION['logged_in'])) {
                     <ul>
                         <li>PAYPAL V2 - Verificação de cartões PayPal @CYBERSECOFC</li>
                         <li>PAGARME - VISA=AMEX=MASTER=ELO @CYBERSECOFC</li>
-                        <li>VBV - @CYBERSECOFC</li>
+                        <li>cielo - @CYBERSECOFC</li>
                         <li>Amazon US Checker - Verificação via Amazon.com @CYBERSECOFC</li>
                         <li>Amazon UK Checker - Verificação via Amazon.co.uk @CYBERSECOFC</li>
                         <li>GGs AMEX - @CYBERSECOFC</li>
@@ -1454,7 +1454,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="checkers[]" value="preauth" id="perm_preauth">
-                            <label for="perm_preauth">VBV</label>
+                            <label for="perm_preauth">cielo</label>
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="checkers[]" value="n7" id="perm_n7">
@@ -1553,7 +1553,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="rental_checkers[]" value="preauth" id="rental_preauth">
-                            <label for="rental_preauth">VBV</label>
+                            <label for="rental_preauth">cielo</label>
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="rental_checkers[]" value="n7" id="rental_n7">
@@ -1653,7 +1653,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="credit_checkers[]" value="preauth" id="credit_preauth">
-                            <label for="credit_preauth">VBV</label>
+                            <label for="credit_preauth">cielo</label>
                         </div>
                         <div class="checker-option">
                             <input type="checkbox" name="credit_checkers[]" value="n7" id="credit_n7">
@@ -1848,7 +1848,7 @@ if (isset($_GET['tool'])) {
 
     $toolNames = [
         'paypal' => 'PayPal V2',
-        'preauth' => 'VBV',
+        'preauth' => 'cielo',
         'n7' => 'PAGARME',
         'amazon1' => 'Amazon Prime Checker',
         'amazon2' => 'Amazon UK Checker',
@@ -2951,8 +2951,8 @@ if ($userType === 'temporary') {
                 <?php if (in_array('preauth', $availableTools)): ?>
                 <a href="?tool=preauth" class="tool-card">
                     <div class="tool-icon">🔐</div>
-                    <h3>VBV</h3>
-                    <p>VERIFICAÇAO DE 3DS GGS</p>
+                    <h3>cielo</h3>
+                    <p>gate cielo</p>
                 </a>
                 <?php endif; ?>
 
