@@ -23,15 +23,25 @@ if (isset($_GET['lista'])) {
     $response_time = isset($result['request_info']['response_time']) ? 
                     round($result['request_info']['response_time'], 2) . 's' : 'N/A';
     
-    // Retornar com os dados do cartão
-    $cartao_dados = explode('|', $lista);
-    $cartao_formatado = substr($cartao_dados[0], 0, 4) . '********' . substr($cartao_dados[0], -4);
+    // Extrair dados do cartão
+    $dados = explode('|', $lista);
+    $cartao = isset($dados[0]) ? trim($dados[0]) : '';
+    $mes = isset($dados[1]) ? trim($dados[1]) : '';
+    $ano = isset($dados[2]) ? trim($dados[2]) : '';
+    $cvv = isset($dados[3]) ? trim($dados[3]) : '';
     
+    // Formatar cartão para exibição
+    $cartao_formatado = strlen($cartao) >= 16 ? 
+                       substr($cartao, 0, 4) . '********' . substr($cartao, -4) : 
+                       $cartao;
+    
+    // Formatar mensagem final
     $formatted_response = [
         'error' => $result['error'],
         'success' => $result['success'],
         'actual_message' => $result['actual_message'],
-        'message' => $cartao_formatado . '|' . $cartao_dados[1] . '|' . $cartao_dados[2] . '|' . $cartao_dados[3] . ' -> ' . $result['message'] . ' @cybersecofc - Tempo: ' . $response_time
+        'message' => $cartao_formatado . '|' . $mes . '|' . $ano . '|' . $cvv . ' -> ' . 
+                    $result['message'] . ' @cybersecofc - Tempo: ' . $response_time
     ];
     
     echo json_encode($formatted_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
@@ -373,10 +383,19 @@ function analisar_resposta($result, $lista_original) {
     $raw_response = $result['response'];
     $http_code = $result['http_code'];
     
-    // Formatar cartão para exibição
+    // Extrair dados do cartão
     $dados_cartao = explode('|', $lista_original);
-    $cartao_formatado = substr($dados_cartao[0], 0, 4) . '********' . substr($dados_cartao[0], -4);
-    $cartao_info = $cartao_formatado . '|' . $dados_cartao[1] . '|' . $dados_cartao[2] . '|' . $dados_cartao[3];
+    $cartao = isset($dados_cartao[0]) ? trim($dados_cartao[0]) : '';
+    $mes = isset($dados_cartao[1]) ? trim($dados_cartao[1]) : '';
+    $ano = isset($dados_cartao[2]) ? trim($dados_cartao[2]) : '';
+    $cvv = isset($dados_cartao[3]) ? trim($dados_cartao[3]) : '';
+    
+    // Formatar cartão para exibição
+    $cartao_formatado = strlen($cartao) >= 16 ? 
+                       substr($cartao, 0, 4) . '********' . substr($cartao, -4) : 
+                       $cartao;
+    
+    $cartao_info = $cartao_formatado . '|' . $mes . '|' . $ano . '|' . $cvv;
     
     // Verificar se houve erro de permissão
     if (strpos($raw_response, "don't have permissions") !== false || 
@@ -445,37 +464,32 @@ function analisar_resposta($result, $lista_original) {
         
         // Verificar código de retorno primeiro
         if ($codigo_retorno !== null) {
-            // Se for código de reprovação, retornar die
+            // Se for código de reprovação, retornar DIE com sucesso=false
             if (in_array($codigo_retorno, $codigos_reprovados)) {
                 die(json_encode([
                     'error' => true,
                     'success' => false,
-                    'actual_message' => '',
-                    'message' => $cartao_info . ' -> REPROVADO - ' . $status_cielo
+                    'actual_message' => $mensagem_gateway,
+                    'message' => $status_cielo
                 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             }
             
-            // Se for código aprovado, continuar processamento
+            // Se for código aprovado, retornar LIVE com sucesso=true
             if (in_array($codigo_retorno, $codigos_aprovados)) {
-                $formatted = [
+                $response_time = isset($result['curl_info']['total_time']) ? 
+                               round($result['curl_info']['total_time'], 2) . 's' : 'N/A';
+                
+                return [
                     'error' => false,
                     'success' => true,
                     'actual_message' => $mensagem_gateway,
                     'message' => $status_cielo,
-                    'payment_status' => isset($response_data['payment_status']) ? $response_data['payment_status'] : '',
-                    'payment_actual_status' => isset($response_data['payment_actual_status']) ? $response_data['payment_actual_status'] : '',
-                    'http_code' => $http_code,
-                    'codigo_retorno' => $codigo_retorno,
-                    'status_cielo' => $status_cielo
+                    'request_info' => [
+                        'http_code' => $http_code,
+                        'curl_error' => $result['curl_error'],
+                        'response_time' => isset($result['curl_info']['total_time']) ? $result['curl_info']['total_time'] : 0
+                    ]
                 ];
-                
-                $formatted['request_info'] = [
-                    'http_code' => $http_code,
-                    'curl_error' => $result['curl_error'],
-                    'response_time' => isset($result['curl_info']['total_time']) ? $result['curl_info']['total_time'] : 0
-                ];
-                
-                return $formatted;
             }
         }
         
@@ -498,8 +512,8 @@ function analisar_resposta($result, $lista_original) {
                 die(json_encode([
                     'error' => true,
                     'success' => false,
-                    'actual_message' => '',
-                    'message' => $cartao_info . ' -> REPROVADO - ' . $mensagem_gateway
+                    'actual_message' => $mensagem_gateway,
+                    'message' => $mensagem_gateway
                 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             }
         }
@@ -532,33 +546,28 @@ function analisar_resposta($result, $lista_original) {
         
         // Se for aprovado, retornar sucesso
         if ($is_aprovado) {
-            $formatted = [
+            $response_time = isset($result['curl_info']['total_time']) ? 
+                           round($result['curl_info']['total_time'], 2) . 's' : 'N/A';
+            
+            return [
                 'error' => false,
                 'success' => true,
                 'actual_message' => $mensagem_gateway,
-                'message' => 'APROVADO - ' . $mensagem_gateway,
-                'payment_status' => isset($response_data['payment_status']) ? $response_data['payment_status'] : '',
-                'payment_actual_status' => isset($response_data['payment_actual_status']) ? $response_data['payment_actual_status'] : '',
-                'http_code' => $http_code,
-                'codigo_retorno' => $codigo_retorno,
-                'status_cielo' => $status_cielo
+                'message' => $mensagem_gateway,
+                'request_info' => [
+                    'http_code' => $http_code,
+                    'curl_error' => $result['curl_error'],
+                    'response_time' => isset($result['curl_info']['total_time']) ? $result['curl_info']['total_time'] : 0
+                ]
             ];
-            
-            $formatted['request_info'] = [
-                'http_code' => $http_code,
-                'curl_error' => $result['curl_error'],
-                'response_time' => isset($result['curl_info']['total_time']) ? $result['curl_info']['total_time'] : 0
-            ];
-            
-            return $formatted;
         }
         
-        // Se chegou aqui e não é nem aprovado nem reprovado, considerar como erro
+        // Se chegou aqui e não é nem aprovado nem reprovado, considerar como erro (DIE)
         die(json_encode([
             'error' => true,
             'success' => false,
-            'actual_message' => '',
-            'message' => $cartao_info . ' -> RESPOSTA NÃO RECONHECIDA: ' . $mensagem_gateway
+            'actual_message' => $mensagem_gateway,
+            'message' => $mensagem_gateway ?: 'Resposta não reconhecida'
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         
     } else {
@@ -579,7 +588,7 @@ function analisar_resposta($result, $lista_original) {
                     'error' => true,
                     'success' => false,
                     'actual_message' => '',
-                    'message' => $cartao_info . ' -> REPROVADO - Cartão recusado'
+                    'message' => 'Cartão recusado'
                 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             }
         }
@@ -592,21 +601,20 @@ function analisar_resposta($result, $lista_original) {
         
         foreach ($palavras_aprovacao_raw as $palavra) {
             if (strpos($raw_lower, $palavra) !== false) {
-                $formatted = [
+                $response_time = isset($result['curl_info']['total_time']) ? 
+                               round($result['curl_info']['total_time'], 2) . 's' : 'N/A';
+                
+                return [
                     'error' => false,
                     'success' => true,
                     'actual_message' => '',
                     'message' => 'APROVADO - Detecção por texto',
-                    'http_code' => $http_code
+                    'request_info' => [
+                        'http_code' => $http_code,
+                        'curl_error' => $result['curl_error'],
+                        'response_time' => isset($result['curl_info']['total_time']) ? $result['curl_info']['total_time'] : 0
+                    ]
                 ];
-                
-                $formatted['request_info'] = [
-                    'http_code' => $http_code,
-                    'curl_error' => $result['curl_error'],
-                    'response_time' => isset($result['curl_info']['total_time']) ? $result['curl_info']['total_time'] : 0
-                ];
-                
-                return $formatted;
             }
         }
         
@@ -620,13 +628,12 @@ function analisar_resposta($result, $lista_original) {
             $message = substr($raw_response, 0, 200);
         }
         
-        // Se não conseguiu detectar nada, retornar como erro
+        // Se não conseguiu detectar nada, retornar como erro (DIE)
         die(json_encode([
             'error' => true,
             'success' => false,
             'actual_message' => '',
-            'message' => $cartao_info . ' -> ERRO: ' . $message
+            'message' => $message
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 }
-?>
