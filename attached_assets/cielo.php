@@ -449,6 +449,33 @@ function analisar_resposta($result) {
             }
         }
         
+        // VERIFICAÇÃO CRÍTICA: Se a mensagem contém palavras de negação, retornar DIE
+        $mensagem_negacao = '';
+        if (isset($response_data['message'])) {
+            $mensagem_negacao = strtolower($response_data['message']);
+        } elseif (isset($response_data['decline_message'])) {
+            $mensagem_negacao = strtolower($response_data['decline_message']);
+        }
+        
+        // Palavras-chave que indicam reprovação
+        $palavras_reprovacao = [
+            'negado', 'negada', 'rejeitado', 'rejeitada', 'recusado', 'recusada',
+            'recuse', 'denied', 'declined', 'failed', 'falhou', 'recusa',
+            'pagamento negado', 'cartão recusado', 'transação recusada',
+            'tente outro cartão', 'escolha outro método'
+        ];
+        
+        foreach ($palavras_reprovacao as $palavra) {
+            if (strpos($mensagem_negacao, $palavra) !== false) {
+                die(json_encode([
+                    'error' => true,
+                    'success' => false,
+                    'actual_message' => '',
+                    'message' => 'REPROVADO - ' . (isset($response_data['message']) ? $response_data['message'] : 'Cartão recusado')
+                ], JSON_PRETTY_PRINT));
+            }
+        }
+        
         $formatted = [
             'error' => isset($response_data['error']) ? (bool)$response_data['error'] : true,
             'success' => isset($response_data['success']) ? (bool)$response_data['success'] : false,
@@ -468,7 +495,18 @@ function analisar_resposta($result) {
             'status_cielo' => $status_cielo
         ];
         
+        // CORREÇÃO CRÍTICA: Ajustar lógica de sucesso/erro baseado na mensagem real
+        // Se a mensagem contém "negado" mas error=false, forçar error=true
+        $mensagem_lower = strtolower($formatted['message']);
+        if (strpos($mensagem_lower, 'negado') !== false || 
+            strpos($mensagem_lower, 'recusado') !== false ||
+            strpos($mensagem_lower, 'rejeitado') !== false) {
+            $formatted['error'] = true;
+            $formatted['success'] = false;
+            // Não retornar die aqui ainda, vamos deixar o fluxo continuar para ver o resultado final
+        }
         
+        // Determinar status final
         if (stripos($formatted['payment_status'], 'aprovado') !== false || 
             stripos($formatted['payment_actual_status'], 'approve') !== false ||
             stripos($formatted['message'], 'aprovado') !== false ||
@@ -484,7 +522,7 @@ function analisar_resposta($result) {
                  stripos($formatted['payment_actual_status'], 'reject') !== false ||
                  stripos($formatted['message'], 'negado') !== false ||
                  stripos($formatted['decline_message'], 'negado') !== false) {
-            // Se detectou reprovação sem código específico
+            // AGORA RETORNA DIE se for reprovado
             die(json_encode([
                 'error' => true,
                 'success' => false,
@@ -500,6 +538,25 @@ function analisar_resposta($result) {
         $message = 'Resposta inválida do servidor';
         $status = 'ERRO';
         
+        // Verificar se há mensagem de negação na resposta bruta
+        $raw_lower = strtolower($raw_response);
+        $palavras_reprovacao_raw = [
+            'negado', 'negada', 'rejeitado', 'rejeitada', 'recusado', 'recusada',
+            'recuse', 'denied', 'declined', 'failed', 'falhou', 'recusa',
+            'pagamento negado', 'cartão recusado', 'transação recusada'
+        ];
+        
+        foreach ($palavras_reprovacao_raw as $palavra) {
+            if (strpos($raw_lower, $palavra) !== false) {
+                die(json_encode([
+                    'error' => true,
+                    'success' => false,
+                    'actual_message' => '',
+                    'message' => 'REPROVADO - Cartão recusado'
+                ], JSON_PRETTY_PRINT));
+            }
+        }
+        
         
         $patterns = [
             '/aprovado|approved|success/i' => 'APROVADO',
@@ -514,18 +571,18 @@ function analisar_resposta($result) {
             if (preg_match($pattern, $raw_response)) {
                 $message = 'Status detectado: ' . $pattern_status;
                 $status = $pattern_status;
+                
+                // Se for reprovado, die
+                if ($pattern_status === 'REPROVADO') {
+                    die(json_encode([
+                        'error' => true,
+                        'success' => false,
+                        'actual_message' => '',
+                        'message' => 'REPROVADO - Cartão recusado'
+                    ], JSON_PRETTY_PRINT));
+                }
                 break;
             }
-        }
-        
-        // Se for reprovado, die
-        if ($status === 'REPROVADO') {
-            die(json_encode([
-                'error' => true,
-                'success' => false,
-                'actual_message' => '',
-                'message' => 'REPROVADO - ' . $message
-            ], JSON_PRETTY_PRINT));
         }
         
         
@@ -578,6 +635,20 @@ function analisar_resposta($result) {
         ];
     }
     
+    // VERIFICAÇÃO FINAL: Se após toda análise ainda tiver "negado" na mensagem, retornar DIE
+    if (isset($formatted['message']) && 
+        (stripos($formatted['message'], 'negado') !== false ||
+         stripos($formatted['message'], 'recusado') !== false ||
+         stripos($formatted['message'], 'rejeitado') !== false ||
+         stripos($formatted['message'], 'tente outro cartão') !== false)) {
+        
+        die(json_encode([
+            'error' => true,
+            'success' => false,
+            'actual_message' => '',
+            'message' => 'REPROVADO - ' . $formatted['message']
+        ], JSON_PRETTY_PRINT));
+    }
     
     $formatted['request_info'] = [
         'http_code' => $http_code,
