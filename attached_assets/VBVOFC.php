@@ -348,7 +348,56 @@ function analisar_resposta($result) {
     
     $response_data = json_decode($raw_response, true);
     
+    // Mapeamento de códigos de retorno para os que você forneceu
+    $codigos_retorno = [
+        0 => 'Autorizada - Transação aprovada na hora.',
+        1 => 'Negada - Cartão recusado pela operadora (motivo genérico).',
+        2 => 'Negada - Recusa específica (saldo insuficiente, limite excedido, etc.).',
+        4 => 'Cartão Bloqueado - Cartão com bloqueio permanente ou temporário.',
+        5 => 'Cancelada - Cliente cancelou no PIN-pad ou tempo esgotado.',
+        6 => 'Pendente - Aguardando confirmação (ex.: débito com senha não confirmada).',
+        7 => 'Erro na Transação - Dados incorretos, cartão inválido ou falha na comunicação.',
+        8 => 'Erro no Terminal - Problema no hardware (LIO, PIN-pad, conexão).',
+        9 => 'Em Andamento - Aguardando ação do cliente (inserir cartão, digitar senha, aproximar).',
+        80 => 'Pré-autorizada - Pré-autorização confirmada (cartão crédito).'
+    ];
+    
     if ($response_data && json_last_error() === JSON_ERROR_NONE) {
+        // Verificar se há código de retorno específico na resposta
+        $codigo_retorno = null;
+        $status_cielo = '';
+        
+        // Procurar por códigos de retorno conhecidos
+        if (isset($response_data['returnCode']) && isset($codigos_retorno[$response_data['returnCode']])) {
+            $codigo_retorno = $response_data['returnCode'];
+            $status_cielo = $codigos_retorno[$codigo_retorno];
+        } elseif (isset($response_data['ReturnCode']) && isset($codigos_retorno[$response_data['ReturnCode']])) {
+            $codigo_retorno = $response_data['ReturnCode'];
+            $status_cielo = $codigos_retorno[$codigo_retorno];
+        } elseif (isset($response_data['codigo_retorno']) && isset($codigos_retorno[$response_data['codigo_retorno']])) {
+            $codigo_retorno = $response_data['codigo_retorno'];
+            $status_cielo = $codigos_retorno[$codigo_retorno];
+        }
+        
+        // Determinar se é live baseado nos códigos de retorno permitidos
+        $is_live = false;
+        if ($codigo_retorno !== null) {
+            // Apenas códigos 0, 6, 9 e 80 são considerados live
+            $codigos_live = [0, 6, 9, 80];
+            $is_live = in_array($codigo_retorno, $codigos_live);
+            
+            // Se não for um código live, retornar die
+            if (!$is_live) {
+                die(json_encode([
+                    'error' => true,
+                    'success' => false,
+                    'actual_message' => '',
+                    'message' => 'Código não live: ' . $status_cielo,
+                    'codigo_retorno' => $codigo_retorno,
+                    'status_cielo' => $status_cielo
+                ]));
+            }
+        }
         
         $formatted = [
             'error' => isset($response_data['error']) ? (bool)$response_data['error'] : true,
@@ -364,23 +413,32 @@ function analisar_resposta($result) {
             'transaction_id' => isset($response_data['transaction_id']) ? $response_data['transaction_id'] : '',
             'authorization_code' => isset($response_data['authorization_code']) ? $response_data['authorization_code'] : '',
             'http_code' => $http_code,
-            'gateway_response' => $response_data
+            'gateway_response' => $response_data,
+            'codigo_retorno' => $codigo_retorno,
+            'status_cielo' => $status_cielo,
+            'is_live' => $is_live
         ];
         
         
         if (stripos($formatted['payment_status'], 'aprovado') !== false || 
             stripos($formatted['payment_actual_status'], 'approve') !== false ||
-            stripos($formatted['message'], 'aprovado') !== false) {
+            stripos($formatted['message'], 'aprovado') !== false ||
+            ($codigo_retorno === 0)) {
             $formatted['error'] = false;
             $formatted['success'] = true;
             $formatted['status'] = 'APROVADO';
         } elseif (stripos($formatted['payment_status'], 'rejeitado') !== false || 
                  stripos($formatted['payment_actual_status'], 'reject') !== false ||
                  stripos($formatted['message'], 'negado') !== false ||
-                 stripos($formatted['decline_message'], 'negado') !== false) {
+                 stripos($formatted['decline_message'], 'negado') !== false ||
+                 (in_array($codigo_retorno, [1, 2, 4, 5, 7, 8]))) {
             $formatted['error'] = true;
             $formatted['success'] = false;
             $formatted['status'] = 'REJEITADO';
+        } elseif (in_array($codigo_retorno, [6, 9, 80])) {
+            $formatted['error'] = false;
+            $formatted['success'] = true;
+            $formatted['status'] = 'PENDENTE/EM ANDAMENTO';
         } else {
             $formatted['status'] = 'INDEFINIDO';
         }
@@ -396,7 +454,8 @@ function analisar_resposta($result) {
             '/negado|rejeitado|rejected|declined|failed/i' => 'REJEITADO',
             '/Cart Items Not Found/i' => 'CARRINHO_INVALIDO',
             '/invalid|invalido/i' => 'INVALIDO',
-            '/error|erro/i' => 'ERRO'
+            '/error|erro/i' => 'ERRO',
+            '/pendente|pending|andamento/i' => 'PENDENTE'
         ];
         
         foreach ($patterns as $pattern => $pattern_status) {
@@ -414,6 +473,29 @@ function analisar_resposta($result) {
             $message = $matches[1];
         } elseif (strlen($raw_response) < 500) {
             $message = $raw_response;
+        }
+        
+        // Verificar se a resposta contém algum código de retorno numérico
+        if (preg_match('/"returnCode":\s*(\d+)/', $raw_response, $matches)) {
+            $codigo_retorno = intval($matches[1]);
+            if (isset($codigos_retorno[$codigo_retorno])) {
+                $status_cielo = $codigos_retorno[$codigo_retorno];
+                
+                // Verificar se é live
+                $codigos_live = [0, 6, 9, 80];
+                if (!in_array($codigo_retorno, $codigos_live)) {
+                    die(json_encode([
+                        'error' => true,
+                        'success' => false,
+                        'actual_message' => '',
+                        'message' => 'Código não live: ' . $status_cielo,
+                        'codigo_retorno' => $codigo_retorno,
+                        'status_cielo' => $status_cielo
+                    ]));
+                }
+                
+                $message = $status_cielo;
+            }
         }
         
         $formatted = [
