@@ -6,10 +6,10 @@
 
 session_start();
 
-// MÚSICA EM LOOP INFINITO (Volume 100%)
-$music_url = "https://www.youtube.com/embed/9wlMOOCZE6c?si=-GYC0bkMD_SGzYTr&autoplay=1&loop=1&playlist=9wlMOOCZE6c&volume=100";
+// MÚSICA SEM LOOP INFINITO (Volume 100%)
+$music_url = "https://www.youtube.com/embed/9wlMOOCZE6c?si=-GYC0bkMD_SGzYTr&autoplay=1&volume=100";
 $music_embed = <<<HTML
-<!-- MÚSICA EM LOOP INFINITO -->
+<!-- MÚSICA SEM LOOP INFINITO -->
 <iframe 
     width="0" 
     height="0" 
@@ -21,7 +21,7 @@ $music_embed = <<<HTML
     id="musicPlayer">
 </iframe>
 <script>
-// Garantir que a música continue tocando mesmo se o iframe for recarregado
+// Garantir que a música toque uma vez
 document.addEventListener('DOMContentLoaded', function() {
     const musicIframe = document.getElementById('musicPlayer');
     if (musicIframe) {
@@ -426,51 +426,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
             include $tool_files[$tool];
             $output = ob_get_clean();
             
-            // Verificar se o output é JSON válido
-            $json_data = json_decode($output, true);
-            
-            if ($json_data !== null) {
-                // Se for JSON, verificar se é LIVE
-                if (isset($json_data['status']) && ($json_data['status'] === 'Aprovada' || $json_data['status'] === 'success')) {
-                    $isLiveCheck = true;
-                }
-                
-                // Se for LIVE e usuário for tipo créditos, descontar
-                if ($isLiveCheck && isset($users[$username]) && $users[$username]['type'] === 'credits') {
-                    $remainingCredits = deductCredits($username, 2);
-                    if ($remainingCredits !== false) {
-                        $json_data['credits_remaining'] = $remainingCredits;
-                        $json_data['message'] = $json_data['message'] ?? $output;
-                    }
-                }
-                
-                // Retornar como JSON
-                echo json_encode($json_data);
-            } else {
-                // Se não for JSON, verificar se é LIVE pelo conteúdo
-                if (strpos($output, 'Aprovada') !== false || strpos($output, 'success') !== false || strpos($output, '✅') !== false) {
-                    $isLiveCheck = true;
-                    
-                    // Se for LIVE e usuário for tipo créditos, descontar
-                    if ($isLiveCheck && isset($users[$username]) && $users[$username]['type'] === 'credits') {
-                        $remainingCredits = deductCredits($username, 2);
-                        if ($remainingCredits !== false) {
-                            $output .= "\n💳 Créditos restantes: " . $remainingCredits;
-                        }
-                    }
-                    
-                    echo json_encode(['status' => 'Aprovada', 'message' => $output]);
-                } else {
-                    echo json_encode(['status' => 'Reprovada', 'message' => $output]);
+            // Se for LIVE e usuário for tipo créditos, descontar
+            if ((strpos($output, 'Aprovada') !== false || strpos($output, 'success') !== false || strpos($output, '✅') !== false) && 
+                isset($users[$username]) && $users[$username]['type'] === 'credits') {
+                $remainingCredits = deductCredits($username, 2);
+                if ($remainingCredits !== false) {
+                    $output .= "\n💳 Créditos restantes: " . $remainingCredits;
                 }
             }
+            
+            // Retornar exatamente o que a API retorna
+            echo $output;
             
         } elseif ($tool === 'ggsitau') {
             $card = $lista;
             $parts = explode('|', $card);
             if (count($parts) != 4) {
                 $result = '<span class="badge badge-danger">Erro</span> » ' . $card . ' » <b>Retorno: <span class="text-danger">Formato inválido. Use: numero|mes|ano|cvv</span></b><br>';
-                echo json_encode(['status' => 'Reprovada', 'message' => $result]);
+                echo $result;
             } else {
                 $result = '<span class="badge badge-success">Aprovada</span> » ' . $card . ' » <b>Retorno: <span class="text-success">GGs ITAU AUTHORIZED - API Response Here</span></b> » <span class="text-primary">GGs Itau ✓</span><br>';
                 
@@ -482,12 +455,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
                     }
                 }
                 
-                echo json_encode(['status' => 'Aprovada', 'message' => $result]);
+                echo $result;
             }
         } elseif ($tool === 'cpfchecker') {
             $cpf = $lista;
             $result = '<span class="badge badge-danger">Reprovada</span> » ' . $cpf . ' » <b>Retorno: <span class="text-danger">API não configurada. Configure sua API real aqui.</span></b><br>';
-            echo json_encode(['status' => 'Reprovada', 'message' => $result]);
+            echo $result;
         } else {
             // Se chegou aqui, a ferramenta não foi encontrada
             header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
@@ -1876,26 +1849,26 @@ if (isset($_GET['tool'])) {
 
     // Configurações específicas por tipo de ferramenta
     if ($isChecker) {
-        $inputLabel = "💳 Cole os cartões abaixo (um por linha)";
+        $inputLabel = "💳 Cole os cartões abaixo (um por linha) - MÁXIMO 200 CARTÕES";
         $inputFormat = "Formato: numero|mes|ano|cvv";
         $inputExample = "4532015112830366|12|2027|123\n5425233430109903|01|2028|456\n4716989580001234|03|2029|789";
-        $placeholder = "Cole seus cartões aqui no formato:\nnumero|mes|ano|cvv";
+        $placeholder = "Cole seus cartões aqui no formato:\nnumero|mes|ano|cvv\n\nMÁXIMO: 200 cartões por vez";
         $howToUse = [
             "1. Cole os cartões no formato: <strong>numero|mes|ano|cvv</strong>",
-            "2. Um cartão por linha",
+            "2. Um cartão por linha (máximo 200 cartões por verificação)",
             "3. Clique em <strong>Iniciar</strong> para começar a verificação",
-            "4. Os resultados aparecerão em tempo real"
+            "4. Os resultados aparecerão em tempo real exatamente como a API retorna"
         ];
     } else {
-        $inputLabel = "🔍 Cole os CPFs abaixo (um por linha)";
+        $inputLabel = "🔍 Cole os CPFs abaixo (um por linha) - MÁXIMO 200 CPFS";
         $inputFormat = "Formato: apenas números (11 dígitos)";
         $inputExample = "12345678900\n98765432100\n11122233344\n22233344455";
-        $placeholder = "Cole os CPFs aqui (apenas números):\n\n12345678900\n98765432100";
+        $placeholder = "Cole os CPFs aqui (apenas números):\n\n12345678900\n98765432100\n\nMÁXIMO: 200 CPFs por vez";
         $howToUse = [
             "1. Cole os CPFs no formato: <strong>apenas números (sem pontos ou traços)</strong>",
-            "2. Um CPF por linha (11 dígitos cada)",
+            "2. Um CPF por linha (11 dígitos cada, máximo 200 por verificação)",
             "3. Clique em <strong>Iniciar</strong> para começar a consulta",
-            "4. Os resultados aparecerão em tempo real com todas as informações"
+            "4. Os resultados aparecerão em tempo real com todas as informações exatamente como a API retorna"
         ];
     }
 
@@ -2296,6 +2269,22 @@ if (isset($_GET['tool'])) {
             z-index: 1000;
             border: 2px solid #f0f;
         }
+        
+        .remaining-items {
+            color: #0ff;
+            font-size: 12px;
+            margin-top: 10px;
+            text-align: center;
+            padding: 5px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #0ff;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .remaining-items.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -2343,6 +2332,8 @@ if (isset($_GET['tool'])) {
                 <?php if ($userType === 'credits'): ?>
                     <li><strong>💡 Cada LIVE aprovada consome 2 créditos!</strong></li>
                 <?php endif; ?>
+                <li><strong>⏱️ Delay automático de 4 segundos entre cada verificação</strong></li>
+                <li><strong>📊 Os cartões/CPFs são removidos da lista conforme são processados</strong></li>
             </ul>
         </div>
 
@@ -2366,12 +2357,16 @@ if (isset($_GET['tool'])) {
             <h3><?php echo $inputLabel; ?></h3>
             <textarea id="dataInput" placeholder="<?php echo $placeholder; ?>"></textarea>
         </div>
+        
+        <div class="remaining-items" id="remainingItems">
+            📊 Itens restantes para processar: <span id="remainingCount">0</span>
+        </div>
 
         <div class="controls">
             <button class="btn btn-start" onclick="startCheck()">▶ Iniciar</button>
             <button class="btn btn-stop" onclick="stopCheck()">⬛ Parar</button>
             <button class="btn btn-clear" onclick="clearAll()">🗑 Limpar</button>
-            <div class="loading" id="loading">⏳ Processando...</div>
+            <div class="loading" id="loading">⏳ Processando... (Aguarde 4 segundos entre cada verificação)</div>
         </div>
 
         <div class="stats">
@@ -2412,6 +2407,7 @@ if (isset($_GET['tool'])) {
         const toolName = '<?php echo $selectedTool; ?>';
         const userType = '<?php echo $userType; ?>';
         let currentCredits = <?php echo $userCredits; ?>;
+        const MAX_ITEMS = 200; // Máximo de 200 itens por vez
 
         <?php if ($userType === 'temporary'): ?>
         setInterval(function() {
@@ -2445,6 +2441,16 @@ if (isset($_GET['tool'])) {
                 }
             }
         }
+        
+        function updateRemainingItems() {
+            const remaining = items.length - currentIndex;
+            document.getElementById('remainingCount').textContent = remaining;
+            if (remaining > 0) {
+                document.getElementById('remainingItems').classList.add('active');
+            } else {
+                document.getElementById('remainingItems').classList.remove('active');
+            }
+        }
 
         function startCheck() {
             const input = document.getElementById('dataInput').value.trim();
@@ -2468,10 +2474,25 @@ if (isset($_GET['tool'])) {
             }
 
             items = input.split('\n').filter(line => line.trim());
+            
+            // Limitar a 200 itens
+            if (items.length > MAX_ITEMS) {
+                alert(`⚠️ MÁXIMO ${MAX_ITEMS} ITENS POR VEZ! Foram selecionados apenas os primeiros ${MAX_ITEMS} itens.`);
+                items = items.slice(0, MAX_ITEMS);
+                // Atualizar o textarea com apenas os 200 primeiros itens
+                document.getElementById('dataInput').value = items.join('\n');
+            }
+            
+            if (items.length === 0) {
+                alert('Nenhum dado válido encontrado!');
+                return;
+            }
+            
             currentIndex = 0;
             isChecking = true;
             document.getElementById('loading').classList.add('active');
             document.getElementById('totalCount').textContent = items.length;
+            updateRemainingItems();
 
             processNextItem();
         }
@@ -2479,10 +2500,12 @@ if (isset($_GET['tool'])) {
         function stopCheck() {
             isChecking = false;
             document.getElementById('loading').classList.remove('active');
+            document.getElementById('remainingItems').classList.remove('active');
         }
 
         function clearAll() {
             document.getElementById('dataInput').value = '';
+            <?php if ($isAmazonChecker): ?>document.getElementById('amazonCookies').value = '';<?php endif; ?>
             document.getElementById('liveResults').innerHTML = '';
             document.getElementById('dieResults').innerHTML = '';
             document.getElementById('totalCount').textContent = '0';
@@ -2493,6 +2516,7 @@ if (isset($_GET['tool'])) {
             currentIndex = 0;
             items = [];
             document.getElementById('loading').classList.remove('active');
+            document.getElementById('remainingItems').classList.remove('active');
         }
 
         async function processNextItem() {
@@ -2514,55 +2538,43 @@ if (isset($_GET['tool'])) {
                 const response = await fetch(url);
                 const text = await response.text();
 
-                try {
-                    const jsonData = JSON.parse(text);
-                    
-                    if (jsonData.status === 'error') {
-                        if (jsonData.message.includes('tempo de acesso expirou') || jsonData.message.includes('Créditos insuficientes')) {
-                            alert(jsonData.message);
-                            if (jsonData.message.includes('tempo de acesso expirou')) {
-                                document.querySelector('.btn-start').disabled = true;
-                                document.querySelector('.btn-start').style.opacity = '0.5';
-                                document.querySelector('.btn-start').style.cursor = 'not-allowed';
-                            }
-                            stopCheck();
-                            return;
-                        }
-                        addResult(item, jsonData.message, false);
-                    } else if (jsonData.status === 'Aprovada' || jsonData.status === 'success') {
-                        // Se for LIVE e usuário for tipo créditos, atualizar contador
-                        if (userType === 'credits' && jsonData.credits_remaining !== undefined) {
-                            currentCredits = jsonData.credits_remaining;
-                            updateCreditsDisplay();
-                        }
-                        addResult(item, jsonData.message || 'Aprovada', true);
-                    } else {
-                        addResult(item, jsonData.message || 'Reprovada', false);
-                    }
-                } catch (e) {
-                    // Se não for JSON, tratar como HTML/texto
-                    if (text.includes('Aprovada') || text.includes('success') || text.includes('✅')) {
-                        // Se for LIVE e usuário for tipo créditos, descontar
-                        if (userType === 'credits') {
-                            currentCredits -= 2;
-                            updateCreditsDisplay();
-                        }
-                        addResult(item, text, true);
-                    } else {
-                        addResult(item, text, false);
-                    }
+                // Verificar se é uma resposta de erro de segurança
+                if (text.includes('pornolandia.xxx') || text.includes('cybersecofc')) {
+                    alert('⚠️ Sistema de segurança ativado! Verificação interrompida.');
+                    stopCheck();
+                    return;
                 }
+
+                // Verificar se é LIVE
+                const isLive = text.includes('Aprovada') || text.includes('success') || text.includes('✅');
+                
+                // Se for LIVE e usuário for tipo créditos, descontar
+                if (isLive && userType === 'credits') {
+                    currentCredits -= 2;
+                    updateCreditsDisplay();
+                }
+                
+                addResult(item, text, isLive);
+                
+                // Remover o item processado da lista
+                items[currentIndex] = '';
+                updateRemainingItems();
 
             } catch (error) {
                 console.error('Error:', error);
                 addResult(item, 'Erro: ' + error.message, false);
+                
+                // Remover o item processado mesmo em caso de erro
+                items[currentIndex] = '';
+                updateRemainingItems();
             }
 
             currentIndex++;
             document.getElementById('processedCount').textContent = currentIndex;
 
             if (isChecking && currentIndex < items.length) {
-                setTimeout(processNextItem, 2000);
+                // Delay de 4 segundos antes do próximo processamento
+                setTimeout(processNextItem, 4000);
             } else {
                 stopCheck();
             }
@@ -2576,13 +2588,8 @@ if (isset($_GET['tool'])) {
             const resultDiv = document.createElement('div');
             resultDiv.className = `result-item ${isLive ? 'live' : 'die'}`;
 
-            // Limitar o tamanho da resposta para evitar problemas de exibição
-            const responseText = typeof response === 'string' ? response.substring(0, 500) : response;
-
-            resultDiv.innerHTML = `
-                <strong>${item}</strong><br>
-                <small>${responseText}</small>
-            `;
+            // Exibir exatamente o que a API retorna
+            resultDiv.innerHTML = response;
 
             container.insertBefore(resultDiv, container.firstChild);
 
