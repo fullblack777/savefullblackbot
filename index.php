@@ -5,6 +5,7 @@
 // ============================================
 
 session_start();
+ob_start();
 
 // MÚSICA SEM LOOP INFINITO (Volume 100%)
 $music_url = "https://www.youtube.com/embed/9wlMOOCZE6c?si=-GYC0bkMD_SGzYTr&autoplay=1&volume=100";
@@ -153,7 +154,7 @@ if ($suspicious_proxy) {
 // BLOQUEAR REQUISIÇÕES SUSPEITAS (SQL Injection, XSS, etc)
 /*
 $suspicious_params = ['union', 'select', 'insert', 'update', 'delete', 
-                     'drop', '--', '/*', '*/', 'script', 'iframe',
+                     'drop', '--', '/*', "\x2a\x2f", 'script', 'iframe',
                      'onload', 'onerror', 'javascript:', 'vbscript:',
                      'data:', 'alert(', 'confirm(', 'prompt('];
 
@@ -161,12 +162,12 @@ if (isset($_GET) && is_array($_GET)) {
     foreach ($_GET as $param => $value) {
         foreach ($suspicious_params as $bad) {
             if (stripos((string)$value, $bad) !== false || stripos((string)$param, $bad) !== false) {
-                // RESPOSTA COM LINK PARA HACKER
-                header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
-                echo json_encode([
+                // RESPOSTA PARA TENTATIVA DE HACK
+                header('X-Hacker-Message: Tentativa de ataque bloqueada');
+                echo json_encode(array(
                     'status' => 'error', 
-                    'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/'
-                ]);
+                    'message' => 'Tentativa de ataque detectada'
+                ));
                 exit;
             }
         }
@@ -504,7 +505,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
     ini_set('display_errors', 0);
 
     $lista = $_GET['lista'];
-    ob_clean();
+    if (ob_get_level()) ob_clean();
 
     try {
         // Mapear os nomes corretamente com as novas ferramentas
@@ -592,13 +593,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
             echo $output;
 
         } else {
-            // Se chegou aqui, a ferramenta não foi encontrada
-            header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
-            echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
+            // Ferramenta não encontrada - mensagem legível
+            echo json_encode(['status' => 'error', 'message' => '⚠️ Ferramenta não encontrada. Entre em contato com o administrador.']);
         }
     } catch (Exception $e) {
-        header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
-        echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
+        // Erro real - retornar mensagem útil em vez de redirecionamento falso
+        echo json_encode(['status' => 'error', 'message' => '⚠️ Erro ao processar: ' . $e->getMessage()]);
     }
 
     exit;
@@ -2646,13 +2646,15 @@ if (isset($_GET['tool'])) {
                 const response = await fetch(url);
                 const text = await response.text();
 
-                if (text.includes('pornolandia.xxx') || text.includes('cybersecofc')) {
-                    if (text.includes('error') && text.includes('message') && text.includes('pornolandia.xxx')) {
+                // Bloquear apenas resposta de segurança real (JSON com pornolandia.xxx), não outputs normais das ferramentas
+                try {
+                    const json = JSON.parse(text);
+                    if (json.status === 'error' && json.message && json.message.includes('pornolandia.xxx')) {
                         alert('⚠️ Sistema de segurança ativado! Verificação interrompida.');
                         stopCheck();
                         return;
                     }
-                }
+                } catch (e) { /* Não é JSON - resposta normal da ferramenta */ }
 
                 const isLive = checkIfLive(text);
 
