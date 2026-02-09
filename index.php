@@ -97,7 +97,7 @@ function sendTelegramMessage($message) {
 }
 
 // DETECTAR PROXY E FERRAMENTAS DE HACKING (APENAS SE DETECTAR TENTATIVAS REAIS)
-/* 
+
 // Proteção temporariamente desativada para evitar erros de falso positivo relatados pelo usuário
 if (isset($_SERVER['HTTP_USER_AGENT'])) {
     $user_agent = strtolower($_SERVER['HTTP_USER_AGENT']);
@@ -120,10 +120,10 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
         }
     }
 }
-*/
+
 
 // BLOQUEAR REQUISIÇÕES COM HEADERS DE PROXY (APENAS SE FOR MUITO SUSPEITO)
-/*
+
 // Proteção desativada para evitar bloqueio indevido de usuários
 $suspicious_proxy = false;
 
@@ -149,10 +149,10 @@ if ($suspicious_proxy) {
     echo json_encode(['status' => 'error', 'message' => 'Proxy de ataque detectado']);
     exit;
 }
-*/
+
 
 // BLOQUEAR REQUISIÇÕES SUSPEITAS (SQL Injection, XSS, etc)
-/*
+
 $suspicious_params = ['union', 'select', 'insert', 'update', 'delete', 
                      'drop', '--', '/*', "\x2a\x2f", 'script', 'iframe',
                      'onload', 'onerror', 'javascript:', 'vbscript:',
@@ -173,7 +173,7 @@ if (isset($_GET) && is_array($_GET)) {
         }
     }
 }
-*/
+
 
 // ============================================
 // SEU CÓDIGO ORIGINAL (MANTIDO INTACTO)
