@@ -44,27 +44,34 @@ header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 $bot_token_file = 'bot_token.txt';
 $bot_enabled_file = 'bot_enabled.txt';
 
+// Criar arquivos se não existirem para evitar erros de leitura
+if (!file_exists($bot_token_file)) {
+    file_put_contents($bot_token_file, '');
+}
+if (!file_exists($bot_enabled_file)) {
+    file_put_contents($bot_enabled_file, '0');
+}
+
 // Função para enviar mensagem via Bot Telegram
 function sendTelegramMessage($message) {
     global $bot_token_file, $bot_enabled_file;
-    
+
     if (!file_exists($bot_enabled_file) || trim(file_get_contents($bot_enabled_file)) !== '1') {
         return false;
     }
-    
+
     if (!file_exists($bot_token_file)) {
         return false;
     }
-    
+
     $bot_token = trim(file_get_contents($bot_token_file));
     if (empty($bot_token)) {
         return false;
     }
-    
-    // Lista de chats/grupos (você precisa adicionar os chat_ids reais aqui)
-    // Para testes, use um grupo seu
-    $chats = ['-1001234567890']; // SUBSTITUA pelo seu chat_id real
-    
+
+    // Obter todos os chats/grupos (simulação - na prática você precisaria armazenar os chat_ids)
+    $chats = ['-1001234567890']; // Substitua com seus chat_ids reais
+
     foreach ($chats as $chat_id) {
         $url = "https://api.telegram.org/bot{$bot_token}/sendMessage";
         $data = [
@@ -72,50 +79,100 @@ function sendTelegramMessage($message) {
             'text' => $message,
             'parse_mode' => 'HTML'
         ];
-        
+
         $options = [
             'http' => [
                 'header' => "Content-type: application/x-www-form-urlencoded\r\n",
                 'method' => 'POST',
-                'content' => http_build_query($data),
-                'timeout' => 5
+                'content' => http_build_query($data)
             ]
         ];
-        
+
         $context = stream_context_create($options);
         @file_get_contents($url, false, $context);
     }
-    
+
     return true;
 }
 
 // DETECTAR PROXY E FERRAMENTAS DE HACKING (APENAS SE DETECTAR TENTATIVAS REAIS)
+/* 
+// Proteção temporariamente desativada para evitar erros de falso positivo relatados pelo usuário
 if (isset($_SERVER['HTTP_USER_AGENT'])) {
     $user_agent = strtolower($_SERVER['HTTP_USER_AGENT']);
-    
-    $is_browser = (
-        strpos($user_agent, 'mozilla') !== false ||
-        strpos($user_agent, 'chrome') !== false ||
-        strpos($user_agent, 'safari') !== false ||
-        strpos($user_agent, 'firefox') !== false ||
-        strpos($user_agent, 'edge') !== false ||
-        strpos($user_agent, 'opera') !== false
-    );
-    
+
     if (!$is_browser) {
         $blacklisted_agents = [
-            'sqlmap', 'nikto', 'burp', 'zap', 'hydra', 'metasploit',
-            'nessus', 'openvas', 'acunetix', 'netsparker'
+            'nmap', 'sqlmap', 'nikto', 'wpscan', 'dirbuster', 
+            'gobuster', 'burp', 'zap', 'hydra', 'metasploit',
+            'nessus', 'openvas', 'acunetix', 'netsparker',
+            'appscan', 'w3af', 'skipfish', 'wapiti', 
+            'Fiddler', 'mitmproxy', 'Proxyman'
         ];
-        
+
         foreach ($blacklisted_agents as $agent) {
             if (stripos($user_agent, $agent) !== false) {
-                header('HTTP/1.1 403 Forbidden');
-                exit('Access Denied');
+                // ADICIONAR HEADER ESPECIAL PARA PROXY
+                header('X-Hacker-Redirect: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
+                exit;
             }
         }
     }
 }
+*/
+
+// BLOQUEAR REQUISIÇÕES COM HEADERS DE PROXY (APENAS SE FOR MUITO SUSPEITO)
+/*
+// Proteção desativada para evitar bloqueio indevido de usuários
+$suspicious_proxy = false;
+
+// Verificar se é um proxy de ataque (não proxy normal)
+if (isset($_SERVER['HTTP_VIA']) && 
+    (strpos($_SERVER['HTTP_VIA'], 'Charles') !== false || 
+     strpos($_SERVER['HTTP_VIA'], 'mitm') !== false ||
+     strpos($_SERVER['HTTP_VIA'], 'Fiddler') !== false)) {
+    $suspicious_proxy = true;
+}
+
+// Verificar X-Forwarded-For apenas se houver muitos IPs (proxy chain de ataque)
+if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+    if (count($ips) > 3) { // Mais de 3 proxies na chain = suspeito
+        $suspicious_proxy = true;
+    }
+}
+
+// Só bloquear se for realmente suspeito
+if ($suspicious_proxy) {
+    header('X-Hacker-Redirect: https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/');
+    echo json_encode(['status' => 'error', 'message' => 'Proxy de ataque detectado']);
+    exit;
+}
+*/
+
+// BLOQUEAR REQUISIÇÕES SUSPEITAS (SQL Injection, XSS, etc)
+/*
+$suspicious_params = ['union', 'select', 'insert', 'update', 'delete', 
+                     'drop', '--', '/*', '*/', 'script', 'iframe',
+                     'onload', 'onerror', 'javascript:', 'vbscript:',
+                     'data:', 'alert(', 'confirm(', 'prompt('];
+
+if (isset($_GET) && is_array($_GET)) {
+    foreach ($_GET as $param => $value) {
+        foreach ($suspicious_params as $bad) {
+            if (stripos((string)$value, $bad) !== false || stripos((string)$param, $bad) !== false) {
+                // RESPOSTA COM LINK PARA HACKER
+                header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+                echo json_encode([
+                    'status' => 'error', 
+                    'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/'
+                ]);
+                exit;
+            }
+        }
+    }
+}
+*/
 
 // ============================================
 // SEU CÓDIGO ORIGINAL (MANTIDO INTACTO)
@@ -124,7 +181,7 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
 // Arquivo para armazenar usuários
 $users_file = 'users.json';
 
-// Lista de todos os checkers disponíveis
+// Lista de todos os checkers disponíveis (removidas as consultas)
 $all_tools = [
     'checkers' => ['paypal', 'preauth', 'n7', 'amazon1', 'amazon2', 'cpfchecker', 'ggsitau', 
                    'getnet', 'auth', 'debitando', 'n7_new', 'gringa', 'elo', 'erede', 'allbins', 'stripe', 'visamaster']
@@ -141,23 +198,19 @@ if (!file_exists($users_file)) {
             'tools' => $all_tools['checkers']
         ]
     ];
-    file_put_contents($users_file, json_encode($users, JSON_PRETTY_PRINT));
+    file_put_contents($users_file, json_encode($users));
 }
 
 // Função para carregar usuários
 function loadUsers() {
     global $users_file;
-    if (!file_exists($users_file)) {
-        return [];
-    }
-    $data = file_get_contents($users_file);
-    return json_decode($data, true) ?: [];
+    return json_decode(file_get_contents($users_file), true);
 }
 
 // Função para salvar usuários
 function saveUsers($users) {
     global $users_file;
-    file_put_contents($users_file, json_encode($users, JSON_PRETTY_PRINT));
+    file_put_contents($users_file, json_encode($users));
 }
 
 // Função para verificar se o acesso temporário expirou ou se tem créditos
@@ -207,7 +260,7 @@ function getUserCredits($username) {
 
 // Processar login
 if (isset($_POST['login'])) {
-    $username = trim($_POST['username'] ?? '');
+    $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
     $users = loadUsers();
@@ -245,8 +298,8 @@ if (isset($_GET['logout'])) {
 }
 
 // Processar adição de usuário permanente (apenas admin)
-if (isset($_POST['add_permanent_user']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    $new_username = trim($_POST['new_username'] ?? '');
+if (isset($_POST['add_permanent_user']) && $_SESSION['role'] === 'admin') {
+    $new_username = $_POST['new_username'] ?? '';
     $new_password = $_POST['new_password'] ?? '';
     $selected_tools = $_POST['checkers'] ?? [];
 
@@ -260,17 +313,17 @@ if (isset($_POST['add_permanent_user']) && isset($_SESSION['role']) && $_SESSION
             'tools' => $selected_tools
         ];
         saveUsers($users);
-        
+
         // Enviar notificação via bot
         sendTelegramMessage("🆕 NOVO USUÁRIO PERMANENTE\n👤 Usuário: <code>$new_username</code>\n⚡ Tipo: Acesso Permanente\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
-        
-        $success_message = "Usuário permanente '$new_username' criado com sucesso!";
+
+        $success_message = "Usuário permanente '$new_username' criado com acesso a: " . implode(', ', $selected_tools);
     }
 }
 
 // Processar aluguel por hora (apenas admin)
-if (isset($_POST['add_rental_user']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    $rental_username = trim($_POST['rental_username'] ?? '');
+if (isset($_POST['add_rental_user']) && $_SESSION['role'] === 'admin') {
+    $rental_username = $_POST['rental_username'] ?? '';
     $rental_password = $_POST['rental_password'] ?? '';
     $rental_hours = intval($_POST['rental_hours'] ?? 0);
     $selected_tools = $_POST['rental_checkers'] ?? [];
@@ -295,13 +348,13 @@ if (isset($_POST['add_rental_user']) && isset($_SESSION['role']) && $_SESSION['r
         $expireDate = date('d/m/Y H:i:s', $expiresAt);
         sendTelegramMessage("⏱️ NOVO ACESSO TEMPORÁRIO\n👤 Usuário: <code>$rental_username</code>\n⏰ Horas: $rental_hours\n⏳ Expira: $expireDate\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
 
-        $success_message = "Acesso temporário criado para '$rental_username' por $rental_hours hora(s)!";
+        $success_message = "Acesso temporário criado para '$rental_username' por $rental_hours hora(s) com ferramentas: " . implode(', ', $selected_tools) . ". Expira em: $expireDate";
     }
 }
 
 // Processar adição de usuário por créditos (apenas admin)
-if (isset($_POST['add_credit_user']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    $credit_username = trim($_POST['credit_username'] ?? '');
+if (isset($_POST['add_credit_user']) && $_SESSION['role'] === 'admin') {
+    $credit_username = $_POST['credit_username'] ?? '';
     $credit_password = $_POST['credit_password'] ?? '';
     $credit_amount = floatval($_POST['credit_amount'] ?? 0);
     $selected_tools = $_POST['credit_checkers'] ?? [];
@@ -322,28 +375,28 @@ if (isset($_POST['add_credit_user']) && isset($_SESSION['role']) && $_SESSION['r
         // Enviar notificação via bot
         sendTelegramMessage("💰 NOVO USUÁRIO POR CRÉDITOS\n👤 Usuário: <code>$credit_username</code>\n💳 Créditos: $credit_amount\n⚡ LIVE: 1.50 créditos | DIE: 0.05 créditos\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
 
-        $success_message = "Usuário por créditos '$credit_username' criado com $credit_amount créditos!";
+        $success_message = "Usuário por créditos '$credit_username' criado com $credit_amount créditos e ferramentas: " . implode(', ', $selected_tools) . ". Cada LIVE custa 1.50 créditos, cada DIE custa 0.05 créditos.";
     }
 }
 
 // Processar recarga de créditos (apenas admin)
-if (isset($_POST['add_credits']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    $recharge_username = trim($_POST['recharge_username'] ?? '');
+if (isset($_POST['add_credits']) && $_SESSION['role'] === 'admin') {
+    $recharge_username = $_POST['recharge_username'] ?? '';
     $add_credits = floatval($_POST['add_credits'] ?? 0);
 
     if ($recharge_username && $add_credits > 0) {
         $users = loadUsers();
-        
+
         if (isset($users[$recharge_username]) && $users[$recharge_username]['type'] === 'credits') {
             $old_credits = $users[$recharge_username]['credits'];
             $users[$recharge_username]['credits'] += $add_credits;
             saveUsers($users);
-            
+
             $new_credits = $users[$recharge_username]['credits'];
-            
+
             // Enviar notificação via bot
             sendTelegramMessage("🔄 RECARGA DE CRÉDITOS\n👤 Usuário: <code>$recharge_username</code>\n💰 Adicionado: $add_credits créditos\n💳 Total: $new_credits créditos");
-            
+
             $success_message = "Recarga realizada! Usuário '$recharge_username' agora tem $new_credits créditos.";
         } else {
             $error_message = "Usuário não encontrado ou não é do tipo 'créditos'.";
@@ -352,56 +405,50 @@ if (isset($_POST['add_credits']) && isset($_SESSION['role']) && $_SESSION['role'
 }
 
 // Processar remoção de usuário (apenas admin)
-if (isset($_POST['remove_user']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    $remove_username = trim($_POST['remove_username'] ?? '');
+if (isset($_POST['remove_user']) && $_SESSION['role'] === 'admin') {
+    $remove_username = $_POST['remove_username'] ?? '';
 
-    if ($remove_username !== 'save' && $remove_username !== '') {
+    if ($remove_username !== 'save') {
         $users = loadUsers();
-        if (isset($users[$remove_username])) {
-            unset($users[$remove_username]);
-            saveUsers($users);
-            
-            // Enviar notificação via bot
-            sendTelegramMessage("🗑️ USUÁRIO REMOVIDO\n👤 Usuário: <code>$remove_username</code>\n❌ Conta removida do sistema");
-            
-            $success_message = "Usuário '$remove_username' removido com sucesso!";
-        }
+        unset($users[$remove_username]);
+        saveUsers($users);
+
+        // Enviar notificação via bot
+        sendTelegramMessage("🗑️ USUÁRIO REMOVIDO\n👤 Usuário: <code>$remove_username</code>\n❌ Conta removida do sistema");
+
+        $success_message = "Usuário '$remove_username' removido com sucesso!";
     }
 }
 
 // Configuração do Bot (apenas admin)
-if (isset($_POST['save_bot_token']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    $bot_token = trim($_POST['bot_token'] ?? '');
-    
+if (isset($_POST['save_bot_token']) && $_SESSION['role'] === 'admin') {
+    $bot_token = $_POST['bot_token'] ?? '';
+
     if (!empty($bot_token)) {
-        if (strpos($bot_token, ':') === false) {
-            $error_message = "Token inválido! Formato correto: 1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        } else {
-            file_put_contents($bot_token_file, $bot_token);
-            $success_message = "Token do bot salvo com sucesso!";
-        }
+        file_put_contents($bot_token_file, $bot_token);
+        $success_message = "Token do bot salvo com sucesso!";
     } else {
         $error_message = "Token não pode ser vazio!";
     }
 }
 
-if (isset($_POST['start_bot']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+if (isset($_POST['start_bot']) && $_SESSION['role'] === 'admin') {
     file_put_contents($bot_enabled_file, '1');
-    
+
     // Enviar mensagem de inicialização
     sendTelegramMessage("🤖 BOT ONLINE\n✅ Sistema CybersecOFC ativado\n🔗 Acesso: https://apiscybersecofc.up.railway.app");
-    
+
     $success_message = "Bot iniciado com sucesso!";
 }
 
-if (isset($_POST['stop_bot']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+if (isset($_POST['stop_bot']) && $_SESSION['role'] === 'admin') {
     file_put_contents($bot_enabled_file, '0');
     $success_message = "Bot parado com sucesso!";
 }
 
-if (isset($_POST['send_broadcast']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    $message = trim($_POST['broadcast_message'] ?? '');
-    
+if (isset($_POST['send_broadcast']) && $_SESSION['role'] === 'admin') {
+    $message = $_POST['broadcast_message'] ?? '';
+
     if (!empty($message)) {
         sendTelegramMessage("📢 MENSAGEM DO ADMINISTRADOR\n\n$message");
         $success_message = "Mensagem enviada para todos os grupos!";
@@ -409,62 +456,58 @@ if (isset($_POST['send_broadcast']) && isset($_SESSION['role']) && $_SESSION['ro
 }
 
 // ============================================
-// PROCESSAMENTO DAS FERRAMENTAS (AJAX)
+// MODIFICAÇÃO NA PARTE AJAX (PROTEÇÃO EXTRA)
 // ============================================
 
+// Processar requisições AJAX das ferramentas
 if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista']) && isset($_GET['tool'])) {
     if (!isset($_SESSION['logged_in'])) {
-        http_response_code(401);
-        echo json_encode(['status' => 'error', 'message' => 'Não autenticado']);
+        header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+        echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
         exit;
     }
 
     // Verificar acesso do usuário
     $users = loadUsers();
     $username = $_SESSION['username'];
-    
-    if (!isset($users[$username])) {
-        http_response_code(403);
-        echo json_encode(['status' => 'error', 'message' => 'Usuário não encontrado']);
-        exit;
-    }
-    
-    $userData = $users[$username];
-    
-    // Verificar expiração
-    if ($userData['type'] === 'temporary') {
-        if (time() > $userData['expires_at']) {
-            echo json_encode([
-                'status' => 'error', 
-                'message' => '⏱️ Seu tempo de acesso expirou! Entre em contato com o administrador.'
-            ]);
-            exit;
-        }
-    } elseif ($userData['type'] === 'credits') {
-        if ($userData['credits'] < 0.05) {
-            echo json_encode([
-                'status' => 'error', 
-                'message' => '💳 Créditos insuficientes! Você precisa de pelo menos 0.05 créditos. Seus créditos: ' . $userData['credits']
-            ]);
-            exit;
+
+    if (isset($users[$username])) {
+        $userData = $users[$username];
+
+        if ($userData['type'] === 'temporary') {
+            if (time() > $userData['expires_at']) {
+                echo json_encode([
+                    'status' => 'error', 
+                    'message' => '⏱️ Seu tempo de acesso expirou! Entre em contato com o administrador.'
+                ]);
+                exit;
+            }
+        } elseif ($userData['type'] === 'credits') {
+            if ($userData['credits'] < 0.05) { // Mínimo para um DIE
+                echo json_encode([
+                    'status' => 'error', 
+                    'message' => '💳 Créditos insuficientes! Você precisa de pelo menos 0.05 créditos. Seus créditos: ' . $userData['credits']
+                ]);
+                exit;
+            }
         }
     }
 
     $tool = $_GET['tool'];
     if (!in_array($tool, $_SESSION['tools'])) {
-        http_response_code(403);
-        echo json_encode(['status' => 'error', 'message' => 'Acesso negado para esta ferramenta']);
+        header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+        echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
         exit;
     }
 
     error_reporting(0);
     ini_set('display_errors', 0);
-    
+
     $lista = $_GET['lista'];
     ob_clean();
 
     try {
-        // Mapear as ferramentas
+        // Mapear os nomes corretamente com as novas ferramentas
         $tool_files = [
             'paypal' => 'attached_assets/PAYPALV2OFC.php',
             'preauth' => 'attached_assets/cielo.php',
@@ -487,21 +530,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
 
         if (isset($tool_files[$tool]) && file_exists($tool_files[$tool])) {
             // Limpar qualquer output anterior
-            while (ob_get_level()) ob_end_clean();
-            
+            ob_clean();
+
             // Incluir o arquivo da ferramenta
             $_GET['lista'] = $lista;
             if (isset($_GET['cookie'])) {
                 $_GET['cookie'] = $_GET['cookie'];
                 $_POST['cookie1'] = $_GET['cookie'];
             }
-            
+
             // Capturar o output do arquivo incluído
             ob_start();
             include $tool_files[$tool];
             $output = ob_get_clean();
-            
-            // Verificar se é LIVE
+
+            // Verificar se é LIVE de forma mais flexível
             $isLive = false;
             $live_patterns = [
                 'Aprovada', 'aprovada', 'APROVADA', 
@@ -513,27 +556,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
                 'Válida', 'válida', 'VÁLIDA',
                 'Valid', 'VALID',
                 'Aprovado', 'aprovado', 'APROVADO',
-                'ok', 'OK', 'Ok'
+                'ok', 'OK', 'Ok',
+                'Encontrado', 'encontrado', 'ENCONTRADO'
             ];
-            
+
             foreach ($live_patterns as $pattern) {
                 if (stripos($output, $pattern) !== false) {
                     $isLive = true;
                     break;
                 }
             }
-            
+
             // Se usuário for tipo créditos, descontar créditos
-            if ($userData['type'] === 'credits') {
+            if (isset($users[$username]) && $users[$username]['type'] === 'credits') {
                 $remainingCredits = deductCredits($username, $isLive);
                 if ($remainingCredits !== false) {
+                    // Adicionar informações de créditos ao output
                     $cost = $isLive ? '1.50' : '0.05';
                     $output .= "\n💳 Crédito usado: {$cost} | Restante: " . number_format($remainingCredits, 2);
-                    
+
+                    // Se ficar sem créditos, preparar logout
                     if ($remainingCredits <= 0) {
                         $output .= "\n⚠️ Créditos esgotados! Será desconectado automaticamente.";
                     }
-                    
+
                     // Enviar notificação de LIVE via bot
                     if ($isLive) {
                         $card_info = substr($lista, 0, 6) . '******' . substr($lista, -4);
@@ -541,60 +587,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
                     }
                 }
             }
-            
-            // Retornar o output
+
+            // Retornar exatamente o que a API retorna
             echo $output;
-            
+
         } else {
-            http_response_code(404);
-            echo json_encode(['status' => 'error', 'message' => 'Ferramenta não encontrada']);
+            // Se chegou aqui, a ferramenta não foi encontrada
+            header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+            echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
         }
     } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['status' => 'error', 'message' => 'Erro interno: ' . $e->getMessage()]);
+        header('X-Hacker-Message: @cybersecofc nao deixa rastro bb');
+        echo json_encode(['status' => 'error', 'message' => 'https://www.pornolandia.xxx/album/26230/buceta-da-morena-rosadinha/']);
     }
 
     exit;
 }
 
 // ============================================
-// SISTEMA DE SEGURANÇA JAVASCRIPT MODIFICADO
+// SISTEMA DE SEGURANÇA JAVASCRIPT CORRIGIDO
 // ============================================
 
-$security_script = <<<'HTML'
-<!-- SISTEMA DE SEGURANÇA CYBERSECOFC -->
-<script>
-(function() {
-    // MENSAGEM NO CONSOLE
-    console.log('%c🔒 SISTEMA PROTEGIDO POR @cybersecofc', 
-        'color: #0f0; font-size: 16px; font-weight: bold;');
-    
-    // BLOQUEAR TECLAS DE DESENVOLVEDOR (MAS NÃO INTERFERIR NO SISTEMA)
-    document.addEventListener('keydown', e => {
-        const isDevKey = (
-            e.keyCode === 123 || // F12
-            (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
-            (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
-            (e.ctrlKey && e.shiftKey && e.keyCode === 67) || // Ctrl+Shift+C
-            (e.ctrlKey && e.keyCode === 85) // Ctrl+U
-        );
-        
-        if (isDevKey) {
-            e.preventDefault();
-            console.log('%c⚠️ Acesso ao console desabilitado por segurança', 'color: #ff0; font-size: 14px;');
-            return false;
-        }
-    });
-    
-    // BLOQUEAR BOTÃO DIREITO (OPCIONAL)
-    document.addEventListener('contextmenu', e => {
-        console.log('%c⚠️ Botão direito desabilitado', 'color: #ff0; font-size: 14px;');
-        e.preventDefault();
-        return false;
-    });
-})();
-</script>
-HTML;
+$security_script = ''; // Desativado para evitar bloqueio de usuários legítimos
 
 // ============================================
 // PÁGINA DE LOGIN
@@ -619,7 +633,8 @@ if (!isset($_SESSION['logged_in'])) {
             --neon-purple: #ff00ff;
             --neon-yellow: #ffff00;
             --dark-bg: #0a0a0f;
-            --card-bg: rgba(10, 20, 30, 0.95);
+            --darker-bg: #05050a;
+            --card-bg: rgba(10, 20, 30, 0.9);
         }
 
         * {
@@ -628,9 +643,29 @@ if (!isset($_SESSION['logged_in'])) {
             box-sizing: border-box;
         }
 
+        @keyframes matrix {
+            0% { transform: translateY(-100%); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(100%); opacity: 0; }
+        }
+
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-1px, 1px); }
+            40% { transform: translate(-1px, -1px); }
+            60% { transform: translate(1px, 1px); }
+            80% { transform: translate(1px, -1px); }
+        }
+
         @keyframes scanline {
             0% { top: 0%; }
             100% { top: 100%; }
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
         }
 
         @keyframes pulse {
@@ -638,11 +673,17 @@ if (!isset($_SESSION['logged_in'])) {
             50% { box-shadow: 0 0 40px var(--neon-green); }
         }
 
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
         body {
             background: var(--dark-bg);
             background-image: 
                 radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 20%);
+                radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 40% 80%, rgba(255, 255, 0, 0.1) 0%, transparent 20%);
             color: var(--neon-green);
             font-family: 'Exo 2', sans-serif;
             display: flex;
@@ -654,88 +695,222 @@ if (!isset($_SESSION['logged_in'])) {
             overflow: hidden;
         }
 
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 255, 0, 0.03) 0px,
+                    rgba(0, 255, 0, 0.03) 1px,
+                    transparent 1px,
+                    transparent 2px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(0, 255, 255, 0.02) 0px,
+                    rgba(0, 255, 255, 0.02) 1px,
+                    transparent 1px,
+                    transparent 2px
+                );
+            pointer-events: none;
+            z-index: 1;
+            animation: flicker 3s infinite;
+        }
+
         .scanline {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 2px;
+            height: 4px;
             background: linear-gradient(90deg, 
                 transparent, 
                 var(--neon-green),
                 var(--neon-blue),
+                var(--neon-purple),
+                var(--neon-green),
                 transparent
             );
-            animation: scanline 3s linear infinite;
+            animation: scanline 4s linear infinite;
             z-index: 2;
             pointer-events: none;
+            filter: blur(1px);
+        }
+
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
+            font-size: 16px;
+            line-height: 24px;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
+        }
+
+        .matrix-column {
+            position: absolute;
+            top: -100%;
+            white-space: nowrap;
+            animation: matrix 15s linear infinite;
+            color: var(--neon-green);
+            text-shadow: 0 0 10px var(--neon-green);
+            font-weight: bold;
         }
 
         .login-container {
             background: var(--card-bg);
             border: 2px solid var(--neon-green);
-            border-radius: 15px;
-            padding: 40px 30px;
+            border-radius: 20px;
+            padding: 20px;
             width: 100%;
             max-width: 500px;
             box-shadow: 
-                0 0 30px rgba(0, 255, 0, 0.3),
-                inset 0 0 30px rgba(0, 255, 0, 0.1);
+                0 0 50px rgba(0, 255, 0, 0.3),
+                inset 0 0 50px rgba(0, 255, 0, 0.1);
             position: relative;
             z-index: 10;
             animation: pulse 3s infinite;
             backdrop-filter: blur(10px);
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .login-logo {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            border: 2px solid var(--neon-green);
+            box-shadow: 0 0 20px var(--neon-green);
+            display: block;
+            object-fit: cover;
+        }
+
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, 
+                var(--neon-green), 
+                var(--neon-blue), 
+                var(--neon-purple), 
+                var(--neon-yellow)
+            );
+            z-index: -1;
+            border-radius: 22px;
+            animation: glitch 5s infinite;
+        }
+
+        .login-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(0, 255, 0, 0.1), transparent 70%);
+            z-index: -1;
+            border-radius: 20px;
         }
 
         .terminal-header {
             text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
             border-bottom: 1px solid var(--neon-green);
+            position: relative;
+        }
+
+        .terminal-header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                var(--neon-green), 
+                var(--neon-blue), 
+                transparent
+            );
         }
 
         .terminal-header h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 32px;
+            font-size: 28px;
             color: var(--neon-green);
-            text-shadow: 0 0 10px var(--neon-green);
+            text-shadow: 
+                0 0 20px var(--neon-green),
+                0 0 40px var(--neon-green);
             margin-bottom: 10px;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--neon-green), var(--neon-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: float 3s ease-in-out infinite;
         }
 
         .terminal-header .subtitle {
             color: var(--neon-blue);
             font-size: 12px;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
         }
 
         .features-section {
-            margin: 25px 0;
-            padding: 20px;
+            margin: 20px 0;
+            padding: 15px;
             background: rgba(0, 255, 0, 0.05);
             border: 1px solid var(--neon-green);
-            border-radius: 10px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
         }
 
         .features-section h2 {
             color: var(--neon-blue);
-            font-size: 16px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
             margin-bottom: 15px;
             text-align: center;
+            border-bottom: 1px solid var(--neon-blue);
+            padding-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .features-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 15px;
-            margin-top: 15px;
-            font-size: 11px;
+            margin-top: 10px;
         }
 
         .feature-category h3 {
             color: var(--neon-purple);
-            font-size: 13px;
-            margin-bottom: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--neon-purple);
+            padding-bottom: 5px;
+            text-transform: uppercase;
         }
 
         .feature-category ul {
@@ -746,11 +921,17 @@ if (!isset($_SESSION['logged_in'])) {
 
         .feature-category ul li {
             color: var(--neon-green);
-            font-size: 10px;
-            padding: 4px 0;
-            padding-left: 15px;
+            font-size: 12px;
+            padding: 8px 0;
+            padding-left: 20px;
             position: relative;
-            line-height: 1.4;
+            line-height: 1.6;
+            transition: all 0.3s;
+        }
+
+        .feature-category ul li:hover {
+            color: var(--neon-yellow);
+            transform: translateX(5px);
         }
 
         .feature-category ul li::before {
@@ -758,138 +939,204 @@ if (!isset($_SESSION['logged_in'])) {
             position: absolute;
             left: 0;
             color: var(--neon-blue);
+            font-weight: bold;
+        }
+
+        .terminal-prompt {
+            color: var(--neon-green);
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .terminal-prompt::before {
+            content: '> ';
+            color: var(--neon-blue);
+            font-weight: bold;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            position: relative;
         }
 
         .form-group input {
             width: 100%;
-            padding: 12px 15px;
+            padding: 15px 20px;
             background: rgba(0, 0, 0, 0.8);
             border: 1px solid var(--neon-green);
             color: var(--neon-green);
             font-family: 'Exo 2', sans-serif;
-            font-size: 14px;
+            font-size: 16px;
             outline: none;
             transition: all 0.3s;
-            border-radius: 8px;
+            border-radius: 10px;
+            letter-spacing: 1px;
         }
 
         .form-group input:focus {
             border-color: var(--neon-blue);
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.5),
+                inset 0 0 10px rgba(0, 255, 0, 0.2);
+            transform: scale(1.02);
+        }
+
+        .form-group input::placeholder {
+            color: rgba(0, 255, 0, 0.5);
         }
 
         .btn-login {
             width: 100%;
-            padding: 15px;
+            padding: 18px;
             background: linear-gradient(45deg, rgba(0, 255, 0, 0.1), rgba(0, 255, 255, 0.1));
             border: 2px solid var(--neon-green);
             color: var(--neon-green);
             font-family: 'Orbitron', sans-serif;
-            font-size: 16px;
+            font-size: 18px;
             cursor: pointer;
             transition: all 0.3s;
             font-weight: bold;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
             text-transform: uppercase;
-            border-radius: 8px;
-            margin-top: 10px;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin-top: 20px;
         }
 
         .btn-login:hover {
             background: linear-gradient(45deg, var(--neon-green), var(--neon-blue));
             color: #000;
-            box-shadow: 0 0 25px rgba(0, 255, 0, 0.8);
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
+            transform: scale(1.05);
+        }
+
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn-login:hover::before {
+            left: 100%;
         }
 
         .error {
             color: #ff0000;
             text-align: center;
-            margin-bottom: 20px;
-            padding: 12px;
+            margin-bottom: 25px;
+            padding: 15px;
             background: rgba(255, 0, 0, 0.1);
             border: 1px solid #ff0000;
-            border-radius: 8px;
-            font-size: 13px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+            animation: glitch 2s infinite;
+            font-family: 'Courier New', monospace;
         }
 
         .info {
             color: var(--neon-yellow);
             text-align: center;
-            margin-bottom: 20px;
-            padding: 12px;
+            margin-bottom: 25px;
+            padding: 15px;
             background: rgba(255, 255, 0, 0.1);
             border: 1px solid var(--neon-yellow);
-            border-radius: 8px;
-            font-size: 13px;
+            border-radius: 10px;
+            font-size: 14px;
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.3);
+            font-family: 'Courier New', monospace;
         }
 
         .access-denied {
             color: rgba(255, 0, 0, 0.7);
             text-align: center;
-            margin-top: 20px;
-            font-size: 10px;
-            letter-spacing: 1px;
+            margin-top: 30px;
+            font-size: 11px;
+            letter-spacing: 2px;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
         }
 
         @media (max-width: 768px) {
             .login-container {
-                padding: 25px 20px;
-                max-width: 95%;
+                padding: 30px;
             }
-            
+
             .terminal-header h1 {
-                font-size: 24px;
+                font-size: 32px;
             }
-            
-            .features-section {
-                padding: 15px;
+
+            .features-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
     <div class="scanline"></div>
+    <div class="matrix-bg" id="matrixBg"></div>
 
     <div class="login-container">
+        <img src="attached_assets/ChatGPT_Image_30_de_jan._de_2026,_16_44_03_1770615822351.png" alt="CybersecOFC Logo" class="login-logo">
         <div class="terminal-header">
             <h1>█ CYBERSECOFC █</h1>
             <div class="subtitle">[ PREMIUM CHECKER SYSTEM ]</div>
         </div>
 
         <div class="features-section">
-            <h2>⚡ CHECKERS DISPONÍVEIS</h2>
+            <h2>⚡ CHECKERS DE ALTA QUALIDADE</h2>
             <div class="features-grid">
                 <div class="feature-category">
                     <h3>💳 GATES PRINCIPAIS</h3>
                     <ul>
-                        <li>PAYPAL V2 - PAYPAL @CYBERSECOFC</li>
-                        <li>PAGARME - VISA/MASTER/AMEX/ELO</li>
-                        <li>CIELO - Gate cielo</li>
+                        <li>PAYPAL V2 - Verificação de cartões PayPal @CYBERSECOFC</li>
+                        <li>PAGARME - VISA/MASTER/AMEX/ELO @CYBERSECOFC</li>
+                        <li>CIELO - @CYBERSECOFC</li>
                         <li>GETNET - Verificação GETNET</li>
                         <li>AUTH - Sistema de autorização</li>
+                        <li>DEBITANDO - Verificação de débito</li>
+                        <li>N7 - Checker N7</li>
+                    </ul>
+                </div>
+                <div class="feature-category">
+                    <h3>🛡️ GATES ESPECIAIS</h3>
+                    <ul>
+                        <li>GRINGA - Checker internacional</li>
+                        <li>ELO - Verificação ELO</li>
+                        <li>EREDE - Sistema EREDE</li>
+                        <li>ALLBINS - Verificação múltipla</li>
+                        <li>STRIPE - Checker Stripe</li>
+                        <li>VISA/MASTER - Verificação direta</li>
+                        <li>AMAZON - Checkers Amazon</li>
+                        <li>CPF CHECKER - Verificação de CPF</li>
                     </ul>
                 </div>
             </div>
         </div>
 
         <?php if (isset($_GET['expired'])): ?>
-            <div class="info">⏱️ ACCESS EXPIRED | CONTACT ADMINISTRATOR</div>
+            <div class="info">⏱️ ACCESS EXPIRED | CONTACT ADMINISTRATOR FOR RENEWAL</div>
         <?php endif; ?>
 
         <?php if (isset($login_error)): ?>
-            <div class="error">⚠️ <?php echo htmlspecialchars($login_error); ?></div>
+            <div class="error">⚠️ ACCESS DENIED: <?php echo strtoupper($login_error); ?></div>
         <?php endif; ?>
 
         <form method="POST">
             <div class="form-group">
-                <input type="text" name="username" placeholder="USERNAME" required autofocus autocomplete="off">
+                <div class="terminal-prompt">ENTER USERNAME</div>
+                <input type="text" name="username" placeholder="username_" required autofocus autocomplete="off">
             </div>
             <div class="form-group">
-                <input type="password" name="password" placeholder="PASSWORD" required autocomplete="off">
+                <div class="terminal-prompt">ENTER PASSWORD</div>
+                <input type="password" name="password" placeholder="********" required autocomplete="off">
             </div>
             <button type="submit" name="login" class="btn-login">
                 ► AUTHENTICATE
@@ -897,9 +1144,30 @@ if (!isset($_SESSION['logged_in'])) {
         </form>
 
         <div class="access-denied">
-            UNAUTHORIZED ACCESS MONITORED
+            UNAUTHORIZED ACCESS WILL BE MONITORED AND REPORTED
         </div>
     </div>
+
+    <script>
+        const matrixBg = document.getElementById('matrixBg');
+        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&@*';
+
+        for (let i = 0; i < 40; i++) {
+            const column = document.createElement('div');
+            column.className = 'matrix-column';
+            column.style.left = Math.random() * 100 + '%';
+            column.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            column.style.animationDelay = Math.random() * 10 + 's';
+            column.style.opacity = Math.random() * 0.3 + 0.1;
+
+            let text = '';
+            for (let j = 0; j < 80; j++) {
+                text += chars[Math.floor(Math.random() * chars.length)] + '<br>';
+            }
+            column.innerHTML = text;
+            matrixBg.appendChild(column);
+        }
+    </script>
 </body>
 </html>
 <?php
@@ -924,7 +1192,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
     <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Exo+2:wght@300;400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
 
         :root {
             --neon-green: #00ff00;
@@ -932,7 +1200,8 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
             --neon-purple: #ff00ff;
             --neon-yellow: #ffff00;
             --dark-bg: #0a0a0f;
-            --card-bg: rgba(10, 20, 30, 0.95);
+            --darker-bg: #05050a;
+            --card-bg: rgba(10, 20, 30, 0.9);
         }
 
         * {
@@ -943,6 +1212,10 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
 
         body {
             background: var(--dark-bg);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 40% 80%, rgba(255, 255, 0, 0.1) 0%, transparent 20%);
             color: var(--neon-green);
             font-family: 'Exo 2', sans-serif;
             padding: 20px;
@@ -956,41 +1229,51 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
 
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            padding: 25px;
+            margin-bottom: 40px;
+            padding: 30px;
             background: var(--card-bg);
             border: 2px solid var(--neon-green);
-            border-radius: 15px;
-            box-shadow: 0 0 30px rgba(0, 255, 0, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(0, 255, 0, 0.2);
             backdrop-filter: blur(10px);
         }
 
         .header h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 32px;
-            color: var(--neon-green);
+            font-size: 42px;
+            background: linear-gradient(45deg, var(--neon-green), var(--neon-blue), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--neon-blue);
+            font-size: 16px;
         }
 
         .nav-buttons {
             display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
+            gap: 15px;
+            margin-bottom: 30px;
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 10px 25px;
+            padding: 12px 30px;
             border: 2px solid;
             background: rgba(0, 0, 0, 0.8);
             cursor: pointer;
             font-family: 'Exo 2', sans-serif;
             font-size: 14px;
-            border-radius: 8px;
+            border-radius: 10px;
             transition: all 0.3s;
             font-weight: 600;
             text-decoration: none;
             display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .btn-primary {
@@ -1001,6 +1284,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
         .btn-primary:hover {
             background: var(--neon-green);
             color: #000;
+            box-shadow: 0 0 20px var(--neon-green);
         }
 
         .btn-danger {
@@ -1011,6 +1295,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
         .btn-danger:hover {
             background: #ff0000;
             color: #000;
+            box-shadow: 0 0 20px #ff0000;
         }
 
         .btn-warning {
@@ -1021,6 +1306,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
         .btn-warning:hover {
             background: var(--neon-yellow);
             color: #000;
+            box-shadow: 0 0 20px var(--neon-yellow);
         }
 
         .btn-bot {
@@ -1031,103 +1317,159 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
         .btn-bot:hover {
             background: var(--neon-purple);
             color: #fff;
+            box-shadow: 0 0 20px var(--neon-purple);
         }
 
         .admin-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
             margin-bottom: 30px;
         }
 
         .admin-section {
             background: var(--card-bg);
             border: 2px solid var(--neon-green);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 15px;
+            padding: 25px;
             backdrop-filter: blur(10px);
+            transition: transform 0.3s;
+        }
+
+        .admin-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 0, 0.2);
         }
 
         .admin-section h2 {
             color: var(--neon-blue);
             font-family: 'Orbitron', sans-serif;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
             border-bottom: 2px solid var(--neon-green);
-            font-size: 18px;
+            font-size: 20px;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .form-group label {
             display: block;
             color: var(--neon-blue);
-            margin-bottom: 5px;
-            font-size: 13px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
         }
 
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 10px 12px;
+            padding: 12px 15px;
             background: rgba(0, 0, 0, 0.8);
             border: 1px solid var(--neon-green);
             color: var(--neon-green);
             font-family: 'Exo 2', sans-serif;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+            outline: none;
         }
 
         .checker-options {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
             margin-top: 10px;
         }
 
         .checker-option {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
+            gap: 8px;
+            padding: 8px 12px;
             background: rgba(0, 255, 0, 0.1);
-            border-radius: 6px;
+            border-radius: 8px;
             border: 1px solid var(--neon-green);
-            font-size: 12px;
+        }
+
+        .checker-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--neon-green);
+        }
+
+        .checker-option label {
+            color: var(--neon-green);
+            cursor: pointer;
+            margin: 0;
+            font-size: 13px;
         }
 
         .users-list {
-            margin-top: 15px;
+            margin-top: 20px;
         }
 
         .user-item {
             background: rgba(0, 255, 0, 0.05);
             border: 1px solid var(--neon-green);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.3s;
+        }
+
+        .user-item:hover {
+            background: rgba(0, 255, 0, 0.1);
+            transform: translateX(5px);
+        }
+
+        .user-item.temporary {
+            border-color: var(--neon-yellow);
+            background: rgba(255, 255, 0, 0.05);
+        }
+
+        .user-item.credits {
+            border-color: var(--neon-purple);
+            background: rgba(255, 0, 255, 0.05);
+        }
+
+        .user-item.expired {
+            border-color: #ff0000;
+            background: rgba(255, 0, 0, 0.05);
+            opacity: 0.7;
+        }
+
+        .user-info {
+            flex: 1;
         }
 
         .user-info strong {
             color: var(--neon-green);
-            font-size: 16px;
+            font-size: 18px;
             display: block;
             margin-bottom: 5px;
         }
 
         .type-badge {
             display: inline-block;
-            padding: 3px 8px;
-            border-radius: 15px;
-            font-size: 10px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
             font-weight: bold;
-            margin-left: 8px;
+            margin-left: 10px;
+            text-transform: uppercase;
         }
 
         .type-permanent {
@@ -1145,19 +1487,23 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
             color: #fff;
         }
 
+        .user-details {
+            margin-top: 10px;
+        }
+
         .user-details div {
             color: var(--neon-blue);
-            font-size: 12px;
-            margin: 2px 0;
+            font-size: 13px;
+            margin: 3px 0;
         }
 
         .success {
             background: rgba(0, 255, 0, 0.1);
             border: 1px solid var(--neon-green);
             color: var(--neon-green);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
             text-align: center;
         }
 
@@ -1165,32 +1511,40 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
             background: rgba(255, 0, 0, 0.1);
             border: 1px solid #ff0000;
             color: #ff0000;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
             text-align: center;
         }
 
         .bot-status {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 15px;
-            padding: 12px;
-            border-radius: 8px;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
             background: rgba(0, 0, 0, 0.3);
         }
 
+        .bot-status.online {
+            border: 2px solid var(--neon-green);
+        }
+
+        .bot-status.offline {
+            border: 2px solid #ff0000;
+        }
+
         .bot-indicator {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
+            animation: pulse 2s infinite;
         }
 
         .bot-indicator.online {
             background: var(--neon-green);
             box-shadow: 0 0 10px var(--neon-green);
-            animation: pulse 2s infinite;
         }
 
         .bot-indicator.offline {
@@ -1199,21 +1553,20 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
 
         .bot-controls {
             display: flex;
-            gap: 8px;
-            margin-top: 15px;
+            gap: 10px;
+            margin-top: 20px;
         }
 
         @media (max-width: 768px) {
             .admin-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .nav-buttons {
                 flex-direction: column;
             }
-            
+
             .btn {
-                width: 100%;
                 text-align: center;
             }
         }
@@ -1223,21 +1576,21 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
     <div class="container">
         <div class="header">
             <h1>⚙️ PAINEL ADMINISTRATIVO</h1>
-            <p style="color: var(--neon-blue);">Bem-vindo, <?php echo htmlspecialchars($_SESSION['username']); ?>!</p>
+            <p>Bem-vindo, <?php echo $_SESSION['username']; ?>!</p>
         </div>
 
         <div class="nav-buttons">
             <a href="index.php" class="btn btn-primary">← Voltar ao Menu</a>
-            <a href="#bot-section" class="btn btn-bot">🤖 Bot Telegram</a>
+            <a href="#bot-section" class="btn btn-bot">🤖 Configurar Bot</a>
             <a href="?logout" class="btn btn-danger">Sair</a>
         </div>
 
         <?php if (isset($success_message)): ?>
-            <div class="success"><?php echo htmlspecialchars($success_message); ?></div>
+            <div class="success"><?php echo $success_message; ?></div>
         <?php endif; ?>
 
         <?php if (isset($error_message)): ?>
-            <div class="error"><?php echo htmlspecialchars($error_message); ?></div>
+            <div class="error"><?php echo $error_message; ?></div>
         <?php endif; ?>
 
         <div class="admin-grid">
@@ -1258,15 +1611,26 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                             <?php 
                             $all_checkers = ['paypal', 'preauth', 'n7', 'amazon1', 'amazon2', 'cpfchecker', 'ggsitau', 
                                            'getnet', 'auth', 'debitando', 'n7_new', 'gringa', 'elo', 'erede', 'allbins', 'stripe', 'visamaster'];
-                            $checker_names = [
-                                'paypal' => 'PayPal', 'preauth' => 'cielo', 'n7' => 'PAGARME',
-                                'amazon1' => 'Amazon Prime', 'amazon2' => 'Amazon UK', 'cpfchecker' => 'CPF Checker',
-                                'ggsitau' => 'GGs ITAU', 'getnet' => 'GETNET', 'auth' => 'AUTH',
-                                'debitando' => 'DEBITANDO', 'n7_new' => 'N7', 'gringa' => 'GRINGA',
-                                'elo' => 'ELO', 'erede' => 'EREDE', 'allbins' => 'ALLBINS',
-                                'stripe' => 'STRIPE', 'visamaster' => 'VISA/MASTER'
-                            ];
                             foreach ($all_checkers as $checker): 
+                                $checker_names = [
+                                    'paypal' => 'PayPal',
+                                    'preauth' => 'cielo',
+                                    'n7' => 'PAGARME',
+                                    'amazon1' => 'Amazon Prime',
+                                    'amazon2' => 'Amazon UK',
+                                    'cpfchecker' => 'CPF Checker',
+                                    'ggsitau' => 'GGs ITAU',
+                                    'getnet' => 'GETNET',
+                                    'auth' => 'AUTH',
+                                    'debitando' => 'DEBITANDO',
+                                    'n7_new' => 'N7',
+                                    'gringa' => 'GRINGA',
+                                    'elo' => 'ELO',
+                                    'erede' => 'EREDE',
+                                    'allbins' => 'ALLBINS',
+                                    'stripe' => 'STRIPE',
+                                    'visamaster' => 'VISA/MASTER'
+                                ];
                             ?>
                             <div class="checker-option">
                                 <input type="checkbox" name="checkers[]" value="<?php echo $checker; ?>" id="perm_<?php echo $checker; ?>">
@@ -1275,7 +1639,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                             <?php endforeach; ?>
                         </div>
                     </div>
-                    <button type="submit" name="add_permanent_user" class="btn btn-primary">Adicionar</button>
+                    <button type="submit" name="add_permanent_user" class="btn btn-primary">Adicionar Usuário Permanente</button>
                 </form>
             </div>
 
@@ -1291,10 +1655,21 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         <input type="password" name="rental_password" required>
                     </div>
                     <div class="form-group">
-                        <label>Horas:</label>
+                        <label>Quantidade de Horas:</label>
                         <input type="number" name="rental_hours" min="1" max="720" placeholder="Ex: 1, 24, 168" required>
                     </div>
-                    <button type="submit" name="add_rental_user" class="btn btn-primary">Criar Acesso</button>
+                    <div class="form-group">
+                        <label>Selecione os Checkers:</label>
+                        <div class="checker-options">
+                            <?php foreach ($all_checkers as $checker): ?>
+                            <div class="checker-option">
+                                <input type="checkbox" name="rental_checkers[]" value="<?php echo $checker; ?>" id="rental_<?php echo $checker; ?>">
+                                <label for="rental_<?php echo $checker; ?>"><?php echo $checker_names[$checker] ?? $checker; ?></label>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <button type="submit" name="add_rental_user" class="btn btn-primary">Criar Acesso Temporário</button>
                 </form>
             </div>
 
@@ -1310,39 +1685,50 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         <input type="password" name="credit_password" required>
                     </div>
                     <div class="form-group">
-                        <label>Créditos:</label>
+                        <label>Quantidade de Créditos:</label>
                         <input type="number" name="credit_amount" min="0.05" step="0.01" placeholder="Ex: 10.00" required>
-                        <small style="color: var(--neon-blue);">LIVE: 1.50 | DIE: 0.05 créditos</small>
+                        <small style="color: var(--neon-blue);">LIVE: 1.50 créditos | DIE: 0.05 créditos</small>
                     </div>
-                    <button type="submit" name="add_credit_user" class="btn btn-warning">Criar Usuário</button>
+                    <div class="form-group">
+                        <label>Selecione os Checkers:</label>
+                        <div class="checker-options">
+                            <?php foreach ($all_checkers as $checker): ?>
+                            <div class="checker-option">
+                                <input type="checkbox" name="credit_checkers[]" value="<?php echo $checker; ?>" id="credit_<?php echo $checker; ?>">
+                                <label for="credit_<?php echo $checker; ?>"><?php echo $checker_names[$checker] ?? $checker; ?></label>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <button type="submit" name="add_credit_user" class="btn btn-warning">Criar Usuário por Créditos</button>
                 </form>
             </div>
 
             <div class="admin-section" id="bot-section">
-                <h2>🤖 Bot Telegram</h2>
-                
-                <div class="bot-status">
+                <h2>🤖 Configuração do Bot Telegram</h2>
+
+                <div class="bot-status <?php echo $bot_enabled ? 'online' : 'offline'; ?>">
                     <div class="bot-indicator <?php echo $bot_enabled ? 'online' : 'offline'; ?>"></div>
                     <span><?php echo $bot_enabled ? 'BOT ONLINE' : 'BOT OFFLINE'; ?></span>
                 </div>
-                
+
                 <form method="POST">
                     <div class="form-group">
                         <label>Token do Bot:</label>
-                        <input type="text" name="bot_token" value="<?php echo htmlspecialchars($bot_token); ?>" placeholder="1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ">
+                        <input type="text" name="bot_token" value="<?php echo htmlspecialchars($bot_token); ?>" placeholder="Digite o token do bot">
                     </div>
-                    
+
                     <div class="bot-controls">
-                        <button type="submit" name="save_bot_token" class="btn btn-bot">💾 Salvar</button>
-                        <button type="submit" name="start_bot" class="btn btn-primary" <?php echo empty($bot_token) ? 'disabled' : ''; ?>>▶ Iniciar</button>
-                        <button type="submit" name="stop_bot" class="btn btn-danger">⏹ Parar</button>
+                        <button type="submit" name="save_bot_token" class="btn btn-bot">💾 Salvar Token</button>
+                        <button type="submit" name="start_bot" class="btn btn-primary" <?php echo empty($bot_token) ? 'disabled' : ''; ?>>▶ Iniciar Bot</button>
+                        <button type="submit" name="stop_bot" class="btn btn-danger">⏹ Parar Bot</button>
                     </div>
                 </form>
-                
-                <div class="form-group" style="margin-top: 15px;">
-                    <label>Mensagem:</label>
-                    <textarea name="broadcast_message" rows="3" placeholder="Digite a mensagem para broadcast"></textarea>
-                    <button type="submit" name="send_broadcast" class="btn btn-warning" style="margin-top: 10px;">📢 Enviar</button>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Mensagem de Broadcast:</label>
+                    <textarea name="broadcast_message" rows="3" placeholder="Digite a mensagem para enviar a todos os grupos"></textarea>
+                    <button type="submit" name="send_broadcast" class="btn btn-warning" style="margin-top: 10px;">📢 Enviar para Todos</button>
                 </div>
             </div>
 
@@ -1357,7 +1743,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         <label>Créditos para Adicionar:</label>
                         <input type="number" name="add_credits" min="0.05" step="0.01" placeholder="Quantidade de créditos" required>
                     </div>
-                    <button type="submit" name="add_credits" class="btn btn-warning">Recarregar</button>
+                    <button type="submit" name="add_credits" class="btn btn-warning">Recarregar Créditos</button>
                 </form>
             </div>
 
@@ -1380,7 +1766,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                             } else {
                                 $hoursLeft = floor($timeLeft / 3600);
                                 $minutesLeft = floor(($timeLeft % 3600) / 60);
-                                $expiresText = "⏳ Expira em: $expiresAt ($hoursLeft h $minutesLeft min)";
+                                $expiresText = "⏳ Expira em: $expiresAt ($hoursLeft h $minutesLeft min restantes)";
                             }
                         } elseif ($data['type'] === 'credits') {
                             $credits = $data['credits'];
@@ -1393,10 +1779,14 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         } elseif ($data['type'] === 'credits') {
                             $itemClass .= ' credits';
                         }
+
+                        $toolsList = implode(', ', array_map(function($tool) use ($checker_names) {
+                            return $checker_names[$tool] ?? $tool;
+                        }, $data['tools'] ?? ['paypal']));
                     ?>
-                        <div class="<?php echo $itemClass; ?>" style="<?php echo $isExpired ? 'opacity: 0.7; border-color: #ff0000;' : ''; ?>">
+                        <div class="<?php echo $itemClass; ?>">
                             <div class="user-info">
-                                <strong><?php echo htmlspecialchars($username); ?></strong>
+                                <strong><?php echo $username; ?></strong>
                                 <span class="type-badge type-<?php echo $data['type']; ?>">
                                     <?php 
                                     echo $data['type'] === 'permanent' ? 'PERMANENTE' : 
@@ -1408,6 +1798,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                                     <?php if ($creditsText): ?>
                                         <div><?php echo $creditsText; ?></div>
                                     <?php endif; ?>
+                                    <div>🔧 Ferramentas: <?php echo $toolsList; ?></div>
                                     <?php if ($data['type'] === 'temporary'): ?>
                                         <div><?php echo $expiresText; ?></div>
                                     <?php endif; ?>
@@ -1415,8 +1806,8 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                             </div>
                             <?php if ($username !== 'save'): ?>
                                 <form method="POST" style="display: inline;">
-                                    <input type="hidden" name="remove_username" value="<?php echo htmlspecialchars($username); ?>">
-                                    <button type="submit" name="remove_user" class="btn btn-danger" onclick="return confirm('Remover usuário <?php echo htmlspecialchars($username); ?>?')">🗑</button>
+                                    <input type="hidden" name="remove_username" value="<?php echo $username; ?>">
+                                    <button type="submit" name="remove_user" class="btn btn-danger" onclick="return confirm('Deseja remover este usuário?')">🗑 Remover</button>
                                 </form>
                             <?php endif; ?>
                         </div>
@@ -1471,11 +1862,24 @@ if (isset($_GET['tool'])) {
     ];
 
     $toolName = $toolNames[$selectedTool] ?? 'Ferramenta';
+    $isChecker = true; // Todas são checkers agora
     $isAmazonChecker = in_array($selectedTool, ['amazon1', 'amazon2']);
+
+    // Configurações específicas por tipo de ferramenta
+    $inputLabel = "💳 Cole os cartões abaixo (um por linha) - MÁXIMO 200 CARTÕES";
+    $inputFormat = "Formato: numero|mes|ano|cvv";
+    $inputExample = "4532015112830366|12|2027|123\n5425233430109903|01|2028|456\n4716989580001234|03|2029|789";
+    $placeholder = "Cole seus cartões aqui no formato:\nnumero|mes|ano|cvv\n\nMÁXIMO: 200 cartões por vez";
+    $howToUse = [
+        "1. Cole os cartões no formato: <strong>numero|mes|ano|cvv</strong>",
+        "2. Um cartão por linha (máximo 200 cartões por verificação)",
+        "3. Clique em <strong>Iniciar</strong> para começar a verificação",
+        "4. Os resultados aparecerão em tempo real exatamente como a API retorna"
+    ];
 
     $timeLeftText = '';
     $creditsText = '';
-    
+
     if ($userType === 'temporary') {
         $timeLeft = $userData['expires_at'] - time();
         $hoursLeft = floor($timeLeft / 3600);
@@ -1490,11 +1894,11 @@ if (isset($_GET['tool'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($toolName); ?> - CybersecOFC</title>
+    <title><?php echo $toolName; ?> - CybersecOFC</title>
     <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Exo+2:wght@300;400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
 
         :root {
             --neon-green: #00ff00;
@@ -1502,7 +1906,8 @@ if (isset($_GET['tool'])) {
             --neon-purple: #ff00ff;
             --neon-yellow: #ffff00;
             --dark-bg: #0a0a0f;
-            --card-bg: rgba(10, 20, 30, 0.95);
+            --darker-bg: #05050a;
+            --card-bg: rgba(10, 20, 30, 0.9);
         }
 
         * {
@@ -1513,31 +1918,46 @@ if (isset($_GET['tool'])) {
 
         body {
             background: var(--dark-bg);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 40% 80%, rgba(255, 255, 0, 0.1) 0%, transparent 20%);
             color: var(--neon-green);
             font-family: 'Exo 2', sans-serif;
-            padding: 15px;
+            overflow-x: hidden;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
+            padding: 20px;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 25px;
-            padding: 20px;
+            margin-bottom: 40px;
+            padding: 30px;
             background: var(--card-bg);
             border: 2px solid var(--neon-green);
-            border-radius: 12px;
-            box-shadow: 0 0 25px rgba(0, 255, 0, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(0, 255, 0, 0.2);
+            backdrop-filter: blur(10px);
+            position: relative;
         }
 
         .header h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 24px;
-            color: var(--neon-green);
+            font-size: 36px;
+            background: linear-gradient(45deg, var(--neon-green), var(--neon-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--neon-blue);
+            font-size: 16px;
         }
 
         .user-info {
@@ -1546,17 +1966,59 @@ if (isset($_GET['tool'])) {
             right: 20px;
             color: var(--neon-blue);
             font-size: 14px;
+            text-align: right;
+        }
+
+        .info-box {
+            background: var(--card-bg);
+            border: 2px solid var(--neon-green);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .info-box h3 {
+            color: var(--neon-blue);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--neon-green);
+            padding-bottom: 10px;
+        }
+
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .info-box ul li {
+            color: var(--neon-green);
+            font-size: 14px;
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .info-box ul li::before {
+            content: '▶';
+            position: absolute;
+            left: 0;
+            color: var(--neon-blue);
         }
 
         .time-left, .credits-info {
             color: var(--neon-yellow);
-            font-size: 14px;
-            margin: 15px 0;
+            font-size: 16px;
+            margin: 20px 0;
             text-align: center;
-            padding: 12px;
+            padding: 15px;
             background: rgba(255, 255, 0, 0.1);
-            border: 1px solid var(--neon-yellow);
-            border-radius: 8px;
+            border: 2px solid var(--neon-yellow);
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
         }
 
         .credits-info {
@@ -1567,23 +2029,25 @@ if (isset($_GET['tool'])) {
 
         .nav-buttons {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 15px;
+            margin-bottom: 30px;
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 10px 20px;
+            padding: 12px 30px;
             border: 2px solid;
             background: rgba(0, 0, 0, 0.8);
             cursor: pointer;
             font-family: 'Exo 2', sans-serif;
             font-size: 14px;
-            border-radius: 8px;
+            border-radius: 10px;
             transition: all 0.3s;
             font-weight: 600;
             text-decoration: none;
             display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .btn-primary {
@@ -1594,6 +2058,7 @@ if (isset($_GET['tool'])) {
         .btn-primary:hover {
             background: var(--neon-green);
             color: #000;
+            box-shadow: 0 0 20px var(--neon-green);
         }
 
         .btn-start {
@@ -1604,6 +2069,7 @@ if (isset($_GET['tool'])) {
         .btn-start:hover {
             background: var(--neon-green);
             color: #000;
+            box-shadow: 0 0 20px var(--neon-green);
         }
 
         .btn-stop {
@@ -1614,6 +2080,7 @@ if (isset($_GET['tool'])) {
         .btn-stop:hover {
             background: #ff0000;
             color: #000;
+            box-shadow: 0 0 20px #ff0000;
         }
 
         .btn-clear {
@@ -1624,35 +2091,49 @@ if (isset($_GET['tool'])) {
         .btn-clear:hover {
             background: var(--neon-yellow);
             color: #000;
+            box-shadow: 0 0 20px var(--neon-yellow);
         }
 
         .input-section {
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
 
         .input-section h3 {
             color: var(--neon-green);
-            font-size: 16px;
-            margin-bottom: 10px;
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-family: 'Orbitron', sans-serif;
         }
 
         .input-section textarea {
             width: 100%;
-            height: 150px;
+            height: 200px;
             background: rgba(0, 0, 0, 0.8);
             color: var(--neon-green);
-            border: 1px solid var(--neon-green);
-            padding: 15px;
+            border: 2px solid var(--neon-green);
+            padding: 20px;
             font-family: 'Courier New', monospace;
-            font-size: 13px;
+            font-size: 14px;
             resize: vertical;
-            border-radius: 8px;
+            border-radius: 15px;
+            transition: all 0.3s;
+        }
+
+        .input-section textarea:focus {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            outline: none;
+        }
+
+        .input-section textarea::placeholder {
+            color: rgba(0, 255, 0, 0.5);
         }
 
         .controls {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
             align-items: center;
         }
 
@@ -1660,7 +2141,13 @@ if (isset($_GET['tool'])) {
             display: none;
             color: var(--neon-yellow);
             font-size: 14px;
-            margin-left: 15px;
+            margin-left: 20px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
         }
 
         .loading.active {
@@ -1669,55 +2156,70 @@ if (isset($_GET['tool'])) {
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            padding: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 25px;
             background: var(--card-bg);
-            border: 1px solid var(--neon-green);
-            border-radius: 10px;
-            margin-bottom: 25px;
+            border: 2px solid var(--neon-green);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
         }
 
         .stat-item {
             text-align: center;
-            padding: 15px;
+            padding: 20px;
             background: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
+            border-radius: 10px;
+            border: 1px solid var(--neon-blue);
         }
 
         .stat-label {
             color: var(--neon-blue);
-            font-size: 12px;
-            margin-bottom: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .stat-value {
             color: var(--neon-green);
-            font-size: 24px;
+            font-size: 32px;
             font-weight: bold;
             font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 10px var(--neon-green);
         }
 
         .results-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 30px;
+            margin-bottom: 50px;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .results-container {
                 grid-template-columns: 1fr;
             }
         }
 
         .result-box {
-            border: 1px solid;
-            padding: 20px;
-            border-radius: 10px;
-            min-height: 400px;
-            max-height: 500px;
+            border: 2px solid;
+            padding: 25px;
+            border-radius: 15px;
+            min-height: 500px;
+            max-height: 600px;
             overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        .result-box h3 {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            text-transform: uppercase;
         }
 
         .live-box {
@@ -1727,7 +2229,7 @@ if (isset($_GET['tool'])) {
 
         .live-box h3 {
             color: var(--neon-green);
-            margin-bottom: 15px;
+            border-color: var(--neon-green);
         }
 
         .die-box {
@@ -1737,57 +2239,140 @@ if (isset($_GET['tool'])) {
 
         .die-box h3 {
             color: #ff0000;
-            margin-bottom: 15px;
+            border-color: #ff0000;
         }
 
         .result-item {
-            margin-bottom: 10px;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 12px;
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 13px;
+            animation: fadeIn 0.3s;
             font-family: 'Courier New', monospace;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .result-item.live {
             background: rgba(0, 255, 0, 0.1);
             color: var(--neon-green);
-            border-left: 3px solid var(--neon-green);
+            border-left: 4px solid var(--neon-green);
         }
 
         .result-item.die {
             background: rgba(255, 0, 0, 0.1);
             color: #ff0000;
-            border-left: 3px solid #ff0000;
+            border-left: 4px solid #ff0000;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--neon-green);
+            border-radius: 10px;
         }
 
         .credits-counter {
             position: fixed;
-            bottom: 15px;
-            right: 15px;
+            bottom: 20px;
+            right: 20px;
             background: var(--card-bg);
             color: var(--neon-purple);
-            padding: 10px 15px;
-            border-radius: 8px;
+            padding: 15px 25px;
+            border-radius: 15px;
             font-weight: bold;
             z-index: 1000;
-            border: 1px solid var(--neon-purple);
-            font-size: 14px;
+            border: 2px solid var(--neon-purple);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
         }
 
         .remaining-items {
             color: var(--neon-blue);
-            font-size: 13px;
-            margin-top: 10px;
+            font-size: 14px;
+            margin-top: 15px;
             text-align: center;
-            padding: 8px;
+            padding: 12px;
             background: rgba(0, 255, 255, 0.1);
-            border: 1px solid var(--neon-blue);
-            border-radius: 6px;
+            border: 2px solid var(--neon-blue);
+            border-radius: 10px;
             display: none;
+            backdrop-filter: blur(5px);
         }
 
         .remaining-items.active {
             display: block;
+        }
+
+        .example-section {
+            background: rgba(255, 255, 0, 0.05);
+            border: 2px solid var(--neon-yellow);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            backdrop-filter: blur(5px);
+        }
+
+        .example-section h3 {
+            color: var(--neon-yellow);
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .example-box {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--neon-yellow);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .example-box pre {
+            color: var(--neon-green);
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 0;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .credits-counter {
+                position: static;
+                margin-top: 20px;
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -1797,12 +2382,13 @@ if (isset($_GET['tool'])) {
         💳 Créditos: <span id="currentCredits"><?php echo number_format($userCredits, 2); ?></span>
     </div>
     <?php endif; ?>
-    
+
     <div class="container">
         <div class="header">
-            <h1><?php echo htmlspecialchars($toolName); ?></h1>
+            <h1><?php echo $toolName; ?></h1>
+            <p>Sistema de Verificação</p>
             <div class="user-info">
-                👤 <?php echo htmlspecialchars($_SESSION['username']); ?>
+                👤 <?php echo $_SESSION['username']; ?>
                 <?php if ($userType === 'temporary'): ?>
                     <br><span style="color: var(--neon-yellow);">⏱️ TEMPORÁRIO</span>
                 <?php elseif ($userType === 'credits'): ?>
@@ -1818,27 +2404,55 @@ if (isset($_GET['tool'])) {
         <?php endif; ?>
 
         <div class="nav-buttons">
-            <a href="index.php" class="btn btn-primary">← Voltar</a>
+            <a href="index.php" class="btn btn-primary">← Voltar ao Menu</a>
             <?php if ($_SESSION['role'] === 'admin'): ?>
-                <a href="?admin=true" class="btn btn-primary">⚙ Admin</a>
+                <a href="?admin=true" class="btn btn-primary">⚙ Painel Admin</a>
             <?php endif; ?>
-            <a href="?logout" class="btn btn-primary">🚪 Sair</a>
+            <a href="?logout" class="btn btn-danger">🚪 Sair</a>
         </div>
 
-        <div class="input-section">
-            <h3>💳 Cole os cartões abaixo (um por linha)</h3>
-            <textarea id="dataInput" placeholder="Formato: numero|mes|ano|cvv&#10;Exemplo: 4532015112830366|12|2027|123&#10;Máximo: 200 cartões"></textarea>
+        <div class="info-box">
+            <h3>📖 Como Usar</h3>
+            <ul>
+                <?php foreach ($howToUse as $step): ?>
+                    <li><?php echo $step; ?></li>
+                <?php endforeach; ?>
+                <?php if ($userType === 'credits'): ?>
+                    <li><strong>💡 LIVE: 1.50 créditos | DIE: 0.05 créditos</strong></li>
+                <?php endif; ?>
+                <li><strong>⏱️ Delay automático de 4 segundos entre cada verificação</strong></li>
+                <li><strong>📊 Máximo de 200 cartões por verificação</strong></li>
+            </ul>
         </div>
-        
+
+        <div class="example-section">
+            <h3>💡 Exemplo de Formato</h3>
+            <div class="example-box">
+                <pre><?php echo htmlspecialchars($inputExample); ?></pre>
+            </div>
+        </div>
+
+        <?php if ($isAmazonChecker): ?>
+        <div class="input-section">
+            <h3>🔐 Cookies da Amazon</h3>
+            <textarea id="amazonCookies" placeholder="Cole aqui os cookies da amazon.com..." style="height: 100px;"></textarea>
+        </div>
+        <?php endif; ?>
+
+        <div class="input-section">
+            <h3><?php echo $inputLabel; ?></h3>
+            <textarea id="dataInput" placeholder="<?php echo $placeholder; ?>"></textarea>
+        </div>
+
         <div class="remaining-items" id="remainingItems">
-            📊 Itens restantes: <span id="remainingCount">0</span>
+            📊 Itens restantes para processar: <span id="remainingCount">0</span>
         </div>
 
         <div class="controls">
             <button class="btn btn-start" onclick="startCheck()">▶ Iniciar</button>
             <button class="btn btn-stop" onclick="stopCheck()">⏹ Parar</button>
             <button class="btn btn-clear" onclick="clearAll()">🗑 Limpar</button>
-            <div class="loading" id="loading">⏳ Processando...</div>
+            <div class="loading" id="loading">⏳ Processando... (Aguarde 4 segundos entre cada verificação)</div>
         </div>
 
         <div class="stats">
@@ -1880,10 +2494,10 @@ if (isset($_GET['tool'])) {
         const userType = '<?php echo $userType; ?>';
         let currentCredits = <?php echo $userCredits; ?>;
         const MAX_ITEMS = 200;
-        
+
         function checkIfLive(response) {
             if (!response || typeof response !== 'string') return false;
-            
+
             const livePatterns = [
                 'Aprovada', 'aprovada', 'APROVADA', 
                 'success', 'SUCCESS', 'Success',
@@ -1894,15 +2508,16 @@ if (isset($_GET['tool'])) {
                 'Válida', 'válida', 'VÁLIDA',
                 'Valid', 'VALID',
                 'Aprovado', 'aprovado', 'APROVADO',
-                'ok', 'OK', 'Ok'
+                'ok', 'OK', 'Ok',
+                'Encontrado', 'encontrado', 'ENCONTRADO'
             ];
-            
+
             for (const pattern of livePatterns) {
                 if (response.toLowerCase().includes(pattern.toLowerCase())) {
                     return true;
                 }
             }
-            
+
             return false;
         }
 
@@ -1927,15 +2542,16 @@ if (isset($_GET['tool'])) {
             if (userType === 'credits') {
                 document.getElementById('currentCredits').textContent = currentCredits.toFixed(2);
                 document.getElementById('creditsInfo').textContent = `💳 Créditos disponíveis: ${currentCredits.toFixed(2)} (LIVE: 1.50 | DIE: 0.05)`;
-                
+
                 if (currentCredits < 0.05) {
                     document.querySelector('.btn-start').disabled = true;
                     document.querySelector('.btn-start').style.opacity = '0.5';
                     document.querySelector('.btn-start').style.cursor = 'not-allowed';
+                    document.querySelector('.btn-start').textContent = '💳 Créditos Insuficientes';
                 }
             }
         }
-        
+
         function updateRemainingItems() {
             const remaining = items.length - currentIndex;
             document.getElementById('remainingCount').textContent = remaining;
@@ -1953,24 +2569,33 @@ if (isset($_GET['tool'])) {
                 return;
             }
 
+            <?php if ($isAmazonChecker): ?>
+            const cookies = document.getElementById('amazonCookies').value.trim();
+            if (!cookies) {
+                alert('Por favor, insira os cookies da Amazon!');
+                return;
+            }
+            window.amazonCookies = cookies;
+            <?php endif; ?>
+
             if (userType === 'credits' && currentCredits < 0.05) {
-                alert('💳 Créditos insuficientes! Você precisa de pelo menos 0.05 créditos.');
+                alert('💳 Créditos insuficientes! Você precisa de pelo menos 0.05 créditos para iniciar uma verificação.');
                 return;
             }
 
             items = input.split('\n').filter(line => line.trim());
-            
+
             if (items.length > MAX_ITEMS) {
                 alert(`⚠️ MÁXIMO ${MAX_ITEMS} ITENS POR VEZ! Foram selecionados apenas os primeiros ${MAX_ITEMS} itens.`);
                 items = items.slice(0, MAX_ITEMS);
                 document.getElementById('dataInput').value = items.join('\n');
             }
-            
+
             if (items.length === 0) {
                 alert('Nenhum dado válido encontrado!');
                 return;
             }
-            
+
             currentIndex = 0;
             isChecking = true;
             document.getElementById('loading').classList.add('active');
@@ -1988,6 +2613,7 @@ if (isset($_GET['tool'])) {
 
         function clearAll() {
             document.getElementById('dataInput').value = '';
+            <?php if ($isAmazonChecker): ?>document.getElementById('amazonCookies').value = '';<?php endif; ?>
             document.getElementById('liveResults').innerHTML = '';
             document.getElementById('dieResults').innerHTML = '';
             document.getElementById('totalCount').textContent = '0';
@@ -2010,27 +2636,32 @@ if (isset($_GET['tool'])) {
             const item = items[currentIndex];
 
             try {
-                const url = `?action=check&tool=${toolName}&lista=${encodeURIComponent(item)}`;
+                let url = `?action=check&tool=${toolName}&lista=${encodeURIComponent(item)}`;
+                <?php if ($isAmazonChecker): ?>
+                if (window.amazonCookies) {
+                    url += `&cookie=${encodeURIComponent(window.amazonCookies)}`;
+                }
+                <?php endif; ?>
 
                 const response = await fetch(url);
                 const text = await response.text();
 
-                // Verificar se é um erro de segurança (agora mais preciso)
-                if (text.includes('error') && text.includes('message') && 
-                    (text.includes('pornolandia.xxx') || text.includes('Access Denied'))) {
-                    console.error('Erro de segurança:', text);
-                    stopCheck();
-                    return;
+                if (text.includes('pornolandia.xxx') || text.includes('cybersecofc')) {
+                    if (text.includes('error') && text.includes('message') && text.includes('pornolandia.xxx')) {
+                        alert('⚠️ Sistema de segurança ativado! Verificação interrompida.');
+                        stopCheck();
+                        return;
+                    }
                 }
 
                 const isLive = checkIfLive(text);
-                
+
                 if (userType === 'credits') {
                     const cost = isLive ? 1.50 : 0.05;
                     currentCredits -= cost;
                     if (currentCredits < 0) currentCredits = 0;
                     updateCreditsDisplay();
-                    
+
                     if (currentCredits <= 0) {
                         setTimeout(() => {
                             alert('💳 Créditos esgotados! Você será desconectado.');
@@ -2038,16 +2669,16 @@ if (isset($_GET['tool'])) {
                         }, 1000);
                     }
                 }
-                
+
                 addResult(item, text, isLive);
-                
+
                 items[currentIndex] = '';
                 updateRemainingItems();
 
             } catch (error) {
                 console.error('Error:', error);
                 addResult(item, 'Erro: ' + error.message, false);
-                
+
                 items[currentIndex] = '';
                 updateRemainingItems();
             }
@@ -2056,7 +2687,7 @@ if (isset($_GET['tool'])) {
             document.getElementById('processedCount').textContent = currentIndex;
 
             if (isChecking && currentIndex < items.length) {
-                setTimeout(processNextItem, 2000);
+                setTimeout(processNextItem, 4000);
             } else {
                 stopCheck();
             }
@@ -2123,7 +2754,7 @@ if ($userType === 'temporary') {
     <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Exo+2:wght@300;400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
 
         :root {
             --neon-green: #00ff00;
@@ -2131,7 +2762,8 @@ if ($userType === 'temporary') {
             --neon-purple: #ff00ff;
             --neon-yellow: #ffff00;
             --dark-bg: #0a0a0f;
-            --card-bg: rgba(10, 20, 30, 0.95);
+            --darker-bg: #05050a;
+            --card-bg: rgba(10, 20, 30, 0.9);
         }
 
         * {
@@ -2142,31 +2774,139 @@ if ($userType === 'temporary') {
 
         body {
             background: var(--dark-bg);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 40% 80%, rgba(255, 255, 0, 0.1) 0%, transparent 20%),
+                linear-gradient(45deg, transparent 49%, rgba(0, 255, 0, 0.03) 50%, transparent 51%),
+                linear-gradient(135deg, transparent 49%, rgba(0, 255, 255, 0.03) 50%, transparent 51%);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 50px 50px, 50px 50px;
             color: var(--neon-green);
             font-family: 'Exo 2', sans-serif;
-            padding: 15px;
             min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 255, 0, 0.03) 0px,
+                    rgba(0, 255, 0, 0.03) 1px,
+                    transparent 1px,
+                    transparent 2px
+                );
+            pointer-events: none;
+            z-index: 1;
+            animation: flicker 3s infinite;
+        }
+
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                var(--neon-green),
+                var(--neon-blue),
+                var(--neon-purple),
+                var(--neon-green),
+                transparent
+            );
+            animation: scanline 3s linear infinite;
+            z-index: 2;
+            pointer-events: none;
+            filter: blur(1px);
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
+            position: relative;
+            z-index: 10;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 25px;
-            padding: 20px;
+            margin-bottom: 50px;
+            padding: 40px;
             background: var(--card-bg);
             border: 2px solid var(--neon-green);
-            border-radius: 12px;
-            box-shadow: 0 0 25px rgba(0, 255, 0, 0.2);
+            border-radius: 25px;
+            box-shadow: 
+                0 0 60px rgba(0, 255, 0, 0.3),
+                inset 0 0 60px rgba(0, 255, 0, 0.1);
+            backdrop-filter: blur(15px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, 
+                var(--neon-green), 
+                var(--neon-blue), 
+                var(--neon-purple), 
+                var(--neon-yellow),
+                var(--neon-green)
+            );
+            z-index: -1;
+            border-radius: 27px;
+            animation: rotate 10s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .header h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 28px;
-            color: var(--neon-green);
+            font-size: 64px;
+            background: linear-gradient(45deg, 
+                var(--neon-green) 0%, 
+                var(--neon-blue) 25%, 
+                var(--neon-purple) 50%, 
+                var(--neon-yellow) 75%, 
+                var(--neon-green) 100%
+            );
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% 100%;
+            animation: gradient 5s linear infinite;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+            letter-spacing: 5px;
+            font-weight: 900;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        .header p {
+            color: var(--neon-blue);
+            font-size: 18px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: 600;
             margin-bottom: 10px;
         }
 
@@ -2175,189 +2915,283 @@ if ($userType === 'temporary') {
             top: 20px;
             right: 20px;
             color: var(--neon-blue);
-            font-size: 14px;
+            font-size: 16px;
+            text-align: right;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--neon-blue);
+            backdrop-filter: blur(5px);
         }
 
         .status-info {
             display: flex;
             justify-content: center;
-            gap: 15px;
-            margin: 20px 0;
+            gap: 30px;
+            margin: 30px 0;
             flex-wrap: wrap;
         }
 
         .status-item {
-            padding: 15px 25px;
-            border-radius: 10px;
-            font-size: 14px;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 18px;
             font-weight: 600;
-            min-width: 250px;
             text-align: center;
+            min-width: 300px;
+            backdrop-filter: blur(10px);
+            animation: pulse 2s infinite;
+            border: 2px solid;
+            transition: all 0.3s;
+        }
+
+        .status-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px;
         }
 
         .time-left {
             color: var(--neon-yellow);
-            border: 1px solid var(--neon-yellow);
+            border-color: var(--neon-yellow);
             background: rgba(255, 255, 0, 0.1);
+            box-shadow: 0 0 20px rgba(255, 255, 0, 0.3);
         }
 
         .credits-info {
             color: var(--neon-purple);
-            border: 1px solid var(--neon-purple);
+            border-color: var(--neon-purple);
             background: rgba(255, 0, 255, 0.1);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
         }
 
         .nav-buttons {
             display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
+            gap: 20px;
+            margin-bottom: 40px;
             justify-content: center;
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 12px 25px;
+            padding: 18px 40px;
             border: 2px solid;
             background: rgba(0, 0, 0, 0.8);
             cursor: pointer;
             font-family: 'Orbitron', sans-serif;
-            font-size: 14px;
-            border-radius: 8px;
+            font-size: 16px;
+            border-radius: 15px;
             transition: all 0.3s;
             font-weight: bold;
             text-decoration: none;
             display: inline-block;
-            min-width: 180px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+            min-width: 200px;
             text-align: center;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn-admin {
             color: var(--neon-blue);
             border-color: var(--neon-blue);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
         }
 
         .btn-admin:hover {
             background: var(--neon-blue);
             color: #000;
+            box-shadow: 0 0 40px var(--neon-blue);
+            transform: translateY(-5px);
         }
 
         .btn-logout {
             color: var(--neon-purple);
             border-color: var(--neon-purple);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
         }
 
         .btn-logout:hover {
             background: var(--neon-purple);
             color: #fff;
+            box-shadow: 0 0 40px var(--neon-purple);
+            transform: translateY(-5px);
         }
 
         .tools-section {
-            margin-bottom: 30px;
+            margin-bottom: 60px;
         }
 
         .tools-section h2 {
             color: var(--neon-blue);
             font-family: 'Orbitron', sans-serif;
-            font-size: 22px;
-            margin-bottom: 20px;
+            font-size: 32px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid var(--neon-green);
             text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px var(--neon-blue);
         }
 
         .tools-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 30px;
         }
 
         .tool-card {
             background: var(--card-bg);
             border: 2px solid var(--neon-green);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 20px;
+            padding: 30px;
             transition: all 0.3s;
             cursor: pointer;
             text-decoration: none;
             color: var(--neon-green);
             display: block;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
             height: 100%;
+        }
+
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                var(--neon-green), 
+                var(--neon-blue), 
+                var(--neon-purple)
+            );
+            transform: translateX(-100%);
+            transition: transform 0.5s;
+        }
+
+        .tool-card:hover::before {
+            transform: translateX(0);
         }
 
         .tool-card:hover {
             background: rgba(0, 255, 0, 0.1);
             border-color: var(--neon-blue);
-            transform: translateY(-5px);
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 
+                0 15px 40px rgba(0, 255, 0, 0.3),
+                inset 0 0 30px rgba(0, 255, 255, 0.1);
         }
 
         .tool-icon {
-            font-size: 36px;
-            margin-bottom: 15px;
+            font-size: 48px;
+            margin-bottom: 20px;
             text-align: center;
+            filter: drop-shadow(0 0 10px currentColor);
         }
 
         .tool-card h3 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 18px;
-            margin-bottom: 10px;
+            font-size: 24px;
+            margin-bottom: 15px;
             color: var(--neon-blue);
             text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
         .tool-card p {
-            font-size: 12px;
+            font-size: 14px;
             color: rgba(0, 255, 0, 0.8);
-            line-height: 1.6;
+            line-height: 1.8;
             text-align: center;
+            margin-bottom: 20px;
         }
 
         .access-type {
             position: fixed;
-            bottom: 15px;
-            left: 15px;
+            bottom: 30px;
+            left: 30px;
             background: rgba(0, 0, 0, 0.9);
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 15px 30px;
+            border-radius: 15px;
             font-weight: bold;
             z-index: 1000;
-            border: 1px solid;
+            border: 2px solid;
+            backdrop-filter: blur(10px);
             font-family: 'Orbitron', sans-serif;
-            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 20px;
         }
 
         .access-type.permanent {
             color: var(--neon-green);
             border-color: var(--neon-green);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
         }
 
         .access-type.temporary {
             color: var(--neon-yellow);
             border-color: var(--neon-yellow);
+            box-shadow: 0 0 20px rgba(255, 255, 0, 0.5);
         }
 
         .access-type.credits {
             color: var(--neon-purple);
             border-color: var(--neon-purple);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+        }
+
+        @media (max-width: 1200px) {
+            .tools-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
         }
 
         @media (max-width: 768px) {
             .header h1 {
-                font-size: 22px;
+                font-size: 36px;
             }
-            
+
+            .status-item {
+                min-width: 100%;
+            }
+
             .tools-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .nav-buttons {
                 flex-direction: column;
             }
-            
+
             .btn {
                 min-width: 100%;
             }
-            
+
             .access-type {
                 position: static;
-                margin-top: 20px;
+                margin-top: 30px;
                 width: 100%;
                 text-align: center;
             }
@@ -2365,7 +3199,8 @@ if ($userType === 'temporary') {
     </style>
 </head>
 <body>
-    
+    <div class="scanline"></div>
+
     <div class="access-type <?php echo $userType; ?>">
         <?php 
         if ($userType === 'permanent') {
@@ -2373,18 +3208,23 @@ if ($userType === 'temporary') {
         } elseif ($userType === 'temporary') {
             echo '⏱️ ACESSO TEMPORÁRIO';
         } elseif ($userType === 'credits') {
-            echo '💰 CRÉDITOS: ' . number_format($userCredits, 2);
+            echo '💰 ACESSO POR CRÉDITOS: ' . number_format($userCredits, 2) . ' créditos';
         }
         ?>
     </div>
-    
+
     <div class="container">
         <div class="header">
             <h1>CYBERSECOFC APIS</h1>
+            <p>SISTEMA PREMIUM DE CHECKERS</p>
             <div class="user-info">
-                👤 <?php echo htmlspecialchars($_SESSION['username']); ?>
+                👤 <?php echo $_SESSION['username']; ?>
                 <?php if ($_SESSION['role'] === 'admin'): ?>
-                    <br><span style="color: var(--neon-yellow);">⭐ ADMIN</span>
+                    <br><span style="color: var(--neon-yellow);">⭐ ADMINISTRADOR</span>
+                <?php elseif ($userType === 'temporary'): ?>
+                    <br><span style="color: var(--neon-yellow);">⏱️ TEMPORÁRIO</span>
+                <?php elseif ($userType === 'credits'): ?>
+                    <br><span style="color: var(--neon-purple);">💰 CRÉDITOS</span>
                 <?php endif; ?>
             </div>
         </div>
@@ -2399,9 +3239,9 @@ if ($userType === 'temporary') {
 
         <div class="nav-buttons">
             <?php if ($_SESSION['role'] === 'admin'): ?>
-                <a href="?admin=true" class="btn btn-admin">⚙ PAINEL ADMIN</a>
+                <a href="?admin=true" class="btn btn-admin">⚙ PAINEL ADMINISTRATIVO</a>
             <?php endif; ?>
-            <a href="?logout" class="btn btn-logout">🚪 SAIR</a>
+            <a href="?logout" class="btn btn-logout">🚪 SAIR DO SISTEMA</a>
         </div>
 
         <div class="tools-section">
@@ -2409,16 +3249,16 @@ if ($userType === 'temporary') {
             <div class="tools-grid">
                 <?php
                 $toolDetails = [
-                    'paypal' => ['icon' => '💰', 'name' => 'PayPal V2', 'desc' => 'Verificação PayPal'],
+                    'paypal' => ['icon' => '💰', 'name' => 'PayPal V2', 'desc' => 'Verificação completa de cartões via PayPal'],
                     'preauth' => ['icon' => '🔐', 'name' => 'cielo', 'desc' => 'Gate cielo'],
-                    'n7' => ['icon' => '⚡', 'name' => 'PAGARME', 'desc' => 'VISA/MASTER/AMEX/ELO'],
-                    'amazon1' => ['icon' => '📦', 'name' => 'Amazon Prime', 'desc' => 'Amazon Prime US'],
-                    'amazon2' => ['icon' => '🛒', 'name' => 'Amazon UK', 'desc' => 'Amazon UK'],
-                    'cpfchecker' => ['icon' => '🔍', 'name' => 'CPF Checker', 'desc' => 'Verificação CPF'],
-                    'ggsitau' => ['icon' => '🏦', 'name' => 'GGs ITAU', 'desc' => 'MASTER/VISA'],
+                    'n7' => ['icon' => '⚡', 'name' => 'PAGARME', 'desc' => 'Checker SAINDO MASTER-VISA-AMEX'],
+                    'amazon1' => ['icon' => '📦', 'name' => 'Amazon Prime', 'desc' => 'Verifica cartões via Amazon Prime US'],
+                    'amazon2' => ['icon' => '🛒', 'name' => 'Amazon UK', 'desc' => 'Verifica cartões via Amazon UK'],
+                    'cpfchecker' => ['icon' => '🔍', 'name' => 'CPF Checker', 'desc' => 'Verificação de CPF completa'],
+                    'ggsitau' => ['icon' => '🏦', 'name' => 'GGs ITAU', 'desc' => 'APENAS RETONOS MASTER-VISA'],
                     'getnet' => ['icon' => '💳', 'name' => 'GETNET', 'desc' => 'Verificação GETNET'],
-                    'auth' => ['icon' => '🔒', 'name' => 'AUTH', 'desc' => 'Sistema autorização'],
-                    'debitando' => ['icon' => '💸', 'name' => 'DEBITANDO', 'desc' => 'Verificação débito'],
+                    'auth' => ['icon' => '🔒', 'name' => 'AUTH', 'desc' => 'Sistema de autorização'],
+                    'debitando' => ['icon' => '💸', 'name' => 'DEBITANDO', 'desc' => 'Verificação de débito'],
                     'n7_new' => ['icon' => '⚡', 'name' => 'N7', 'desc' => 'Checker N7'],
                     'gringa' => ['icon' => '🌎', 'name' => 'GRINGA', 'desc' => 'Checker internacional'],
                     'elo' => ['icon' => '💎', 'name' => 'ELO', 'desc' => 'Verificação ELO'],
@@ -2465,3 +3305,4 @@ if ($userType === 'temporary') {
     </script>
 </body>
 </html>
+
