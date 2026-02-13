@@ -35,6 +35,10 @@ function connectDB() {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
         ]);
+        
+        // Testar a conexão executando uma consulta simples
+        $pdo->query("SELECT 1");
+        
         return $pdo;
     } catch (PDOException $e) {
         error_log("Erro na conexão com o banco de dados: " . $e->getMessage());
@@ -68,6 +72,53 @@ function fallbackSaveUsers($users) {
     $users_file = __DIR__ . '/users.json';
     file_put_contents($users_file, json_encode($users));
     chmod($users_file, 0600);
+}
+
+// Função de diagnóstico para ajudar na resolução de problemas
+function diagnoseSystem() {
+    $issues = [];
+    
+    // Verificar conexão com banco de dados
+    $pdo = connectDB();
+    if (!$pdo) {
+        $issues[] = "❌ Conexão com banco de dados falhou";
+    } else {
+        $issues[] = "✅ Conexão com banco de dados OK";
+    }
+    
+    // Verificar arquivos necessários
+    $required_files = [
+        'bot_token.txt' => 'Token do bot',
+        'bot_enabled.txt' => 'Status do bot',
+        'chat_ids.txt' => 'IDs dos chats',
+        'users.json' => 'Arquivo de usuários fallback'
+    ];
+    
+    foreach ($required_files as $file => $description) {
+        if (!file_exists(__DIR__ . '/' . $file)) {
+            $issues[] = "❌ Arquivo ausente: $description ($file)";
+        } else {
+            $issues[] = "✅ Arquivo presente: $description ($file)";
+        }
+    }
+    
+    // Verificar usuário admin padrão
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM users WHERE username = 'save'");
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result && $result['count'] > 0) {
+                $issues[] = "✅ Usuário admin 'save' encontrado no banco de dados";
+            } else {
+                $issues[] = "⚠️ Usuário admin 'save' NÃO encontrado no banco de dados";
+            }
+        } catch (Exception $e) {
+            $issues[] = "❌ Erro ao verificar usuário admin: " . $e->getMessage();
+        }
+    }
+    
+    return $issues;
 }
 
 // Função para inicializar o banco de dados
@@ -129,6 +180,9 @@ function initializeDatabase() {
             
             $stmt = $pdo->prepare("INSERT INTO users (username, password, role, type, credits, tools) VALUES (?, ?, 'admin', 'permanent', 0, ?)");
             $stmt->execute(['save', $defaultPassword, $tools]);
+            error_log("Usuário admin padrão 'save' criado no banco de dados.");
+        } else {
+            error_log("Usuário admin padrão 'save' já existe no banco de dados.");
         }
         
         return true;
@@ -159,6 +213,30 @@ if (!initializeDatabase()) {
         ];
         file_put_contents($users_file, json_encode($default_users));
         chmod($users_file, 0600);
+    }
+} else {
+    // Banco inicializado com sucesso, verificar se o usuário 'save' existe no banco
+    $pdo = connectDB();
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+            $stmt->execute(['save']);
+            if ($stmt->fetchColumn() == 0) {
+                // O usuário 'save' não existe no banco, criar
+                $defaultPassword = password_hash('black', PASSWORD_DEFAULT);
+                $tools = json_encode([
+                    'paypal', 'preauth', 'n7', 'amazon1', 'amazon2', 'cpfchecker', 
+                    'ggsitau', 'getnet', 'auth', 'debitando', 'n7_new', 'gringa', 
+                    'elo', 'erede', 'allbins', 'stripe', 'visamaster'
+                ]);
+                
+                $stmt = $pdo->prepare("INSERT INTO users (username, password, role, type, credits, tools) VALUES (?, ?, 'admin', 'permanent', 0, ?)");
+                $stmt->execute(['save', $defaultPassword, $tools]);
+                error_log("Usuário admin 'save' criado no banco de dados após inicialização bem sucedida.");
+            }
+        } catch (PDOException $e) {
+            error_log("Erro ao verificar/criar usuário admin padrão: " . $e->getMessage());
+        }
     }
 }
 
@@ -480,6 +558,7 @@ $security_script = str_replace('_TOKEN_', $_SESSION['_cyber_token'], $security_s
 
 $bot_token_file = __DIR__ . '/bot_token.txt';
 $bot_enabled_file = __DIR__ . '/bot_enabled.txt';
+$chat_ids_file = __DIR__ . '/chat_ids.txt';
 
 if (!file_exists($bot_token_file)) {
     file_put_contents($bot_token_file, '');
@@ -488,6 +567,10 @@ if (!file_exists($bot_token_file)) {
 if (!file_exists($bot_enabled_file)) {
     file_put_contents($bot_enabled_file, '0');
     chmod($bot_enabled_file, 0600);
+}
+if (!file_exists($chat_ids_file)) {
+    file_put_contents($chat_ids_file, '');
+    chmod($chat_ids_file, 0600);
 }
 
 function sendTelegramMessage($message) {
@@ -938,13 +1021,28 @@ if (isset($_POST['add_permanent_user']) && $_SESSION['role'] === 'admin') {
     $new_username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['new_username'] ?? '');
     $new_password = substr($_POST['new_password'] ?? '', 0, 100);
     $selected_tools = $_POST['checkers'] ?? [];
+    
     if ($new_username && $new_password && !empty($selected_tools)) {
-        if (addUser($new_username, $new_password, 'user', 'permanent', 0, $selected_tools)) {
-            sendTelegramMessage("🆕 NOVO USUÁRIO PERMANENTE\n👤 Usuário: <code>$new_username</code>\n⚡ Tipo: Acesso Permanente\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
-            $success_message = "Usuário permanente '$new_username' criado com acesso a: " . implode(', ', $selected_tools);
+        // Verificar se o usuário já existe
+        $pdo = connectDB();
+        if ($pdo) {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+            $stmt->execute([$new_username]);
+            if ($stmt->fetchColumn() > 0) {
+                $error_message = "Erro: Usuário '$new_username' já existe!";
+            } else {
+                if (addUser($new_username, $new_password, 'user', 'permanent', 0, $selected_tools)) {
+                    sendTelegramMessage("🆕 NOVO USUÁRIO PERMANENTE\n👤 Usuário: <code>$new_username</code>\n⚡ Tipo: Acesso Permanente\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
+                    $success_message = "Usuário permanente '$new_username' criado com acesso a: " . implode(', ', $selected_tools);
+                } else {
+                    $error_message = "Erro ao criar usuário permanente. Verifique os dados e tente novamente.";
+                }
+            }
         } else {
-            $error_message = "Erro ao criar usuário permanente.";
+            $error_message = "Erro na conexão com o banco de dados.";
         }
+    } else {
+        $error_message = "Todos os campos são obrigatórios!";
     }
 }
 
@@ -953,15 +1051,30 @@ if (isset($_POST['add_rental_user']) && $_SESSION['role'] === 'admin') {
     $rental_password = substr($_POST['rental_password'] ?? '', 0, 100);
     $rental_hours = intval($_POST['rental_hours'] ?? 0);
     $selected_tools = $_POST['rental_checkers'] ?? [];
+    
     if ($rental_username && $rental_password && $rental_hours > 0 && !empty($selected_tools)) {
-        $expiresAt = date('Y-m-d H:i:s', time() + ($rental_hours * 3600));
-        if (addUser($rental_username, $rental_password, 'user', 'temporary', 0, $selected_tools, $expiresAt)) {
-            $expireDate = date('d/m/Y H:i:s', strtotime($expiresAt));
-            sendTelegramMessage("⏱️ NOVO ACESSO TEMPORÁRIO\n👤 Usuário: <code>$rental_username</code>\n⏰ Horas: $rental_hours\n⏳ Expira: $expireDate\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
-            $success_message = "Acesso temporário criado para '$rental_username' por $rental_hours hora(s) com ferramentas: " . implode(', ', $selected_tools) . ". Expira em: $expireDate";
+        // Verificar se o usuário já existe
+        $pdo = connectDB();
+        if ($pdo) {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+            $stmt->execute([$rental_username]);
+            if ($stmt->fetchColumn() > 0) {
+                $error_message = "Erro: Usuário '$rental_username' já existe!";
+            } else {
+                $expiresAt = date('Y-m-d H:i:s', time() + ($rental_hours * 3600));
+                if (addUser($rental_username, $rental_password, 'user', 'temporary', 0, $selected_tools, $expiresAt)) {
+                    $expireDate = date('d/m/Y H:i:s', strtotime($expiresAt));
+                    sendTelegramMessage("⏱️ NOVO ACESSO TEMPORÁRIO\n👤 Usuário: <code>$rental_username</code>\n⏰ Horas: $rental_hours\n⏳ Expira: $expireDate\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
+                    $success_message = "Acesso temporário criado para '$rental_username' por $rental_hours hora(s) com ferramentas: " . implode(', ', $selected_tools) . ". Expira em: $expireDate";
+                } else {
+                    $error_message = "Erro ao criar usuário temporário. Verifique os dados e tente novamente.";
+                }
+            }
         } else {
-            $error_message = "Erro ao criar usuário temporário.";
+            $error_message = "Erro na conexão com o banco de dados.";
         }
+    } else {
+        $error_message = "Todos os campos são obrigatórios!";
     }
 }
 
@@ -970,19 +1083,35 @@ if (isset($_POST['add_credit_user']) && $_SESSION['role'] === 'admin') {
     $credit_password = substr($_POST['credit_password'] ?? '', 0, 100);
     $credit_amount = floatval($_POST['credit_amount'] ?? 0);
     $selected_tools = $_POST['credit_checkers'] ?? [];
+    
     if ($credit_username && $credit_password && $credit_amount > 0 && !empty($selected_tools)) {
-        if (addUser($credit_username, $credit_password, 'user', 'credits', $credit_amount, $selected_tools)) {
-            sendTelegramMessage("💰 NOVO USUÁRIO POR CRÉDITOS\n👤 Usuário: <code>$credit_username</code>\n💳 Créditos: $credit_amount\n⚡ LIVE: 1.50 créditos | DIE: 0.05 créditos\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
-            $success_message = "Usuário por créditos '$credit_username' criado com $credit_amount créditos e ferramentas: " . implode(', ', $selected_tools) . ". Cada LIVE custa 1.50 créditos, cada DIE custa 0.05 créditos.";
+        // Verificar se o usuário já existe
+        $pdo = connectDB();
+        if ($pdo) {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+            $stmt->execute([$credit_username]);
+            if ($stmt->fetchColumn() > 0) {
+                $error_message = "Erro: Usuário '$credit_username' já existe!";
+            } else {
+                if (addUser($credit_username, $credit_password, 'user', 'credits', $credit_amount, $selected_tools)) {
+                    sendTelegramMessage("💰 NOVO USUÁRIO POR CRÉDITOS\n👤 Usuário: <code>$credit_username</code>\n💳 Créditos: $credit_amount\n⚡ LIVE: 1.50 créditos | DIE: 0.05 créditos\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
+                    $success_message = "Usuário por créditos '$credit_username' criado com $credit_amount créditos e ferramentas: " . implode(', ', $selected_tools) . ". Cada LIVE custa 1.50 créditos, cada DIE custa 0.05 créditos.";
+                } else {
+                    $error_message = "Erro ao criar usuário por créditos. Verifique os dados e tente novamente.";
+                }
+            }
         } else {
-            $error_message = "Erro ao criar usuário por créditos.";
+            $error_message = "Erro na conexão com o banco de dados.";
         }
+    } else {
+        $error_message = "Todos os campos são obrigatórios!";
     }
 }
 
 if (isset($_POST['add_credits']) && $_SESSION['role'] === 'admin') {
     $recharge_username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['recharge_username'] ?? '');
     $add_credits = floatval($_POST['add_credits'] ?? 0);
+    
     if ($recharge_username && $add_credits > 0) {
         $pdo = connectDB();
         if ($pdo) {
@@ -991,36 +1120,60 @@ if (isset($_POST['add_credits']) && $_SESSION['role'] === 'admin') {
             $stmt->execute([$recharge_username]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if ($user && $user['type'] === 'credits') {
-                $old_credits = floatval($user['credits']);
-                $new_credits = $old_credits + $add_credits;
-                
-                // Atualizar créditos
-                $stmt = $pdo->prepare("UPDATE users SET credits = ? WHERE username = ?");
-                if ($stmt->execute([$new_credits, $recharge_username])) {
-                    sendTelegramMessage("🔄 RECARGA DE CRÉDITOS\n👤 Usuário: <code>$recharge_username</code>\n💰 Adicionado: $add_credits créditos\n💳 Total: $new_credits créditos");
-                    $success_message = "Recarga realizada! Usuário '$recharge_username' agora tem $new_credits créditos.";
+            if ($user) {
+                if ($user['type'] === 'credits') {
+                    $old_credits = floatval($user['credits']);
+                    $new_credits = $old_credits + $add_credits;
+                    
+                    // Atualizar créditos
+                    $stmt = $pdo->prepare("UPDATE users SET credits = ? WHERE username = ?");
+                    if ($stmt->execute([$new_credits, $recharge_username])) {
+                        sendTelegramMessage("🔄 RECARGA DE CRÉDITOS\n👤 Usuário: <code>$recharge_username</code>\n💰 Adicionado: $add_credits créditos\n💳 Total: $new_credits créditos");
+                        $success_message = "Recarga realizada! Usuário '$recharge_username' agora tem $new_credits créditos.";
+                    } else {
+                        $error_message = "Erro ao atualizar créditos.";
+                    }
                 } else {
-                    $error_message = "Erro ao atualizar créditos.";
+                    $error_message = "Erro: Usuário '$recharge_username' não é do tipo 'créditos'.";
                 }
             } else {
-                $error_message = "Usuário não encontrado ou não é do tipo 'créditos'.";
+                $error_message = "Erro: Usuário '$recharge_username' não encontrado.";
             }
         } else {
             $error_message = "Erro na conexão com o banco de dados.";
         }
+    } else {
+        $error_message = "Todos os campos são obrigatórios!";
     }
 }
 
 if (isset($_POST['remove_user']) && $_SESSION['role'] === 'admin') {
     $remove_username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['remove_username'] ?? '');
     if ($remove_username !== 'save') {
-        if (deleteUser($remove_username)) {
-            sendTelegramMessage("🗑️ USUÁRIO REMOVIDO\n👤 Usuário: <code>$remove_username</code>\n❌ Conta removida do sistema");
-            $success_message = "Usuário '$remove_username' removido com sucesso!";
+        if (empty($remove_username)) {
+            $error_message = "Erro: Nome de usuário não fornecido.";
         } else {
-            $error_message = "Erro ao remover usuário.";
+            // Verificar se o usuário existe
+            $pdo = connectDB();
+            if ($pdo) {
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+                $stmt->execute([$remove_username]);
+                if ($stmt->fetchColumn() == 0) {
+                    $error_message = "Erro: Usuário '$remove_username' não encontrado.";
+                } else {
+                    if (deleteUser($remove_username)) {
+                        sendTelegramMessage("🗑️ USUÁRIO REMOVIDO\n👤 Usuário: <code>$remove_username</code>\n❌ Conta removida do sistema");
+                        $success_message = "Usuário '$remove_username' removido com sucesso!";
+                    } else {
+                        $error_message = "Erro ao remover usuário.";
+                    }
+                }
+            } else {
+                $error_message = "Erro na conexão com o banco de dados.";
+            }
         }
+    } else {
+        $error_message = "Erro: Não é permitido remover o usuário principal 'save'.";
     }
 }
 
@@ -1035,9 +1188,23 @@ if (isset($_POST['save_bot_token']) && $_SESSION['role'] === 'admin') {
 }
 
 if (isset($_POST['start_bot']) && $_SESSION['role'] === 'admin') {
-    file_put_contents($bot_enabled_file, '1');
-    sendTelegramMessage("🤖 BOT ONLINE\n✅ Sistema CybersecOFC ativado\n🔗 Acesso: " . (isset($_SERVER['HTTPS']) ? 'https' : 'http') . "://{$_SERVER['HTTP_HOST']}\n🛡️ Segurança NASA Level 2.0 ativada");
-    $success_message = "Bot iniciado com sucesso!";
+    $bot_token = file_exists($bot_token_file) ? trim(file_get_contents($bot_token_file)) : '';
+    if (empty($bot_token)) {
+        $error_message = "Erro: Não é possível iniciar o bot sem um token configurado!";
+    } else {
+        // Verificar se existem chat_ids configurados
+        $chat_ids_file = __DIR__ . '/chat_ids.txt';
+        $chat_ids_content = file_exists($chat_ids_file) ? trim(file_get_contents($chat_ids_file)) : '';
+        $chat_ids = !empty($chat_ids_content) ? array_filter(array_map('trim', explode("\n", $chat_ids_content))) : [];
+        
+        if (empty($chat_ids)) {
+            $error_message = "Erro: Configure pelo menos um ID de chat/grupo antes de iniciar o bot!";
+        } else {
+            file_put_contents($bot_enabled_file, '1');
+            sendTelegramMessage("🤖 BOT ONLINE\n✅ Sistema CybersecOFC ativado\n🔗 Acesso: " . (isset($_SERVER['HTTPS']) ? 'https' : 'http') . "://{$_SERVER['HTTP_HOST']}\n🛡️ Segurança NASA Level 2.0 ativada");
+            $success_message = "Bot iniciado com sucesso!";
+        }
+    }
 }
 
 if (isset($_POST['stop_bot']) && $_SESSION['role'] === 'admin') {
