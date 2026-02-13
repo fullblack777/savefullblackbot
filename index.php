@@ -913,7 +913,6 @@ if (isset($_GET['lives']) && isset($_SESSION['logged_in'])) {
 </body>
 </html>
 <?php
-exit;
 }
 
 // ============================================
@@ -1374,7 +1373,6 @@ if (!isset($_SESSION['logged_in'])) {
 </body>
 </html>
 <?php
-exit;
 }
 
 // ============================================
@@ -1663,7 +1661,6 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
 </body>
 </html>
 <?php
-exit;
 }
 
 // ============================================
@@ -2025,7 +2022,6 @@ if (isset($_GET['tool'])) {
 </body>
 </html>
 <?php
-exit;
 }
 
 // ============================================
