@@ -4193,5 +4193,4 @@ if ($userType === 'temporary') {
 </html>
 <?php
 // Fim do arquivo - sem exit;
-}
 ?>
