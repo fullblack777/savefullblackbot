@@ -553,7 +553,7 @@ foreach ($all_tools['checkers'] as $tool) {
     $real_tool_names = [
         'paypal' => 'PAYPALV2OFC.php',
         'preauth' => 'cielo.php',
-        'n7' => 'db.php',
+        'n7' => 'PAGARMEOFC.php',
         'amazon1' => 'AMAZONOFC1.php',
         'amazon2' => 'AMAZONOFC2.php',
         'cpfchecker' => 'cpfchecker.php',
@@ -809,7 +809,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
         $tool_files = [
             'paypal' => 'attached_assets/PAYPALV2OFC.php',
             'preauth' => 'attached_assets/cielo.php',
-            'n7' => 'attached_assets/db.php',
+            'n7' => 'attached_assets/PAGARMEOFC.php',
             'amazon1' => 'attached_assets/AMAZONOFC1.php',
             'amazon2' => 'attached_assets/AMAZONOFC2.php',
             'cpfchecker' => 'attached_assets/cpfchecker.php',
@@ -1448,7 +1448,7 @@ if (!isset($_SESSION['logged_in'])) {
                     <h3>💳 GATES PRINCIPAIS</h3>
                     <ul>
                         <li>PAYPAL V2 - Verificação de cartões PayPal @CYBERSECOFC</li>
-                        <li>db - VISA/MASTER/AMEX/ELO @CYBERSECOFC</li>
+                        <li>PAGARME - VISA/MASTER/AMEX/ELO @CYBERSECOFC</li>
                         <li>CIELO - @CYBERSECOFC</li>
                         <li>GETNET - Verificação GETNET</li>
                         <li>AUTH - Sistema de autorização</li>
@@ -1966,7 +1966,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                                 $checker_names = [
                                     'paypal' => 'PayPal',
                                     'preauth' => 'cielo',
-                                    'n7' => 'db',
+                                    'n7' => 'PAGARME',
                                     'amazon1' => 'Amazon Prime',
                                     'amazon2' => 'Amazon UK',
                                     'cpfchecker' => 'CPF Checker',
@@ -2195,7 +2195,7 @@ if (isset($_GET['tool'])) {
     $toolNames = [
         'paypal' => 'PayPal V2',
         'preauth' => 'cielo',
-        'n7' => 'db',
+        'n7' => 'PAGARME',
         'amazon1' => 'Amazon Prime Checker',
         'amazon2' => 'Amazon UK Checker',
         'cpfchecker' => 'CPF Checker',
@@ -3617,7 +3617,7 @@ if ($userType === 'temporary') {
                 $toolDetails = [
                     'paypal' => ['icon' => '💰', 'name' => 'PayPal V2', 'desc' => 'Verificação completa de cartões via PayPal'],
                     'preauth' => ['icon' => '🔐', 'name' => 'cielo', 'desc' => 'Gate cielo'],
-                    'n7' => ['icon' => '⚡', 'name' => 'debitando', 'desc' => 'Checker SAINDO MASTER-VISA-AMEX'],
+                    'n7' => ['icon' => '⚡', 'name' => 'PAGARME', 'desc' => 'Checker SAINDO MASTER-VISA-AMEX'],
                     'amazon1' => ['icon' => '📦', 'name' => 'Amazon Prime', 'desc' => 'Verifica cartões via Amazon Prime US'],
                     'amazon2' => ['icon' => '🛒', 'name' => 'Amazon UK', 'desc' => 'Verifica cartões via Amazon UK'],
                     'cpfchecker' => ['icon' => '🔍', 'name' => 'CPF Checker', 'desc' => 'Verificação de CPF completa'],
