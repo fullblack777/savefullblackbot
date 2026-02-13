@@ -4195,5 +4195,4 @@ if ($userType === 'temporary') {
 <?php
 // Remova este exit também
 // exit;
-}
 ?>
