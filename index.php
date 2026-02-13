@@ -416,7 +416,7 @@ function getUserCredits($username) {
     return 0;
 }
 
-// Processar login
+// Processar login (COM CORREÇÃO DA DECODIFICAÇÃO BASE64)
 if (isset($_POST['login'])) {
     if (!isset($_SESSION['login_attempts'])) {
         $_SESSION['login_attempts'] = 0;
@@ -424,11 +424,24 @@ if (isset($_POST['login'])) {
     if ($_SESSION['login_attempts'] >= 5) {
         sleep(5);
     }
+    
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
+    
+    // Verificar se os dados estão codificados em base64 (enviados pelo JavaScript) e decodificar
+    if (base64_encode(base64_decode($username, true)) === $username) {
+        $username = base64_decode($username);
+    }
+    if (base64_encode(base64_decode($password, true)) === $password) {
+        $password = base64_decode($password);
+    }
+    
+    // Sanitizar
     $username = preg_replace('/[^a-zA-Z0-9_]/', '', $username);
     $password = substr($password, 0, 100);
+    
     $users = loadUsers();
+    
     if (isset($users[$username]) && password_verify($password, $users[$username]['password'])) {
         if (!checkUserAccess($users[$username])) {
             $login_error = 'Seu acesso expirou ou créditos insuficientes!';
@@ -2278,5 +2291,5 @@ if ($userType === 'temporary') {
 </body>
 </html>
 <?php
-// Fim do código - nenhuma chave extra
+// Fim do código
 ?>
