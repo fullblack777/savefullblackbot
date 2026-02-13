@@ -1,3 +1,14 @@
-"require": {
-  "php": "^8.1"
+{
+  "require": {
+    "php": "^8.1"
+  },
+  "require-dev": {
+    "ext-openssl": "*",
+    "ext-json": "*",
+    "ext-session": "*",
+    "ext-mbstring": "*"
+  },
+  "scripts": {
+    "start": "php -S 0.0.0.0:8080 -t ."
+  }
 }
