@@ -310,7 +310,6 @@ $all_tools = [
                    'getnet', 'auth', 'debitando', 'n7_new', 'gringa', 'elo', 'erede', 'allbins', 'stripe', 'visamaster']
 ];
 
-// Nomes amigáveis para os checkers (usado globalmente)
 $checker_names = [
     'paypal' => 'PayPal',
     'preauth' => 'Preauth',
@@ -477,7 +476,7 @@ foreach ($all_tools['checkers'] as $tool) {
     $tool_mapping[$tool] = _obfuscate_url("attached_assets/" . $filename);
 }
 
-// Processar admin actions (mantido igual, apenas corrigido uso de $checker_names)
+// Processar admin actions
 if (isset($_POST['add_permanent_user']) && $_SESSION['role'] === 'admin') {
     $new_username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['new_username'] ?? '');
     $new_password = substr($_POST['new_password'] ?? '', 0, 100);
@@ -1396,7 +1395,6 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
     <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
-        /* (mesmo estilo do painel admin anterior) */
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
         :root {
             --neon-green: #00ff00;
@@ -1719,7 +1717,6 @@ if (isset($_GET['tool'])) {
     <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
-        /* (mesmo estilo da ferramenta anterior, mantido) */
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
         :root {
             --neon-green: #00ff00; --neon-blue: #00ffff; --neon-purple: #ff00ff; --neon-yellow: #ffff00;
@@ -2059,7 +2056,6 @@ if ($userType === 'temporary') {
     <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
-        /* (mesmo estilo do menu principal anterior, mantido) */
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
         :root {
             --neon-green: #00ff00; --neon-blue: #00ffff; --neon-purple: #ff00ff; --neon-yellow: #ffff00;
@@ -2260,5 +2256,5 @@ if ($userType === 'temporary') {
 </body>
 </html>
 <?php
-exit;
+// Fim do código - nenhuma chave extra
 ?>
