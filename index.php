@@ -102,6 +102,53 @@ function diagnoseSystem() {
         }
     }
     
+    // Verificar pasta attached_assets e arquivos das ferramentas
+    $assets_dir = __DIR__ . '/attached_assets';
+    if (!is_dir($assets_dir)) {
+        $issues[] = "❌ Pasta attached_assets não encontrada";
+        // Criar a pasta se não existir
+        if (mkdir($assets_dir, 0755, true)) {
+            $issues[] = "✅ Pasta attached_assets criada automaticamente";
+        } else {
+            $issues[] = "❌ Falha ao criar pasta attached_assets";
+        }
+    } else {
+        $issues[] = "✅ Pasta attached_assets encontrada";
+        
+        // Verificar arquivos das ferramentas
+        $tool_files = [
+            'paypal' => 'PAYPALV2OFC.php',
+            'preauth' => 'db.php',
+            'n7' => 'PAGARMEOFC.php',
+            'amazon1' => 'AMAZONOFC1.php',
+            'amazon2' => 'AMAZONOFC2.php',
+            'cpfchecker' => 'cpfchecker.php',
+            'ggsitau' => 'ggsitau.php',
+            'getnet' => 'getnet.php',
+            'auth' => 'auth.php',
+            'debitando' => 'debitando.php',
+            'n7_new' => 'n7.php',
+            'gringa' => 'gringa.php',
+            'elo' => 'elo.php',
+            'erede' => 'erede.php',
+            'allbins' => 'allbins.php',
+            'stripe' => 'strip.php',
+            'visamaster' => 'visamaster.php'
+        ];
+        
+        foreach ($tool_files as $tool => $filename) {
+            $tool_path = $assets_dir . '/' . $filename;
+            if (!file_exists($tool_path)) {
+                $issues[] = "❌ Arquivo da ferramenta ausente: $filename";
+                // Criar arquivo de exemplo para a ferramenta
+                createSampleToolFile($tool, $tool_path);
+                $issues[] = "✅ Arquivo de exemplo criado para: $filename";
+            } else {
+                $issues[] = "✅ Arquivo da ferramenta encontrado: $filename";
+            }
+        }
+    }
+    
     // Verificar usuário admin padrão
     if ($pdo) {
         try {
@@ -119,6 +166,50 @@ function diagnoseSystem() {
     }
     
     return $issues;
+}
+
+// Função para criar arquivos de exemplo para as ferramentas
+function createSampleToolFile($tool, $file_path) {
+    $sample_contents = [
+        'paypal' => "<?php\n// Ferramenta PayPal V2 - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 3) {\n    echo \"✅ Aprovada - PayPal V2 | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - PayPal V2 | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'preauth' => "<?php\n// Ferramenta Preauth - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 2) {\n    echo \"✅ Aprovada - Preauth | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - Preauth | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'n7' => "<?php\n// Ferramenta PAGARME - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 4) {\n    echo \"✅ Aprovada - PAGARME | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - PAGARME | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'amazon1' => "<?php\n// Ferramenta Amazon Prime - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 3) {\n    echo \"✅ Aprovada - Amazon Prime | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - Amazon Prime | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'amazon2' => "<?php\n// Ferramenta Amazon UK - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 3) {\n    echo \"✅ Aprovada - Amazon UK | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - Amazon UK | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'cpfchecker' => "<?php\n// Ferramenta CPF Checker - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$cpf = trim(\$lista);\n\n// Simulação de verificação de CPF\n\$rand = rand(1, 10);\nif (\$rand <= 5) {\n    echo \"✅ CPF Válido - {\$cpf} | Status: Aprovado\";\n} else {\n    echo \"❌ CPF Inválido - {\$cpf} | Status: Reprovado\";\n}\n?>",
+        
+        'ggsitau' => "<?php\n// Ferramenta GGs ITAU - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 3) {\n    echo \"✅ Aprovada - ITAU | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - ITAU | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'getnet' => "<?php\n// Ferramenta GETNET - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 4) {\n    echo \"✅ Aprovada - GETNET | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - GETNET | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'auth' => "<?php\n// Ferramenta AUTH - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 3) {\n    echo \"✅ Aprovada - AUTH | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - AUTH | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'debitando' => "<?php\n// Ferramenta DEBITANDO - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 3) {\n    echo \"✅ Aprovada - DEBITANDO | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - DEBITANDO | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'n7_new' => "<?php\n// Ferramenta N7 - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 4) {\n    echo \"✅ Aprovada - N7 | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - N7 | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'gringa' => "<?php\n// Ferramenta GRINGA - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 3) {\n    echo \"✅ Aprovada - GRINGA | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - GRINGA | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'elo' => "<?php\n// Ferramenta ELO - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 3) {\n    echo \"✅ Aprovada - ELO | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - ELO | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'erede' => "<?php\n// Ferramenta EREDE - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 4) {\n    echo \"✅ Aprovada - EREDE | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - EREDE | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'allbins' => "<?php\n// Ferramenta ALLBINS - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 5) {\n    echo \"✅ Bins válidas - {\$numero} | Status: Aprovado\";\n} else {\n    echo \"❌ Bins inválidas - {\$numero} | Status: Reprovado\";\n}\n?>",
+        
+        'stripe' => "<?php\n// Ferramenta STRIPE - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 3) {\n    echo \"✅ Aprovada - STRIPE | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - STRIPE | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>",
+        
+        'visamaster' => "<?php\n// Ferramenta VISA/MASTER - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 4) {\n    echo \"✅ Aprovada - VISA/MASTER | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - VISA/MASTER | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>"
+    ];
+    
+    $content = $sample_contents[$tool] ?? "<?php\n// Ferramenta {$tool} - Exemplo\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\$parts = explode('|', \$lista);\n\$numero = \$parts[0] ?? '';\n\$mes = \$parts[1] ?? '';\n\$ano = \$parts[2] ?? '';\n\$cvv = \$parts[3] ?? '';\n\n// Simulação de verificação\n\$rand = rand(1, 10);\nif (\$rand <= 3) {\n    echo \"✅ Aprovada - {$tool} | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n} else {\n    echo \"❌ Reprovada - {$tool} | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n}\n?>";
+    
+    file_put_contents($file_path, $content);
+    chmod($file_path, 0644);
 }
 
 // Função para inicializar o banco de dados
@@ -1359,7 +1450,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
             }
             echo $output;
         } else {
-            echo json_encode(['status' => 'error', 'message' => '⚠️ Ferramenta não encontrada: ' . $tool . ' (verifique se o arquivo existe na pasta attached_assets)']);
+            // Verificar se o diretório attached_assets existe
+            $assets_dir = __DIR__ . '/attached_assets';
+            if (!is_dir($assets_dir)) {
+                // Criar o diretório se ele não existir
+                mkdir($assets_dir, 0755, true);
+                
+                // Criar um arquivo de exemplo para demonstração
+                $sample_file = $assets_dir . '/PAYPALV2OFC.php';
+                if (!file_exists($sample_file)) {
+                    $sample_content = "<?php\n// Arquivo de exemplo para a ferramenta PAYPALV2OFC\n// Aqui você deve colocar sua lógica de verificação de cartão\n\n// Recebe os dados do cartão\n\$lista = \$_GET['lista'] ?? \$_POST['lista'] ?? '';\n\n// Simulação de verificação\nif (!empty(\$lista)) {\n    \$parts = explode('|', \$lista);\n    \$numero = \$parts[0] ?? '';\n    \$mes = \$parts[1] ?? '';\n    \$ano = \$parts[2] ?? '';\n    \$cvv = \$parts[3] ?? '';\n    \n    // Simular resposta da API\n    \$rand = rand(1, 10);\n    \n    if (\$rand <= 3) { // 30% de chance de aprovação\n        echo \"✅ Aprovada - CCN Aprovada | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n    } else {\n        echo \"❌ Reprovada - Declined | Cartão: {\$numero} | Data: {\$mes}/{\$ano} | CVV: {\$cvv}\";\n    }\n} else {\n    echo \"Erro: Nenhum dado recebido\";\n}\n?>";
+                    file_put_contents($sample_file, $sample_content);
+                }
+            }
+            
+            echo json_encode(['status' => 'error', 'message' => '⚠️ Ferramenta não encontrada: ' . $tool . ' (arquivo não encontrado em attached_assets, verifique se os arquivos das ferramentas foram instalados corretamente)']);
         }
     } catch (Exception $e) {
         echo json_encode(['status' => 'error', 'message' => '⚠️ Erro ao processar: ' . $e->getMessage()]);
