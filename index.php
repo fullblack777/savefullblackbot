@@ -4,6 +4,18 @@
 // VERSÃO HIPER SEGURA - CÓDIGO OFUSCADO
 // ============================================
 
+// Configurar exibição de erros apenas para log (desligar display)
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
+
+// Definir caminho para sessões (evitar problemas no Railway)
+$session_path = __DIR__ . '/sessions';
+if (!is_dir($session_path)) {
+    mkdir($session_path, 0777, true);
+}
+session_save_path($session_path);
+
 // INICIAR SESSÃO COM CONFIGURAÇÕES DE SEGURANÇA
 session_start([
     'cookie_httponly' => true,
@@ -208,8 +220,8 @@ $security_script = str_replace('_TOKEN_', $_SESSION['_cyber_token'], $security_s
 // CONFIGURAÇÃO DO BOT TELEGRAM
 // ============================================
 
-$bot_token_file = 'bot_token.txt';
-$bot_enabled_file = 'bot_enabled.txt';
+$bot_token_file = __DIR__ . '/bot_token.txt';
+$bot_enabled_file = __DIR__ . '/bot_enabled.txt';
 
 if (!file_exists($bot_token_file)) {
     file_put_contents($bot_token_file, '');
@@ -226,7 +238,17 @@ function sendTelegramMessage($message) {
     if (!file_exists($bot_token_file)) return false;
     $bot_token = trim(file_get_contents($bot_token_file));
     if (empty($bot_token)) return false;
-    $chats = ['-1001234567890']; // Substitua pelos IDs reais
+    
+    // IMPORTANTE: Substitua pelos IDs reais dos seus chats/grupos
+    // Exemplo: ['-1001234567890', '123456789']
+    $chats = []; // ADICIONE AQUI OS CHAT_IDS DESEJADOS
+    
+    if (empty($chats)) {
+        // Se não houver chats configurados, não envia mensagem (apenas log)
+        error_log("Telegram bot: Nenhum chat_id configurado. Mensagem não enviada.");
+        return false;
+    }
+    
     foreach ($chats as $chat_id) {
         $url = "https://api.telegram.org/bot{$bot_token}/sendMessage";
         $data = [
@@ -251,7 +273,7 @@ function sendTelegramMessage($message) {
 // ============================================
 // ARQUIVO PARA ARMAZENAR LIVES DOS USUÁRIOS
 // ============================================
-$lives_file = 'lives.json';
+$lives_file = __DIR__ . '/lives.json';
 if (!file_exists($lives_file)) {
     file_put_contents($lives_file, json_encode([]));
     chmod($lives_file, 0600);
@@ -304,7 +326,7 @@ if (isset($_GET['security_logout']) || isset($_POST['security_logout'])) {
 // SEU CÓDIGO ORIGINAL (MANTIDO INTACTO)
 // ============================================
 
-$users_file = 'users.json';
+$users_file = __DIR__ . '/users.json';
 $all_tools = [
     'checkers' => ['paypal', 'preauth', 'n7', 'amazon1', 'amazon2', 'cpfchecker', 'ggsitau', 
                    'getnet', 'auth', 'debitando', 'n7_new', 'gringa', 'elo', 'erede', 'allbins', 'stripe', 'visamaster']
@@ -583,7 +605,7 @@ if (isset($_POST['save_bot_token']) && $_SESSION['role'] === 'admin') {
 
 if (isset($_POST['start_bot']) && $_SESSION['role'] === 'admin') {
     file_put_contents($bot_enabled_file, '1');
-    sendTelegramMessage("🤖 BOT ONLINE\n✅ Sistema CybersecOFC ativado\n🔗 Acesso: https://apiscybersecofc.up.railway.app\n🛡️ Segurança NASA Level 2.0 ativada");
+    sendTelegramMessage("🤖 BOT ONLINE\n✅ Sistema CybersecOFC ativado\n🔗 Acesso: " . (isset($_SERVER['HTTPS']) ? 'https' : 'http') . "://{$_SERVER['HTTP_HOST']}\n🛡️ Segurança NASA Level 2.0 ativada");
     $success_message = "Bot iniciado com sucesso!";
 }
 
@@ -643,7 +665,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
     error_reporting(0);
     ini_set('display_errors', 0);
     ini_set('log_errors', 1);
-    ini_set('error_log', 'php_errors.log');
+    ini_set('error_log', __DIR__ . '/php_errors.log');
     $lista = $_GET['lista'];
     if (ob_get_level()) ob_clean();
     try {
@@ -651,23 +673,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
             $lista = _decrypt(base64_decode($lista));
         }
         $tool_files = [
-            'paypal' => 'attached_assets/PAYPALV2OFC.php',
-            'preauth' => 'attached_assets/db.php',
-            'n7' => 'attached_assets/PAGARMEOFC.php',
-            'amazon1' => 'attached_assets/AMAZONOFC1.php',
-            'amazon2' => 'attached_assets/AMAZONOFC2.php',
-            'cpfchecker' => 'attached_assets/cpfchecker.php',
-            'ggsitau' => 'attached_assets/ggsitau.php',
-            'getnet' => 'attached_assets/getnet.php',
-            'auth' => 'attached_assets/auth.php',
-            'debitando' => 'attached_assets/debitando.php',
-            'n7_new' => 'attached_assets/n7.php',
-            'gringa' => 'attached_assets/gringa.php',
-            'elo' => 'attached_assets/elo.php',
-            'erede' => 'attached_assets/erede.php',
-            'allbins' => 'attached_assets/allbins.php',
-            'stripe' => 'attached_assets/strip.php',
-            'visamaster' => 'attached_assets/visamaster.php'
+            'paypal' => __DIR__ . '/attached_assets/PAYPALV2OFC.php',
+            'preauth' => __DIR__ . '/attached_assets/db.php',
+            'n7' => __DIR__ . '/attached_assets/PAGARMEOFC.php',
+            'amazon1' => __DIR__ . '/attached_assets/AMAZONOFC1.php',
+            'amazon2' => __DIR__ . '/attached_assets/AMAZONOFC2.php',
+            'cpfchecker' => __DIR__ . '/attached_assets/cpfchecker.php',
+            'ggsitau' => __DIR__ . '/attached_assets/ggsitau.php',
+            'getnet' => __DIR__ . '/attached_assets/getnet.php',
+            'auth' => __DIR__ . '/attached_assets/auth.php',
+            'debitando' => __DIR__ . '/attached_assets/debitando.php',
+            'n7_new' => __DIR__ . '/attached_assets/n7.php',
+            'gringa' => __DIR__ . '/attached_assets/gringa.php',
+            'elo' => __DIR__ . '/attached_assets/elo.php',
+            'erede' => __DIR__ . '/attached_assets/erede.php',
+            'allbins' => __DIR__ . '/attached_assets/allbins.php',
+            'stripe' => __DIR__ . '/attached_assets/strip.php',
+            'visamaster' => __DIR__ . '/attached_assets/visamaster.php'
         ];
         if (isset($tool_files[$tool]) && file_exists($tool_files[$tool])) {
             ob_clean();
@@ -721,7 +743,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
             }
             echo $output;
         } else {
-            echo json_encode(['status' => 'error', 'message' => '⚠️ Ferramenta não encontrada: ' . $tool]);
+            echo json_encode(['status' => 'error', 'message' => '⚠️ Ferramenta não encontrada: ' . $tool . ' (verifique se o arquivo existe na pasta attached_assets)']);
         }
     } catch (Exception $e) {
         echo json_encode(['status' => 'error', 'message' => '⚠️ Erro ao processar: ' . $e->getMessage()]);
@@ -913,6 +935,7 @@ if (isset($_GET['lives']) && isset($_SESSION['logged_in'])) {
 </body>
 </html>
 <?php
+exit;
 }
 
 // ============================================
@@ -1373,6 +1396,7 @@ if (!isset($_SESSION['logged_in'])) {
 </body>
 </html>
 <?php
+exit;
 }
 
 // ============================================
@@ -1661,6 +1685,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
 </body>
 </html>
 <?php
+exit;
 }
 
 // ============================================
@@ -2022,6 +2047,7 @@ if (isset($_GET['tool'])) {
 </body>
 </html>
 <?php
+exit;
 }
 
 // ============================================
