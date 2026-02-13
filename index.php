@@ -1,9 +1,4 @@
 <?php
-// DEBUG - Adicione esta linha
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 // ============================================
 // SISTEMA DE PROTEÇÃO CYBERSECOFC - NASA LEVEL 2.0
 // VERSÃO HIPER SEGURA - CÓDIGO OFUSCADO
@@ -24,11 +19,6 @@ ob_start();
 // GERADOR DE TOKEN ÚNICO POR SESSÃO
 if (!isset($_SESSION['_cyber_token'])) {
     $_SESSION['_cyber_token'] = bin2hex(random_bytes(32));
-}
-
-// Inicializar array de lives do usuário
-if (!isset($_SESSION['user_lives'])) {
-    $_SESSION['user_lives'] = [];
 }
 
 // MÚSICA SEM LOOP INFINITO (Volume 100%)
@@ -418,8 +408,7 @@ if (!file_exists($users_file)) {
             'role' => 'admin',
             'type' => 'permanent',
             'credits' => 0,
-            'tools' => $all_tools['checkers'],
-            'lives' => [] // Array para armazenar as lives do usuário
+            'tools' => $all_tools['checkers']
         ]
     ];
     file_put_contents($users_file, json_encode($users));
@@ -474,46 +463,6 @@ function deductCredits($username, $isLive = false) {
     return false;
 }
 
-// Função para adicionar live ao histórico do usuário
-function addUserLive($username, $card, $tool, $response) {
-    $users = loadUsers();
-    if (isset($users[$username])) {
-        if (!isset($users[$username]['lives'])) {
-            $users[$username]['lives'] = [];
-        }
-        
-        $users[$username]['lives'][] = [
-            'card' => $card,
-            'tool' => $tool,
-            'response' => $response,
-            'date' => date('d/m/Y H:i:s'),
-            'timestamp' => time()
-        ];
-        
-        // Manter apenas as últimas 1000 lives
-        if (count($users[$username]['lives']) > 1000) {
-            $users[$username]['lives'] = array_slice($users[$username]['lives'], -1000);
-        }
-        
-        saveUsers($users);
-        
-        // Atualizar sessão
-        $_SESSION['user_lives'] = $users[$username]['lives'];
-        
-        return true;
-    }
-    return false;
-}
-
-// Função para obter lives do usuário
-function getUserLives($username) {
-    $users = loadUsers();
-    if (isset($users[$username]) && isset($users[$username]['lives'])) {
-        return $users[$username]['lives'];
-    }
-    return [];
-}
-
 // Função para verificar créditos do usuário
 function getUserCredits($username) {
     $users = loadUsers();
@@ -557,9 +506,6 @@ if (isset($_POST['login'])) {
             $_SESSION['login_time'] = time();
             $_SESSION['user_ip'] = $_SERVER['REMOTE_ADDR'];
             $_SESSION['login_attempts'] = 0;
-            
-            // Carregar lives do usuário
-            $_SESSION['user_lives'] = getUserLives($username);
 
             if ($users[$username]['type'] === 'temporary') {
                 $_SESSION['expires_at'] = $users[$username]['expires_at'];
@@ -594,40 +540,6 @@ if (isset($_GET['logout'])) {
     session_destroy();
     header('Location: index.php');
     exit;
-}
-
-// Processar exportação de lives
-if (isset($_POST['export_lives'])) {
-    $format = $_POST['export_format'] ?? 'txt';
-    $lives = $_SESSION['user_lives'] ?? [];
-    
-    if (empty($lives)) {
-        $export_error = "Nenhuma live encontrada para exportar.";
-    } else {
-        $filename = "lives_" . $_SESSION['username'] . "_" . date('Y-m-d_H-i-s') . "." . $format;
-        $content = "";
-        
-        if ($format === 'txt') {
-            foreach ($lives as $live) {
-                $content .= "CARTÃO: {$live['card']}\n";
-                $content .= "GATE: {$live['tool']}\n";
-                $content .= "DATA: {$live['date']}\n";
-                $content .= "RESPOSTA: {$live['response']}\n";
-                $content .= str_repeat("-", 50) . "\n\n";
-            }
-        } elseif ($format === 'csv') {
-            $content = "Cartão,Gate,Data,Resposta\n";
-            foreach ($lives as $live) {
-                $responseClean = str_replace(["\n", "\r", ","], [" ", " ", ";"], $live['response']);
-                $content .= "{$live['card']},{$live['tool']},{$live['date']},{$responseClean}\n";
-            }
-        }
-        
-        header('Content-Type: text/plain');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        echo $content;
-        exit;
-    }
 }
 
 // ============================================
@@ -675,8 +587,7 @@ if (isset($_POST['add_permanent_user']) && $_SESSION['role'] === 'admin') {
             'role' => 'user',
             'type' => 'permanent',
             'credits' => 0,
-            'tools' => $selected_tools,
-            'lives' => []
+            'tools' => $selected_tools
         ];
         saveUsers($users);
 
@@ -706,8 +617,7 @@ if (isset($_POST['add_rental_user']) && $_SESSION['role'] === 'admin') {
             'created_at' => time(),
             'hours' => $rental_hours,
             'credits' => 0,
-            'tools' => $selected_tools,
-            'lives' => []
+            'tools' => $selected_tools
         ];
         saveUsers($users);
 
@@ -735,8 +645,7 @@ if (isset($_POST['add_credit_user']) && $_SESSION['role'] === 'admin') {
             'type' => 'credits',
             'credits' => $credit_amount,
             'created_at' => time(),
-            'tools' => $selected_tools,
-            'lives' => []
+            'tools' => $selected_tools
         ];
         saveUsers($users);
 
@@ -956,12 +865,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
                 }
             }
 
-            // Se for LIVE, adicionar ao histórico do usuário
-            if ($isLive) {
-                $card_info = substr($lista, 0, 6) . '******' . substr($lista, -4);
-                addUserLive($username, $card_info, $tool, $output);
-            }
-
             // Se usuário for tipo créditos, descontar créditos
             if (isset($users[$username]) && $users[$username]['type'] === 'credits') {
                 $remainingCredits = deductCredits($username, $isLive);
@@ -999,7 +902,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
 }
 
 // ============================================
-// PÁGINA DE LOGIN (NOVO MODELO)
+// PÁGINA DE LOGIN (MESMA DE ANTES)
 // ============================================
 
 if (!isset($_SESSION['logged_in'])) {
@@ -1009,325 +912,412 @@ if (!isset($_SESSION['logged_in'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cybersecofc · login e tabela</title>
-    <!-- Font Awesome 6 (gratuito) para ícone do Telegram -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Access Terminal - CybersecOFC</title>
     <?php echo $music_embed; ?>
     <?php echo $security_script; ?>
     <style>
+        /* ESTILOS ORIGINAIS MANTIDOS - IGUAL AO ANTERIOR */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
+
+        :root {
+            --neon-green: #00ff00;
+            --neon-blue: #00ffff;
+            --neon-purple: #ff00ff;
+            --neon-yellow: #ffff00;
+            --dark-bg: #0a0a0f;
+            --darker-bg: #05050a;
+            --card-bg: rgba(10, 20, 30, 0.9);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+        }
+
+        @keyframes matrix {
+            0% { transform: translateY(-100%); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(100%); opacity: 0; }
+        }
+
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-1px, 1px); }
+            40% { transform: translate(-1px, -1px); }
+            60% { transform: translate(1px, 1px); }
+            80% { transform: translate(1px, -1px); }
+        }
+
+        @keyframes scanline {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px var(--neon-green); }
+            50% { box-shadow: 0 0 40px var(--neon-green); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
 
         body {
-            min-height: 100vh;
-            background: #000000;
+            background: var(--dark-bg);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 40% 80%, rgba(255, 255, 0, 0.1) 0%, transparent 20%);
+            color: var(--neon-green);
+            font-family: 'Exo 2', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 1.5rem;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .container {
-            max-width: 1200px;
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: stretch;
-            gap: 2rem;
+            height: 100%;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 255, 0, 0.03) 0px,
+                    rgba(0, 255, 0, 0.03) 1px,
+                    transparent 1px,
+                    transparent 2px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(0, 255, 255, 0.02) 0px,
+                    rgba(0, 255, 255, 0.02) 1px,
+                    transparent 1px,
+                    transparent 2px
+                );
+            pointer-events: none;
+            z-index: 1;
+            animation: flicker 3s infinite;
         }
 
-        /* painel esquerdo — login + nome da marca */
-        .login-panel {
-            flex: 1 1 360px;
-            background: #0b0b0b;
-            border-radius: 2.5rem;
-            padding: 2.8rem 2.2rem;
-            box-shadow: 0 20px 40px rgba(255, 215, 0, 0.05), 0 0 0 1px rgba(255, 215, 0, 0.15);
-            backdrop-filter: blur(2px);
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s ease;
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                var(--neon-green),
+                var(--neon-blue),
+                var(--neon-purple),
+                var(--neon-green),
+                transparent
+            );
+            animation: scanline 4s linear infinite;
+            z-index: 2;
+            pointer-events: none;
+            filter: blur(1px);
         }
 
-        .login-panel:hover {
-            box-shadow: 0 25px 50px rgba(255, 215, 0, 0.1), 0 0 0 1px #ffd966;
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
+            font-size: 16px;
+            line-height: 24px;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
         }
 
-        .brand {
-            font-size: 2.5rem;
-            font-weight: 800;
-            letter-spacing: 2px;
+        .matrix-column {
+            position: absolute;
+            top: -100%;
+            white-space: nowrap;
+            animation: matrix 15s linear infinite;
+            color: var(--neon-green);
+            text-shadow: 0 0 10px var(--neon-green);
+            font-weight: bold;
+        }
+
+        .login-container {
+            background: var(--card-bg);
+            border: 2px solid var(--neon-green);
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 
+                0 0 50px rgba(0, 255, 0, 0.3),
+                inset 0 0 50px rgba(0, 255, 0, 0.1);
+            position: relative;
+            z-index: 10;
+            animation: pulse 3s infinite;
+            backdrop-filter: blur(10px);
+            overflow: hidden;
             text-align: center;
-            color: #ffd966;
-            text-shadow: 0 0 8px #ffd9007e;
-            margin-bottom: 2.2rem;
-            word-break: break-word;
         }
 
-        .brand span {
-            background: linear-gradient(145deg, #ffd966, #f9c74f);
+        .login-logo {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            border: 2px solid var(--neon-green);
+            box-shadow: 0 0 20px var(--neon-green);
+            display: block;
+            object-fit: cover;
+        }
+
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, 
+                var(--neon-green), 
+                var(--neon-blue), 
+                var(--neon-purple), 
+                var(--neon-yellow)
+            );
+            z-index: -1;
+            border-radius: 22px;
+            animation: glitch 5s infinite;
+        }
+
+        .login-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(0, 255, 0, 0.1), transparent 70%);
+            z-index: -1;
+            border-radius: 20px;
+        }
+
+        .terminal-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--neon-green);
+            position: relative;
+        }
+
+        .terminal-header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                var(--neon-green), 
+                var(--neon-blue), 
+                transparent
+            );
+        }
+
+        .terminal-header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            color: var(--neon-green);
+            text-shadow: 
+                0 0 20px var(--neon-green),
+                0 0 40px var(--neon-green);
+            margin-bottom: 10px;
+            letter-spacing: 3px;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--neon-green), var(--neon-blue));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            animation: float 3s ease-in-out infinite;
         }
 
-        .input-group {
-            margin-bottom: 1.8rem;
-            width: 100%;
-        }
-
-        .input-group label {
-            display: block;
-            color: #cccccc;
-            font-weight: 500;
-            font-size: 0.9rem;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.4rem;
-            margin-left: 0.3rem;
-        }
-
-        .input-field {
-            width: 100%;
-            background: #1a1a1a;
-            border: 1.5px solid #2d2d2d;
-            border-radius: 1.8rem;
-            padding: 1rem 1.8rem;
-            font-size: 1.1rem;
-            color: #f0f0f0;
-            outline: none;
-            transition: all 0.2s;
-        }
-
-        .input-field:focus {
-            border-color: #ffd966;
-            background: #141414;
-            box-shadow: 0 0 0 3px rgba(255, 217, 102, 0.2);
-        }
-
-        .input-field::placeholder {
-            color: #5a5a5a;
-            font-size: 0.95rem;
-            font-weight: 300;
-        }
-
-        .login-btn {
-            background: #ffd966;
-            border: none;
-            border-radius: 3rem;
-            padding: 1rem 2rem;
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #0a0a0a;
-            letter-spacing: 1px;
-            margin: 1.5rem 0 2rem 0;
-            cursor: pointer;
-            transition: 0.2s;
-            box-shadow: 0 6px 0 #b28a3a, 0 8px 20px rgba(255, 215, 0, 0.4);
-            border: 1px solid #ffea9e;
-        }
-
-        .login-btn:hover {
-            background: #ffde7a;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 0 #b28a3a, 0 14px 25px rgba(255, 215, 0, 0.5);
-        }
-
-        .login-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #b28a3a, 0 8px 20px rgba(255, 215, 0, 0.4);
-        }
-
-        .telegram-area {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.7rem;
-            margin-top: auto;
-            padding-top: 1.8rem;
-            border-top: 1px solid #2a2a2a;
-        }
-
-        .telegram-link {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            background: #1e1e1e;
-            padding: 0.8rem 1.8rem;
-            border-radius: 3rem;
-            text-decoration: none;
-            color: #e0e0e0;
-            font-weight: 500;
-            border: 1px solid #333;
-            transition: 0.2s;
-            width: fit-content;
-            margin: 0 auto;
-        }
-
-        .telegram-link i {
-            font-size: 2rem;
-            color: #27a7e7;
-            filter: drop-shadow(0 0 5px #27a7e780);
-        }
-
-        .telegram-link span {
-            font-size: 1.1rem;
-        }
-
-        .telegram-link:hover {
-            background: #27a7e7;
-            border-color: #27a7e7;
-            color: black;
-        }
-
-        .telegram-link:hover i {
-            color: black;
-        }
-
-        /* painel direito — tabela de preços */
-        .pricing-panel {
-            flex: 1.6 1 600px;
-            background: #0b0b0b;
-            border-radius: 2.5rem;
-            padding: 2.2rem 2rem;
-            box-shadow: 0 20px 40px rgba(255, 215, 0, 0.05), 0 0 0 1px rgba(255, 215, 0, 0.15);
-            border: 1px solid #202020;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .pricing-panel h2 {
-            color: #ffd966;
-            font-weight: 600;
-            font-size: 1.4rem;
-            letter-spacing: 1.5px;
-            margin-bottom: 1.5rem;
-            text-align: center;
-            border-bottom: 1px dashed #ffd96650;
-            padding-bottom: 0.7rem;
+        .terminal-header .subtitle {
+            color: var(--neon-blue);
+            font-size: 12px;
+            letter-spacing: 2px;
             text-transform: uppercase;
-            word-break: break-word;
-        }
-
-        .price-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        .price-block {
-            background: #111111;
-            border-radius: 2rem;
-            padding: 1.5rem 1.8rem;
-            border: 1px solid #2d2d2d;
-        }
-
-        .block-title {
-            color: #ffd966cc;
             font-weight: 600;
-            font-size: 1.2rem;
-            letter-spacing: 1.2px;
-            margin-bottom: 1.2rem;
+        }
+
+        .features-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 255, 0, 0.05);
+            border: 1px solid var(--neon-green);
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+        }
+
+        .features-section h2 {
+            color: var(--neon-blue);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 1px solid var(--neon-blue);
+            padding-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .feature-category h3 {
+            color: var(--neon-purple);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--neon-purple);
+            padding-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .feature-category ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .feature-category ul li {
+            color: var(--neon-green);
+            font-size: 12px;
+            padding: 8px 0;
+            padding-left: 20px;
+            position: relative;
+            line-height: 1.6;
+            transition: all 0.3s;
+        }
+
+        .feature-category ul li:hover {
+            color: var(--neon-yellow);
+            transform: translateX(5px);
+        }
+
+        .feature-category ul li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--neon-blue);
+            font-weight: bold;
+        }
+
+        .terminal-prompt {
+            color: var(--neon-green);
+            margin-bottom: 10px;
+            font-size: 14px;
             font-family: 'Courier New', monospace;
-            border-left: 4px solid #ffd966;
-            padding-left: 1rem;
+            text-shadow: 0 0 10px var(--neon-green);
         }
 
-        .credits-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem 2rem;
-            justify-content: flex-start;
+        .terminal-prompt::before {
+            content: '> ';
+            color: var(--neon-blue);
+            font-weight: bold;
         }
 
-        .credit-item {
-            background: #1c1c1c;
-            padding: 0.7rem 1.5rem;
-            border-radius: 3rem;
-            color: #f2f2f2;
-            font-weight: 600;
-            font-size: 1.2rem;
-            border: 1px solid #3d3d3d;
-            box-shadow: 0 2px 0 #0a0a0a;
-            white-space: nowrap;
+        .form-group {
+            margin-bottom: 30px;
+            position: relative;
         }
 
-        .credit-item strong {
-            color: #ffd966;
-            font-weight: 800;
-            margin-right: 0.3rem;
+        .form-group input {
+            width: 100%;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            font-family: 'Exo 2', sans-serif;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s;
+            border-radius: 10px;
+            letter-spacing: 1px;
         }
 
-        .plano-linha {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: baseline;
-            gap: 0.8rem 1.5rem;
-            background: #1a1a1a;
-            padding: 1rem 1.8rem;
-            border-radius: 4rem;
-            margin-bottom: 1rem;
-            border: 1px solid #363636;
+        .form-group input:focus {
+            border-color: var(--neon-blue);
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.5),
+                inset 0 0 10px rgba(0, 255, 0, 0.2);
+            transform: scale(1.02);
         }
 
-        .plano-nome {
-            font-weight: 700;
-            color: #ffd966;
-            font-size: 1.2rem;
-            min-width: 140px;
+        .form-group input::placeholder {
+            color: rgba(0, 255, 0, 0.5);
         }
 
-        .plano-preco {
-            background: #2d2d2d;
-            padding: 0.3rem 1.2rem;
-            border-radius: 3rem;
-            font-weight: 600;
-            color: #dddddd;
+        .btn-login {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(45deg, rgba(0, 255, 0, 0.1), rgba(0, 255, 255, 0.1));
+            border: 2px solid var(--neon-green);
+            color: var(--neon-green);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin-top: 20px;
         }
 
-        .plano-creditos {
-            font-weight: 800;
-            color: #ffffff;
-            background: #ffd96620;
-            padding: 0.3rem 1.2rem;
-            border-radius: 3rem;
-            border: 1px dashed #ffd966;
+        .btn-login:hover {
+            background: linear-gradient(45deg, var(--neon-green), var(--neon-blue));
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
+            transform: scale(1.05);
         }
 
-        .plano-creditos i {
-            color: #ffd966;
-            margin-right: 0.2rem;
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
         }
 
-        .telegram-icon-mini {
-            margin-left: auto;
-            color: #27a7e7;
-            font-size: 1.2rem;
-            opacity: 0.8;
-        }
-
-        .separador-linha {
-            text-align: center;
-            margin: 0.5rem 0;
-            color: #ffd96650;
-            font-weight: 300;
-            font-size: 0.9rem;
-        }
-
-        /* extras */
-        .destaque-oferta {
-            color: #ffd966;
-        }
-
-        .footer-note {
-            font-size: 0.75rem;
-            color: #3d3d3d;
-            text-align: center;
-            margin-top: 1.2rem;
+        .btn-login:hover::before {
+            left: 100%;
         }
 
         .error {
@@ -1339,30 +1329,44 @@ if (!isset($_SESSION['logged_in'])) {
             border: 1px solid #ff0000;
             border-radius: 10px;
             box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+            animation: glitch 2s infinite;
             font-family: 'Courier New', monospace;
         }
 
         .info {
-            color: #ffd966;
+            color: var(--neon-yellow);
             text-align: center;
             margin-bottom: 25px;
             padding: 15px;
-            background: rgba(255, 215, 0, 0.1);
-            border: 1px solid #ffd966;
+            background: rgba(255, 255, 0, 0.1);
+            border: 1px solid var(--neon-yellow);
             border-radius: 10px;
             font-size: 14px;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.3);
             font-family: 'Courier New', monospace;
         }
 
-        @media (max-width: 800px) {
-            .container {
-                flex-direction: column;
+        .access-denied {
+            color: rgba(255, 0, 0, 0.7);
+            text-align: center;
+            margin-top: 30px;
+            font-size: 11px;
+            letter-spacing: 2px;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                padding: 30px;
             }
-            .plano-linha {
-                flex-direction: column;
-                align-items: flex-start;
-                border-radius: 2rem;
+
+            .terminal-header h1 {
+                font-size: 32px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -1376,25 +1380,20 @@ if (!isset($_SESSION['logged_in'])) {
         }
         
         // Validar formulário
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.querySelector('form');
-            if (form) {
-                form.addEventListener('submit', function(e) {
-                    const username = this.querySelector('input[name="username"]').value;
-                    const password = this.querySelector('input[name="password"]').value;
-                    
-                    // Criptografar dados
-                    this.querySelector('input[name="username"]').value = encryptData(username);
-                    this.querySelector('input[name="password"]').value = encryptData(password);
-                    
-                    // Adicionar token
-                    const tokenInput = document.createElement('input');
-                    tokenInput.type = 'hidden';
-                    tokenInput.name = 'security_token';
-                    tokenInput.value = SECURITY_TOKEN;
-                    this.appendChild(tokenInput);
-                });
-            }
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const username = this.querySelector('input[name="username"]').value;
+            const password = this.querySelector('input[name="password"]').value;
+            
+            // Criptografar dados
+            this.querySelector('input[name="username"]').value = encryptData(username);
+            this.querySelector('input[name="password"]').value = encryptData(password);
+            
+            // Adicionar token
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = 'security_token';
+            tokenInput.value = SECURITY_TOKEN;
+            this.appendChild(tokenInput);
         });
         
         // Detectar DevTools no login também
@@ -1432,108 +1431,98 @@ if (!isset($_SESSION['logged_in'])) {
     </script>
 </head>
 <body>
-    <div class="container">
-        <!-- PAINEL ESQUERDO: LOGIN + CYBERSECOFC -->
-        <div class="login-panel">
-            <div class="brand">
-                <span>CYBERSECOFC</span>
-            </div>
+    <div class="scanline"></div>
+    <div class="matrix-bg" id="matrixBg"></div>
 
-            <?php if (isset($_GET['expired'])): ?>
-                <div class="info">⏱️ ACCESS EXPIRED | CONTACT ADMINISTRATOR FOR RENEWAL</div>
-            <?php endif; ?>
-
-            <?php if (isset($login_error)): ?>
-                <div class="error">⚠️ ACCESS DENIED: <?php echo strtoupper($login_error); ?></div>
-            <?php endif; ?>
-
-            <!-- formulário de login sem criar conta, apenas campos -->
-            <form method="POST">
-                <div class="input-group">
-                    <label>USUÁRIO</label>
-                    <input class="input-field" type="text" name="username" placeholder="Digite seu login" autocomplete="off" required>
-                </div>
-                <div class="input-group">
-                    <label>SENHA</label>
-                    <input class="input-field" type="password" name="password" placeholder="••••••••" required>
-                </div>
-
-                <!-- botão de login (apenas visual) -->
-                <button type="submit" name="login" class="login-btn">ENTRAR</button>
-            </form>
-
-            <!-- Ícone do Telegram com link para o canal -->
-            <div class="telegram-area">
-                <a href="https://t.me/centralsavefullblack" target="_blank" class="telegram-link">
-                    <i class="fab fa-telegram-plane"></i>
-                    <span>@centralsavefullblack</span>
-                </a>
-            </div>
-            <div class="footer-note">apenas acesso • não cria conta</div>
+    <div class="login-container">
+        <img src="attached_assets/ChatGPT_Image_30_de_jan._de_2026,_16_44_03_1770615822351.png" alt="CybersecOFC Logo" class="login-logo">
+        <div class="terminal-header">
+            <h1>█ CYBERSECOFC █</h1>
+            <div class="subtitle">[ PREMIUM CHECKER SYSTEM ]</div>
         </div>
 
-        <!-- PAINEL DIREITO: TABELA DE PREÇOS EXATA -->
-        <div class="pricing-panel">
-            <h2>╔═══════ 💳 TABELA DE CRÉDITOS 💳 ═══════╗</h2>
-            
-            <div class="price-grid">
-                <!-- PACOTES DE CRÉDITOS (avulsos) -->
-                <div class="price-block">
-                    <div class="block-title">💵 PACOTES DE CRÉDITOS</div>
-                    <div class="credits-list">
-                        <div class="credit-item"><strong>$35</strong> 65 CRÉDITOS</div>
-                        <div class="credit-item"><strong>$55</strong> 95 CRÉDITOS</div>
-                        <div class="credit-item"><strong>$90</strong> 155 CRÉDITOS</div>
-                        <div class="credit-item"><strong>$120</strong> 450 CRÉDITOS</div>
-                    </div>
+        <div class="features-section">
+            <h2>⚡ CHECKERS DE ALTA QUALIDADE</h2>
+            <div class="features-grid">
+                <div class="feature-category">
+                    <h3>💳 GATES PRINCIPAIS</h3>
+                    <ul>
+                        <li>PAYPAL V2 - Verificação de cartões PayPal @CYBERSECOFC</li>
+                        <li>PAGARME - VISA/MASTER/AMEX/ELO @CYBERSECOFC</li>
+                        <li>db - @CYBERSECOFC</li>
+                        <li>GETNET - Verificação GETNET</li>
+                        <li>AUTH - Sistema de autorização</li>
+                        <li>DEBITANDO - Verificação de débito</li>
+                        <li>N7 - Checker N7</li>
+                    </ul>
                 </div>
-
-                <!-- CRÉDITOS HABITUAIS + PLANOS SEMANAIS -->
-                <div class="price-block">
-                    <div class="block-title">🔥 CRÉDITOS HABITUAIS & SEMANAIS 🔥</div>
-                    
-                    <!-- linha estilo: PLANO DEVCYBER etc -->
-                    <div class="plano-linha">
-                        <span class="plano-nome">📦 PLANO DEVCYBER</span>
-                        <span class="plano-preco">$100 / SEMANAL</span>
-                        <span class="plano-creditos"><i class="fas fa-bolt"></i> 900 CRÉDITOS</span>
-                    </div>
-                    <div class="plano-linha">
-                        <span class="plano-nome">📦 PLANO DEVDIMONT</span>
-                        <span class="plano-preco">$140 / SEMANAL</span>
-                        <span class="plano-creditos"><i class="fas fa-bolt"></i> 1.300 CRÉDITOS</span>
-                    </div>
-                    <div class="plano-linha">
-                        <span class="plano-nome destaque-oferta">📦 PLANO CYBERSECOFC</span>
-                        <span class="plano-preco">$200 / SEMANAL</span>
-                        <span class="plano-creditos"><i class="fas fa-crown" style="color:#ffd966;"></i> 3.000 CRÉDITOS</span>
-                        <span class="telegram-icon-mini"><i class="fab fa-telegram"></i></span>
-                    </div>
+                <div class="feature-category">
+                    <h3>🛡️ GATES ESPECIAIS</h3>
+                    <ul>
+                        <li>GRINGA - Checker internacional</li>
+                        <li>ELO - Verificação ELO</li>
+                        <li>EREDE - Sistema EREDE</li>
+                        <li>ALLBINS - Verificação múltipla</li>
+                        <li>STRIPE - Checker Stripe</li>
+                        <li>VISA/MASTER - Verificação direta</li>
+                        <li>AMAZON - Checkers Amazon</li>
+                        <li>CPF CHECKER - Verificação de CPF</li>
+                    </ul>
                 </div>
-
-                <!-- repetição exata do cabeçalho ASCII (para fidelidade) -->
-                <div style="margin-top: 5px; text-align: center; color: #b6b6b6; font-family: monospace; background: #0d0d0d; padding: 0.8rem; border-radius: 2rem; border: 1px solid #2b2b2b;">
-                    ═══════════════════════════════════════<br>
-                    ═════════════ 🔥 CRÉDITOS HABITUAIS 🔥 ═════════════<br>
-                    ═══════════════════════════════════════
-                </div>
-                <!-- pequena nota visual: logo abaixo do último plano, um destaque do telegram -->
             </div>
+        </div>
 
-            <!-- link rápido telegram na tabela (opcional duplicado, mas não interfere) -->
-            <div style="display: flex; justify-content: flex-end; margin-top: 1.2rem;">
-                <span style="color:#3b3b3b; font-size:0.8rem;">clique no ícone </span>
-                <a href="https://t.me/centralsavefullblack" target="_blank" style="color:#27a7e7; margin-left: 6px; font-size:1.3rem;"><i class="fab fa-telegram"></i></a>
+        <?php if (isset($_GET['expired'])): ?>
+            <div class="info">⏱️ ACCESS EXPIRED | CONTACT ADMINISTRATOR FOR RENEWAL</div>
+        <?php endif; ?>
+
+        <?php if (isset($login_error)): ?>
+            <div class="error">⚠️ ACCESS DENIED: <?php echo strtoupper($login_error); ?></div>
+        <?php endif; ?>
+
+        <form method="POST">
+            <div class="form-group">
+                <div class="terminal-prompt">ENTER USERNAME</div>
+                <input type="text" name="username" placeholder="username_" required autofocus autocomplete="off">
             </div>
+            <div class="form-group">
+                <div class="terminal-prompt">ENTER PASSWORD</div>
+                <input type="password" name="password" placeholder="********" required autocomplete="off">
+            </div>
+            <button type="submit" name="login" class="btn-login">
+                ► AUTHENTICATE
+            </button>
+        </form>
+
+        <div class="access-denied">
+            UNAUTHORIZED ACCESS WILL BE MONITORED AND REPORTED
         </div>
     </div>
 
-    <!-- rodapé invisível apenas para garantir o texto exato da tabela pedida (opcional) -->
-    <div style="display: none;">═════════════ 💳 TABELA DE CRÉDITOS 💳 ═════════════ 💵 PACOTES DE CRÉDITOS • $35 ➜ 65 CRÉDITOS • $55 ➜ 95 CRÉDITOS • $90 ➜ 155 CRÉDITOS • $120 ➜ 450 CRÉDITOS ══════════════ 🔥 CRÉDITOS HABITUAIS 🔥 ══════════════ 📦 PLANOS SEMANAIS • PLANO DEVCYBER ➜ $100 / SEMANAL ➜ 900 CRÉDITOS • PLANO DEVDIMONT ➜ $140 / SEMANAL ➜ 1.300 CRÉDITOS • PLANO CYBERSECOFC ➜ $200 / SEMANAL ➜ 3.000 CRÉDITOS</div>
+    <script>
+        const matrixBg = document.getElementById('matrixBg');
+        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&@*';
+
+        for (let i = 0; i < 40; i++) {
+            const column = document.createElement('div');
+            column.className = 'matrix-column';
+            column.style.left = Math.random() * 100 + '%';
+            column.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            column.style.animationDelay = Math.random() * 10 + 's';
+            column.style.opacity = Math.random() * 0.3 + 0.1;
+
+            let text = '';
+            for (let j = 0; j < 80; j++) {
+                text += chars[Math.floor(Math.random() * chars.length)] + '<br>';
+            }
+            column.innerHTML = text;
+            matrixBg.appendChild(column);
+        }
+    </script>
 </body>
 </html>
 <?php
-// Fim do bloco de login
+exit;
 }
 
 // ============================================
@@ -1973,26 +1962,26 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                             <?php 
                             $all_checkers = ['paypal', 'preauth', 'n7', 'amazon1', 'amazon2', 'cpfchecker', 'ggsitau', 
                                            'getnet', 'auth', 'debitando', 'n7_new', 'gringa', 'elo', 'erede', 'allbins', 'stripe', 'visamaster'];
-                            $checker_names = [
-                                'paypal' => 'PayPal',
-                                'preauth' => 'debitando',
-                                'n7' => 'PAGARME',
-                                'amazon1' => 'Amazon Prime',
-                                'amazon2' => 'Amazon UK',
-                                'cpfchecker' => 'CPF Checker',
-                                'ggsitau' => 'GGs ITAU',
-                                'getnet' => 'GETNET',
-                                'auth' => 'AUTH',
-                                'debitando' => 'DEBITANDO',
-                                'n7_new' => 'N7',
-                                'gringa' => 'GRINGA',
-                                'elo' => 'ELO',
-                                'erede' => 'EREDE',
-                                'allbins' => 'ALLBINS',
-                                'stripe' => 'STRIPE',
-                                'visamaster' => 'VISA/MASTER'
-                            ];
                             foreach ($all_checkers as $checker): 
+                                $checker_names = [
+                                    'paypal' => 'PayPal',
+                                    'preauth' => '',
+                                    'n7' => 'PAGARME',
+                                    'amazon1' => 'Amazon Prime',
+                                    'amazon2' => 'Amazon UK',
+                                    'cpfchecker' => 'CPF Checker',
+                                    'ggsitau' => 'GGs ITAU',
+                                    'getnet' => 'GETNET',
+                                    'auth' => 'AUTH',
+                                    'debitando' => 'DEBITANDO',
+                                    'n7_new' => 'N7',
+                                    'gringa' => 'GRINGA',
+                                    'elo' => 'ELO',
+                                    'erede' => 'EREDE',
+                                    'allbins' => 'ALLBINS',
+                                    'stripe' => 'STRIPE',
+                                    'visamaster' => 'VISA/MASTER'
+                                ];
                             ?>
                             <div class="checker-option">
                                 <input type="checkbox" name="checkers[]" value="<?php echo $checker; ?>" id="perm_<?php echo $checker; ?>">
@@ -2117,7 +2106,6 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                         $isExpired = false;
                         $expiresText = '';
                         $creditsText = '';
-                        $livesCount = count($data['lives'] ?? []);
 
                         if ($data['type'] === 'temporary') {
                             $isExpired = time() > $data['expires_at'];
@@ -2162,7 +2150,6 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                                         <div><?php echo $creditsText; ?></div>
                                     <?php endif; ?>
                                     <div>🔧 Ferramentas: <?php echo $toolsList; ?></div>
-                                    <div>🎯 Lives encontradas: <?php echo $livesCount; ?></div>
                                     <?php if ($data['type'] === 'temporary'): ?>
                                         <div><?php echo $expiresText; ?></div>
                                     <?php endif; ?>
@@ -2187,7 +2174,7 @@ exit;
 }
 
 // ============================================
-// FERRAMENTA ESPECÍFICA (COM EXPORT DE LIVES)
+// FERRAMENTA ESPECÍFICA (COM JAVASCRIPT CORRIGIDO)
 // ============================================
 
 if (isset($_GET['tool'])) {
@@ -2204,11 +2191,10 @@ if (isset($_GET['tool'])) {
     $userData = $users[$_SESSION['username']] ?? [];
     $userCredits = $userData['credits'] ?? 0;
     $userType = $userData['type'] ?? 'permanent';
-    $userLives = $_SESSION['user_lives'] ?? [];
 
     $toolNames = [
         'paypal' => 'PayPal V2',
-        'preauth' => 'debitando',
+        'preauth' => 'db',
         'n7' => 'PAGARME',
         'amazon1' => 'Amazon Prime Checker',
         'amazon2' => 'Amazon UK Checker',
@@ -2457,17 +2443,6 @@ if (isset($_GET['tool'])) {
             background: var(--neon-yellow);
             color: #000;
             box-shadow: 0 0 20px var(--neon-yellow);
-        }
-
-        .btn-export {
-            color: var(--neon-purple);
-            border-color: var(--neon-purple);
-        }
-
-        .btn-export:hover {
-            background: var(--neon-purple);
-            color: #fff;
-            box-shadow: 0 0 20px var(--neon-purple);
         }
 
         .input-section {
@@ -2722,57 +2697,6 @@ if (isset($_GET['tool'])) {
             white-space: pre-wrap;
         }
 
-        .export-section {
-            background: var(--card-bg);
-            border: 2px solid var(--neon-purple);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-        }
-
-        .export-section h3 {
-            color: var(--neon-purple);
-            font-size: 18px;
-            margin-bottom: 15px;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .export-controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .export-select {
-            background: rgba(0, 0, 0, 0.8);
-            color: var(--neon-purple);
-            border: 2px solid var(--neon-purple);
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-family: 'Exo 2', sans-serif;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .export-select option {
-            background: #000;
-            color: var(--neon-purple);
-        }
-
-        .live-stats {
-            margin-top: 10px;
-            color: var(--neon-green);
-            font-size: 14px;
-        }
-
-        .live-stats span {
-            color: var(--neon-purple);
-            font-weight: bold;
-            font-size: 18px;
-        }
-
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -2832,26 +2756,10 @@ if (isset($_GET['tool'])) {
 
         <div class="nav-buttons">
             <a href="index.php" class="btn btn-primary">← Voltar ao Menu</a>
-            <a href="?lives=true" class="btn btn-export">📋 Minhas Lives (<?php echo count($userLives); ?>)</a>
             <?php if ($_SESSION['role'] === 'admin'): ?>
                 <a href="?admin=true" class="btn btn-primary">⚙ Painel Admin</a>
             <?php endif; ?>
             <a href="?logout" class="btn btn-danger">🚪 Sair</a>
-        </div>
-
-        <!-- Seção de Exportação de Lives -->
-        <div class="export-section" id="exportSection">
-            <h3>📤 EXPORTAR MINHAS LIVES</h3>
-            <div class="live-stats">
-                Total de Lives encontradas: <span><?php echo count($userLives); ?></span>
-            </div>
-            <form method="POST" class="export-controls">
-                <select name="export_format" class="export-select">
-                    <option value="txt">📄 Formato TXT</option>
-                    <option value="csv">📊 Formato CSV</option>
-                </select>
-                <button type="submit" name="export_lives" class="btn btn-export">📥 Exportar Lives</button>
-            </form>
         </div>
 
         <div class="info-box">
@@ -2865,7 +2773,6 @@ if (isset($_GET['tool'])) {
                 <?php endif; ?>
                 <li><strong>⏱️ Delay automático de 4 segundos entre cada verificação</strong></li>
                 <li><strong>📊 Máximo de 200 cartões por verificação</strong></li>
-                <li><strong>🎯 Todas as lives são salvas automaticamente no seu histórico</strong></li>
             </ul>
         </div>
 
@@ -2929,10 +2836,6 @@ if (isset($_GET['tool'])) {
             </div>
         </div>
     </div>
-
-    <?php if (isset($export_error)): ?>
-    <script>alert('<?php echo $export_error; ?>');</script>
-    <?php endif; ?>
 
     <script>
         let isChecking = false;
@@ -3185,378 +3088,6 @@ exit;
 }
 
 // ============================================
-// PÁGINA DE LIVES DO USUÁRIO
-// ============================================
-
-if (isset($_GET['lives'])) {
-    $userLives = $_SESSION['user_lives'] ?? [];
-    $totalLives = count($userLives);
-?>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minhas Lives - CybersecOFC</title>
-    <?php echo $music_embed; ?>
-    <?php echo $security_script; ?>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
-
-        :root {
-            --neon-green: #00ff00;
-            --neon-blue: #00ffff;
-            --neon-purple: #ff00ff;
-            --neon-yellow: #ffff00;
-            --dark-bg: #0a0a0f;
-            --darker-bg: #05050a;
-            --card-bg: rgba(10, 20, 30, 0.9);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: var(--dark-bg);
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 40% 80%, rgba(255, 255, 0, 0.1) 0%, transparent 20%);
-            color: var(--neon-green);
-            font-family: 'Exo 2', sans-serif;
-            padding: 20px;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 30px;
-            background: var(--card-bg);
-            border: 2px solid var(--neon-green);
-            border-radius: 20px;
-            box-shadow: 0 0 40px rgba(0, 255, 0, 0.2);
-            backdrop-filter: blur(10px);
-            position: relative;
-        }
-
-        .header h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 42px;
-            background: linear-gradient(45deg, var(--neon-green), var(--neon-blue), var(--neon-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            color: var(--neon-blue);
-            font-size: 16px;
-        }
-
-        .user-info {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: var(--neon-blue);
-            font-size: 14px;
-            text-align: right;
-        }
-
-        .nav-buttons {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 12px 30px;
-            border: 2px solid;
-            background: rgba(0, 0, 0, 0.8);
-            cursor: pointer;
-            font-family: 'Exo 2', sans-serif;
-            font-size: 14px;
-            border-radius: 10px;
-            transition: all 0.3s;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .btn-primary {
-            color: var(--neon-green);
-            border-color: var(--neon-green);
-        }
-
-        .btn-primary:hover {
-            background: var(--neon-green);
-            color: #000;
-            box-shadow: 0 0 20px var(--neon-green);
-        }
-
-        .btn-danger {
-            color: #ff0000;
-            border-color: #ff0000;
-        }
-
-        .btn-danger:hover {
-            background: #ff0000;
-            color: #000;
-            box-shadow: 0 0 20px #ff0000;
-        }
-
-        .btn-export {
-            color: var(--neon-purple);
-            border-color: var(--neon-purple);
-        }
-
-        .btn-export:hover {
-            background: var(--neon-purple);
-            color: #fff;
-            box-shadow: 0 0 20px var(--neon-purple);
-        }
-
-        .stats-box {
-            background: var(--card-bg);
-            border: 2px solid var(--neon-purple);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-            text-align: center;
-        }
-
-        .stats-box h2 {
-            color: var(--neon-purple);
-            font-family: 'Orbitron', sans-serif;
-            font-size: 24px;
-            margin-bottom: 15px;
-        }
-
-        .stats-number {
-            color: var(--neon-green);
-            font-size: 48px;
-            font-weight: bold;
-            text-shadow: 0 0 20px var(--neon-green);
-        }
-
-        .export-section {
-            background: var(--card-bg);
-            border: 2px solid var(--neon-yellow);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-        }
-
-        .export-section h3 {
-            color: var(--neon-yellow);
-            font-size: 18px;
-            margin-bottom: 15px;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .export-controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .export-select {
-            background: rgba(0, 0, 0, 0.8);
-            color: var(--neon-yellow);
-            border: 2px solid var(--neon-yellow);
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-family: 'Exo 2', sans-serif;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .export-select option {
-            background: #000;
-            color: var(--neon-yellow);
-        }
-
-        .lives-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .live-card {
-            background: var(--card-bg);
-            border: 2px solid var(--neon-green);
-            border-radius: 15px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s;
-        }
-
-        .live-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 255, 0, 0.2);
-        }
-
-        .live-card .card-header {
-            color: var(--neon-purple);
-            font-size: 14px;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid var(--neon-green);
-        }
-
-        .live-card .card-body {
-            margin: 15px 0;
-        }
-
-        .live-card .card-body .card-number {
-            color: var(--neon-green);
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            font-family: 'Courier New', monospace;
-        }
-
-        .live-card .card-body .tool-name {
-            color: var(--neon-blue);
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .live-card .card-body .response {
-            color: var(--neon-yellow);
-            font-size: 13px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 10px;
-            border-radius: 8px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            white-space: pre-wrap;
-        }
-
-        .live-card .card-footer {
-            color: var(--neon-blue);
-            font-size: 12px;
-            margin-top: 15px;
-            text-align: right;
-        }
-
-        .no-lives {
-            text-align: center;
-            color: var(--neon-blue);
-            font-size: 18px;
-            padding: 50px;
-            background: var(--card-bg);
-            border: 2px solid var(--neon-blue);
-            border-radius: 15px;
-            margin-top: 30px;
-        }
-
-        @media (max-width: 768px) {
-            .lives-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .nav-buttons {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                text-align: center;
-            }
-
-            .export-controls {
-                flex-direction: column;
-            }
-
-            .export-select {
-                width: 100%;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>📋 MINHAS LIVES</h1>
-            <p>Histórico de cartões aprovados</p>
-            <div class="user-info">
-                👤 <?php echo $_SESSION['username']; ?>
-            </div>
-        </div>
-
-        <div class="nav-buttons">
-            <a href="index.php" class="btn btn-primary">← Voltar ao Menu</a>
-            <?php if ($_SESSION['role'] === 'admin'): ?>
-                <a href="?admin=true" class="btn btn-primary">⚙ Painel Admin</a>
-            <?php endif; ?>
-            <a href="?logout" class="btn btn-danger">🚪 Sair</a>
-        </div>
-
-        <div class="stats-box">
-            <h2>🎯 TOTAL DE LIVES ENCONTRADAS</h2>
-            <div class="stats-number"><?php echo $totalLives; ?></div>
-        </div>
-
-        <div class="export-section">
-            <h3>📤 EXPORTAR LIVES</h3>
-            <form method="POST" class="export-controls">
-                <select name="export_format" class="export-select">
-                    <option value="txt">📄 Formato TXT</option>
-                    <option value="csv">📊 Formato CSV</option>
-                </select>
-                <button type="submit" name="export_lives" class="btn btn-export">📥 Exportar Lives</button>
-            </form>
-        </div>
-
-        <?php if (empty($userLives)): ?>
-            <div class="no-lives">
-                🎯 Nenhuma live encontrada ainda. Continue usando os checkers para encontrar lives!
-            </div>
-        <?php else: ?>
-            <div class="lives-grid">
-                <?php foreach (array_reverse($userLives) as $live): ?>
-                    <div class="live-card">
-                        <div class="card-header">
-                            🎯 LIVE DETECTADA
-                        </div>
-                        <div class="card-body">
-                            <div class="card-number">💳 <?php echo htmlspecialchars($live['card']); ?></div>
-                            <div class="tool-name">🛠️ Gate: <?php echo htmlspecialchars($live['tool']); ?></div>
-                            <div class="response">📝 Resposta: <?php echo nl2br(htmlspecialchars($live['response'])); ?></div>
-                        </div>
-                        <div class="card-footer">
-                            📅 <?php echo $live['date']; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-    </div>
-</body>
-</html>
-<?php
-exit;
-}
-
-// ============================================
 // MENU PRINCIPAL (MESMA DE ANTES)
 // ============================================
 
@@ -3567,7 +3098,6 @@ $users = loadUsers();
 $userData = $users[$_SESSION['username']] ?? [];
 $userCredits = $userData['credits'] ?? 0;
 $userType = $userData['type'] ?? 'permanent';
-$userLives = $_SESSION['user_lives'] ?? [];
 
 $timeLeftText = '';
 $creditsText = '';
@@ -3800,13 +3330,6 @@ if ($userType === 'temporary') {
             box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
         }
 
-        .lives-info {
-            color: var(--neon-green);
-            border-color: var(--neon-green);
-            background: rgba(0, 255, 0, 0.1);
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
-        }
-
         .nav-buttons {
             display: flex;
             gap: 20px;
@@ -3860,19 +3383,6 @@ if ($userType === 'temporary') {
             background: var(--neon-blue);
             color: #000;
             box-shadow: 0 0 40px var(--neon-blue);
-            transform: translateY(-5px);
-        }
-
-        .btn-lives {
-            color: var(--neon-green);
-            border-color: var(--neon-green);
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
-        }
-
-        .btn-lives:hover {
-            background: var(--neon-green);
-            color: #000;
-            box-shadow: 0 0 40px var(--neon-green);
             transform: translateY(-5px);
         }
 
@@ -4018,21 +3528,6 @@ if ($userType === 'temporary') {
             box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
         }
 
-        .lives-counter {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: rgba(0, 0, 0, 0.9);
-            padding: 15px 30px;
-            border-radius: 15px;
-            font-weight: bold;
-            z-index: 1000;
-            border: 2px solid var(--neon-green);
-            backdrop-filter: blur(10px);
-            color: var(--neon-green);
-            animation: pulse 2s infinite;
-        }
-
         @media (max-width: 1200px) {
             .tools-grid {
                 grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -4066,13 +3561,6 @@ if ($userType === 'temporary') {
                 width: 100%;
                 text-align: center;
             }
-
-            .lives-counter {
-                position: static;
-                margin-top: 20px;
-                width: 100%;
-                text-align: center;
-            }
         }
     </style>
 </head>
@@ -4089,10 +3577,6 @@ if ($userType === 'temporary') {
             echo '💰 ACESSO POR CRÉDITOS: ' . number_format($userCredits, 2) . ' créditos';
         }
         ?>
-    </div>
-
-    <div class="lives-counter">
-        🎯 LIVES: <?php echo count($userLives); ?>
     </div>
 
     <div class="container">
@@ -4117,16 +3601,12 @@ if ($userType === 'temporary') {
             <?php elseif ($userType === 'credits'): ?>
                 <div class="status-item credits-info" id="creditsInfo"><?php echo $creditsText; ?></div>
             <?php endif; ?>
-            <div class="status-item lives-info">
-                🎯 Lives Encontradas: <?php echo count($userLives); ?>
-            </div>
         </div>
 
         <div class="nav-buttons">
             <?php if ($_SESSION['role'] === 'admin'): ?>
                 <a href="?admin=true" class="btn btn-admin">⚙ PAINEL ADMINISTRATIVO</a>
             <?php endif; ?>
-            <a href="?lives=true" class="btn btn-lives">📋 MINHAS LIVES (<?php echo count($userLives); ?>)</a>
             <a href="?logout" class="btn btn-logout">🚪 SAIR DO SISTEMA</a>
         </div>
 
@@ -4191,6 +3671,3 @@ if ($userType === 'temporary') {
     </script>
 </body>
 </html>
-<?php
-// Fim do arquivo - sem exit;
-?>
