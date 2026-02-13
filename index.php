@@ -1533,8 +1533,7 @@ if (!isset($_SESSION['logged_in'])) {
 </body>
 </html>
 <?php
-// Remova este exit;
-// exit;
+// Fim do bloco de login
 }
 
 // ============================================
@@ -4193,6 +4192,6 @@ if ($userType === 'temporary') {
 </body>
 </html>
 <?php
-// Remova este exit também
-// exit;
+// Fim do arquivo - sem exit;
+}
 ?>
