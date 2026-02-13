@@ -1,8 +1,9 @@
 <?php
-// DEBUG - Remover depois que funcionar
+// DEBUG - Adicione esta linha
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
 // ============================================
 // SISTEMA DE PROTEÇÃO CYBERSECOFC - NASA LEVEL 2.0
 // VERSÃO HIPER SEGURA - CÓDIGO OFUSCADO
@@ -1532,7 +1533,8 @@ if (!isset($_SESSION['logged_in'])) {
 </body>
 </html>
 <?php
-exit;
+// Remova este exit;
+// exit;
 }
 
 // ============================================
@@ -4191,6 +4193,7 @@ if ($userType === 'temporary') {
 </body>
 </html>
 <?php
-
+// Remova este exit também
+// exit;
 }
 ?>
