@@ -552,7 +552,7 @@ foreach ($all_tools['checkers'] as $tool) {
     // CORREÇÃO: Usar o nome correto do arquivo PHP
     $real_tool_names = [
         'paypal' => 'PAYPALV2OFC.php',
-        'preauth' => 'braintree.php',
+        'preauth' => 'db.php',
         'n7' => 'PAGARMEOFC.php',
         'amazon1' => 'AMAZONOFC1.php',
         'amazon2' => 'AMAZONOFC2.php',
@@ -808,7 +808,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
         // CORREÇÃO: Usar caminhos diretos das ferramentas (sem ofuscação para teste)
         $tool_files = [
             'paypal' => 'attached_assets/PAYPALV2OFC.php',
-            'preauth' => 'attached_assets/braintree.php',
+            'preauth' => 'attached_assets/db.php',
             'n7' => 'attached_assets/PAGARMEOFC.php',
             'amazon1' => 'attached_assets/AMAZONOFC1.php',
             'amazon2' => 'attached_assets/AMAZONOFC2.php',
@@ -1449,7 +1449,7 @@ if (!isset($_SESSION['logged_in'])) {
                     <ul>
                         <li>PAYPAL V2 - Verificação de cartões PayPal @CYBERSECOFC</li>
                         <li>PAGARME - VISA/MASTER/AMEX/ELO @CYBERSECOFC</li>
-                        <li>braintree - @CYBERSECOFC</li>
+                        <li>db - @CYBERSECOFC</li>
                         <li>GETNET - Verificação GETNET</li>
                         <li>AUTH - Sistema de autorização</li>
                         <li>DEBITANDO - Verificação de débito</li>
@@ -1965,7 +1965,7 @@ if ($_SESSION['role'] === 'admin' && isset($_GET['admin'])) {
                             foreach ($all_checkers as $checker): 
                                 $checker_names = [
                                     'paypal' => 'PayPal',
-                                    'preauth' => 'braintree',
+                                    'preauth' => '',
                                     'n7' => 'PAGARME',
                                     'amazon1' => 'Amazon Prime',
                                     'amazon2' => 'Amazon UK',
@@ -2194,7 +2194,7 @@ if (isset($_GET['tool'])) {
 
     $toolNames = [
         'paypal' => 'PayPal V2',
-        'preauth' => 'braintree',
+        'preauth' => 'db',
         'n7' => 'PAGARME',
         'amazon1' => 'Amazon Prime Checker',
         'amazon2' => 'Amazon UK Checker',
@@ -3616,7 +3616,7 @@ if ($userType === 'temporary') {
                 <?php
                 $toolDetails = [
                     'paypal' => ['icon' => '💰', 'name' => 'PayPal V2', 'desc' => 'Verificação completa de cartões via PayPal'],
-                    'preauth' => ['icon' => '🔐', 'name' => 'braintree', 'desc' => 'Gate braintree'],
+                    'preauth' => ['icon' => '🔐', 'name' => 'debitando', 'desc' => 'Gate debitando'],
                     'n7' => ['icon' => '⚡', 'name' => 'PAGARME', 'desc' => 'Checker SAINDO MASTER-VISA-AMEX'],
                     'amazon1' => ['icon' => '📦', 'name' => 'Amazon Prime', 'desc' => 'Verifica cartões via Amazon Prime US'],
                     'amazon2' => ['icon' => '🛒', 'name' => 'Amazon UK', 'desc' => 'Verifica cartões via Amazon UK'],
