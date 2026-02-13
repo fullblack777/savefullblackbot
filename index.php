@@ -1,12 +1,13 @@
 <?php
-// ============================================
-// SISTEMA DE PROTEÇÃO CYBERSECOFC - NASA LEVEL 2.0
-// VERSÃO HIPER SEGURA - CÓDIGO OFUSCADO
-// ============================================
 // DEBUG - Remover depois que funcionar
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+// ============================================
+// SISTEMA DE PROTEÇÃO CYBERSECOFC - NASA LEVEL 2.0
+// VERSÃO HIPER SEGURA - CÓDIGO OFUSCADO
+// ============================================
+
 // INICIAR SESSÃO COM CONFIGURAÇÕES DE SEGURANÇA
 session_start([
     'cookie_httponly' => true,
@@ -4190,5 +4191,6 @@ if ($userType === 'temporary') {
 </body>
 </html>
 <?php
+
 }
 ?>
