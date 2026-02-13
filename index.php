@@ -2226,5 +2226,4 @@ if ($userType === 'temporary') {
 </body>
 </html>
 <?php
-exit;
 ?>
