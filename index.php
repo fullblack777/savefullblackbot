@@ -63,112 +63,104 @@ $all_gates = [
 // ============================================
 
 // Usuários
-function loadUsers() { return \loadUsers(); }
-function saveUsers($users) { return \saveUsers($users); }
-function getUser($username) { return \getUser($username); }
-function addUser($username, $password, $role, $type, $credits = 0, $expires_at = null) { 
+if (!function_exists('loadUsers')) { function loadUsers() { return \loadUsers(); } }
+if (!function_exists('saveUsers')) { function saveUsers($users) { return \saveUsers($users); } }
+if (!function_exists('getUser')) { function getUser($username) { return \getUser($username); } }
+if (!function_exists('addUser')) { function addUser($username, $password, $role, $type, $credits = 0, $expires_at = null) { 
     return \addUser($username, $password, $role, $type, $credits, $expires_at); 
-}
-function updateUser($username, $data) { return \updateUser($username, $data); }
-function deleteUser($username) { return \deleteUser($username); }
-function deductCredits($username, $amount) { return \deductCredits($username, $amount); }
-function updateLastLogin($username) { return \updateLastLogin($username); }
+} }
+if (!function_exists('updateUser')) { function updateUser($username, $data) { return \updateUser($username, $data); } }
+if (!function_exists('deleteUser')) { function deleteUser($username) { return \deleteUser($username); } }
+if (!function_exists('deductCredits')) { function deductCredits($username, $amount) { return \deductCredits($username, $amount); } }
+if (!function_exists('updateLastLogin')) { function updateLastLogin($username) { return \updateLastLogin($username); } }
 
 // Gates
-function loadGatesConfig() { return \loadGatesConfig(); }
-function saveGatesConfig($config) { return \saveGatesConfig($config); }
-function isGateActive($gate) { return \isGateActive($gate); }
+if (!function_exists('loadGatesConfig')) { function loadGatesConfig() { return \loadGatesConfig(); } }
+if (!function_exists('saveGatesConfig')) { function saveGatesConfig($config) { return \saveGatesConfig($config); } }
+if (!function_exists('isGateActive')) { function isGateActive($gate) { return \isGateActive($gate); } }
 
 // Lives
-function loadLives() { return \loadLives(); }
-function saveLives($lives) { return \saveLives($lives); }
-function addLive($username, $gate, $card, $bin, $response) { 
+if (!function_exists('loadLives')) { function loadLives() { return \loadLives(); } }
+if (!function_exists('saveLives')) { function saveLives($lives) { return \saveLives($lives); } }
+if (!function_exists('addLive')) { function addLive($username, $gate, $card, $bin, $response) { 
     return \addLive($username, $gate, $card, $bin, $response); 
-}
-function getUserLives($username) { return \getUserLives($username); }
+} }
+if (!function_exists('getUserLives')) { function getUserLives($username) { return \getUserLives($username); } }
 
 // Telegram
-function sendTelegramMessage($message) {
-    $url = "https://api.telegram.org/bot" . TELEGRAM_TOKEN . "/sendMessage";
-    $data = [
-        'chat_id' => TELEGRAM_CHAT,
-        'text' => $message,
-        'parse_mode' => 'Markdown'
-    ];
-    
-    $options = [
-        'http' => [
-            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-            'method' => 'POST',
-            'content' => http_build_query($data),
-            'timeout' => 5
-        ]
-    ];
-    
-    $context = stream_context_create($options);
-    @file_get_contents($url, false, $context);
+if (!function_exists('sendTelegramMessage')) { 
+    function sendTelegramMessage($message) {
+        $url = "https://api.telegram.org/bot" . TELEGRAM_TOKEN . "/sendMessage";
+        $data = [
+            'chat_id' => TELEGRAM_CHAT,
+            'text' => $message,
+            'parse_mode' => 'Markdown'
+        ];
+        
+        $options = [
+            'http' => [
+                'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+                'method' => 'POST',
+                'content' => http_build_query($data),
+                'timeout' => 5
+            ]
+        ];
+        
+        $context = stream_context_create($options);
+        @file_get_contents($url, false, $context);
+    }
 }
 
 // Verificar acesso
-function checkAccess() {
-    if (!isset($_SESSION['logged_in'])) return false;
-    
-    $user = getUser($_SESSION['username']);
-    if (!$user) {
-        session_destroy();
-        return false;
-    }
-    
-    if ($user['type'] === 'temporary' && $user['expires_at']) {
-        if (time() > strtotime($user['expires_at'])) {
+if (!function_exists('checkAccess')) {
+    function checkAccess() {
+        if (!isset($_SESSION['logged_in'])) return false;
+        
+        $user = getUser($_SESSION['username']);
+        if (!$user) {
             session_destroy();
             return false;
         }
+        
+        if ($user['type'] === 'temporary' && $user['expires_at']) {
+            if (time() > strtotime($user['expires_at'])) {
+                session_destroy();
+                return false;
+            }
+        }
+        
+        return true;
     }
+}
+
+// ============================================
+// PROCESSAR LOGIN
+// ============================================
+if (isset($_POST['login'])) {
+    if (!isset($_SESSION['login_attempts'])) $_SESSION['login_attempts'] = 0;
     
-    return true;
-}
-
-// ============================================
-// CONTINUA SEU CÓDIGO A PARTIR DAQUI...
-// ============================================
-// TODO: Colocar o resto do seu código aqui
-
-// Criar arquivo de configuração das gates se não existir
-if (!file_exists($gates_file)) {
-    $default_gates = [];
-    foreach ($all_gates as $key => $gate) {
-        $default_gates[$key] = true;
+    $username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+    
+    $user = getUser($username);
+    
+    if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['logged_in'] = true;
+        $_SESSION['username'] = $username;
+        $_SESSION['role'] = $user['role'];
+        $_SESSION['type'] = $user['type'];
+        $_SESSION['login_time'] = time();
+        $_SESSION['login_attempts'] = 0;
+        
+        updateLastLogin($username);
+        
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    } else {
+        $_SESSION['login_attempts']++;
+        $login_error = 'Usuário ou senha incorretos!';
     }
-    file_put_contents($gates_file, json_encode($default_gates, JSON_PRETTY_PRINT));
-    chmod($gates_file, 0600);
 }
-
-// Criar arquivo de usuários se não existir
-if (!file_exists($users_file)) {
-    $default_users = [
-        'save' => [
-            'password' => password_hash('black', PASSWORD_DEFAULT),
-            'role' => 'admin',
-            'type' => 'permanent',
-            'credits' => 0,
-            'expires_at' => null,
-            'created_at' => date('Y-m-d H:i:s'),
-            'last_login' => null,
-            'total_lives' => 0,
-            'total_checks' => 0
-        ]
-    ];
-    file_put_contents($users_file, json_encode($default_users, JSON_PRETTY_PRINT));
-    chmod($users_file, 0600);
-}
-
-// Criar arquivo de lives se não existir
-if (!file_exists($lives_file)) {
-    file_put_contents($lives_file, json_encode([]));
-    chmod($lives_file, 0600);
-}
-
 
 // ============================================
 // PROCESSAR LOGOUT
@@ -404,12 +396,14 @@ if (!checkAccess()) {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
         }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
         
         body {
             min-height: 100vh;
-            background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+            background: radial-gradient(circle at 10% 20%, #001500, #000000);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -418,37 +412,90 @@ if (!checkAccess()) {
             overflow: hidden;
         }
         
-        body::before {
-            content: '';
+        /* Animated background */
+        .cyber-grid {
             position: absolute;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(0,255,0,0.1) 0%, transparent 50%);
-            animation: rotate 20s linear infinite;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 0, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+            pointer-events: none;
         }
         
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        .glow-orbs {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .orb {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            animation: floatOrb 15s ease-in-out infinite;
+        }
+        
+        .orb-1 {
+            background: #00ff00;
+            top: -100px;
+            left: -100px;
+        }
+        
+        .orb-2 {
+            background: #00ffff;
+            bottom: -100px;
+            right: -100px;
+            animation-delay: -5s;
+        }
+        
+        .orb-3 {
+            background: #ff00ff;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            height: 500px;
+            animation-delay: -10s;
+        }
+        
+        @keyframes floatOrb {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(50px, 50px) scale(1.1); }
+            66% { transform: translate(-50px, -50px) scale(0.9); }
         }
         
         .login-container {
             width: 100%;
-            max-width: 500px;
+            max-width: 480px;
             position: relative;
-            z-index: 1;
+            z-index: 10;
         }
         
         .login-box {
-            background: rgba(10, 10, 10, 0.95);
-            backdrop-filter: blur(10px);
-            border: 2px solid #00ff00;
-            border-radius: 30px;
-            padding: 40px;
-            box-shadow: 0 0 50px rgba(0, 255, 0, 0.3);
+            background: rgba(5, 15, 5, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(0, 255, 0, 0.5);
+            border-radius: 40px;
+            padding: 50px 40px;
+            box-shadow: 
+                0 0 50px rgba(0, 255, 0, 0.3),
+                inset 0 0 30px rgba(0, 255, 0, 0.1);
             position: relative;
             overflow: hidden;
-            margin-bottom: 20px;
+            transition: all 0.3s ease;
         }
         
         .login-box::before {
@@ -458,8 +505,13 @@ if (!checkAccess()) {
             left: -50%;
             width: 200%;
             height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(0, 255, 0, 0.1), transparent);
-            animation: shine 3s linear infinite;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(0, 255, 0, 0.1),
+                transparent
+            );
+            animation: shine 6s linear infinite;
         }
         
         @keyframes shine {
@@ -470,21 +522,33 @@ if (!checkAccess()) {
         .logo {
             text-align: center;
             margin-bottom: 30px;
+            position: relative;
         }
         
         .logo h1 {
-            font-size: 48px;
-            color: #00ff00;
-            text-shadow: 0 0 20px #00ff00;
-            margin-bottom: 10px;
+            font-size: 52px;
             font-weight: 800;
+            background: linear-gradient(135deg, #00ff00, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            letter-spacing: 2px;
         }
         
         .logo .subtitle {
-            color: #00ffff;
+            color: #00ff00;
             font-size: 14px;
-            letter-spacing: 5px;
+            letter-spacing: 6px;
             text-transform: uppercase;
+            text-shadow: 0 0 20px #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+            padding: 8px 20px;
+            border-radius: 30px;
+            display: inline-block;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0, 255, 0, 0.3);
         }
         
         .input-group {
@@ -494,53 +558,62 @@ if (!checkAccess()) {
         
         .input-group label {
             display: block;
-            color: #00ff00;
+            color: #00ffff;
             margin-bottom: 8px;
             font-size: 14px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
         }
         
         .input-group input {
             width: 100%;
-            padding: 15px 20px;
-            background: rgba(0, 0, 0, 0.7);
+            padding: 18px 25px;
+            background: rgba(0, 0, 0, 0.6);
             border: 2px solid #00ff00;
-            border-radius: 15px;
+            border-radius: 20px;
             color: #00ff00;
             font-size: 16px;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
         }
         
         .input-group input:focus {
             outline: none;
             border-color: #00ffff;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
             transform: scale(1.02);
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        .input-group input::placeholder {
+            color: rgba(0, 255, 0, 0.3);
+            font-size: 14px;
         }
         
         .btn-login {
             width: 100%;
             padding: 18px;
-            background: linear-gradient(45deg, #00ff00, #00ffff);
+            background: linear-gradient(135deg, #00ff00, #00ffff);
             border: none;
-            border-radius: 15px;
+            border-radius: 20px;
             color: #000;
             font-size: 18px;
             font-weight: bold;
             cursor: pointer;
             margin: 30px 0;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: all 0.3s;
+            letter-spacing: 3px;
+            transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
         }
         
         .btn-login:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0, 255, 0, 0.5);
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 255, 0, 0.6);
         }
         
         .btn-login::before {
@@ -550,8 +623,13 @@ if (!checkAccess()) {
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            animation: btn-shine 2s infinite;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.4),
+                transparent
+            );
+            animation: btn-shine 3s infinite;
         }
         
         @keyframes btn-shine {
@@ -563,20 +641,23 @@ if (!checkAccess()) {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             padding: 15px;
             background: rgba(0, 0, 0, 0.5);
             border: 2px solid #00ff00;
-            border-radius: 15px;
+            border-radius: 20px;
             text-decoration: none;
             color: #00ff00;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            margin-bottom: 20px;
         }
         
         .telegram-link:hover {
             background: #00ff00;
             color: #000;
-            transform: translateY(-3px);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 10px 30px rgba(0, 255, 0, 0.5);
         }
         
         .error {
@@ -584,11 +665,13 @@ if (!checkAccess()) {
             border: 2px solid #ff0000;
             color: #ff0000;
             padding: 15px;
-            border-radius: 15px;
+            border-radius: 20px;
             margin-bottom: 25px;
             text-align: center;
             font-weight: bold;
-            animation: shake 0.5s;
+            backdrop-filter: blur(5px);
+            animation: shake 0.5s ease;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.3);
         }
         
         @keyframes shake {
@@ -600,66 +683,101 @@ if (!checkAccess()) {
         .status {
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 20px;
             margin-top: 20px;
-            color: #666;
+            color: rgba(0, 255, 0, 0.5);
             font-size: 12px;
         }
         
         .status span {
             color: #00ff00;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         
         .gates-status {
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #00ff00;
-            border-radius: 20px;
-            padding: 20px;
-            margin-top: 20px;
+            background: rgba(5, 15, 5, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(0, 255, 0, 0.5);
+            border-radius: 30px;
+            padding: 25px;
+            margin-top: 25px;
+            box-shadow: 0 0 40px rgba(0, 255, 0, 0.2);
         }
         
         .gates-status h3 {
             color: #00ffff;
             text-align: center;
-            margin-bottom: 15px;
-            font-size: 16px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
         }
         
         .gates-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
         }
         
         .gate-status-item {
             display: flex;
             align-items: center;
-            gap: 5px;
-            padding: 8px;
-            border-radius: 8px;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 15px;
             background: rgba(0, 0, 0, 0.5);
             font-size: 12px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .gate-status-item:hover {
+            transform: translateY(-3px);
+            border-color: rgba(0, 255, 0, 0.5);
+            box-shadow: 0 5px 15px rgba(0, 255, 0, 0.2);
         }
         
         .gate-status-dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
         }
         
         .dot-active {
             background: #00ff00;
-            box-shadow: 0 0 10px #00ff00;
+            box-shadow: 0 0 15px #00ff00;
             animation: pulse 2s infinite;
         }
         
         .dot-inactive {
             background: #ff0000;
-            box-shadow: 0 0 10px #ff0000;
+            box-shadow: 0 0 15px #ff0000;
+        }
+        
+        .version-badge {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(0, 255, 0, 0.3);
+            font-size: 12px;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
+    <div class="cyber-grid"></div>
+    <div class="glow-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+    
     <div class="login-container">
         <div class="login-box">
             <div class="logo">
@@ -673,16 +791,16 @@ if (!checkAccess()) {
             
             <form method="POST">
                 <div class="input-group">
-                    <label>👤 Usuário</label>
+                    <label>👤 USUÁRIO</label>
                     <input type="text" name="username" required placeholder="Digite seu usuário">
                 </div>
                 
                 <div class="input-group">
-                    <label>🔐 Senha</label>
+                    <label>🔐 SENHA</label>
                     <input type="password" name="password" required placeholder="Digite sua senha">
                 </div>
                 
-                <button type="submit" name="login" class="btn-login">Entrar no Sistema</button>
+                <button type="submit" name="login" class="btn-login">ENTRAR NO SISTEMA</button>
             </form>
             
             <a href="https://t.me/centralsavefullblack" target="_blank" class="telegram-link">
@@ -691,8 +809,8 @@ if (!checkAccess()) {
             </a>
             
             <div class="status">
-                <div>🔒 Sistema Seguro</div>
-                <div>⚡ Online: <span id="status">Ativo</span></div>
+                <div>🔒 SISTEMA SEGURO</div>
+                <div>⚡ ONLINE: <span id="status">ATIVO</span></div>
             </div>
         </div>
         
@@ -712,11 +830,13 @@ if (!checkAccess()) {
         </div>
     </div>
     
+    <div class="version-badge">v4.0 • CYBERSEC</div>
+    
     <script>
         // Atualizar status online
         setInterval(() => {
-            document.getElementById('status').style.opacity = 
-                document.getElementById('status').style.opacity === '1' ? '0.5' : '1';
+            const status = document.getElementById('status');
+            status.style.opacity = status.style.opacity === '1' ? '0.5' : '1';
         }, 500);
     </script>
 </body>
