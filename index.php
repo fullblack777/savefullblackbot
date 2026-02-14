@@ -21,7 +21,24 @@ date_default_timezone_set('America/Sao_Paulo');
 // ============================================
 // CONEXÃO COM BANCO DE DADOS MYSQL
 // ============================================
+// Variável para armazenar a conexão de banco de dados (cache de conexão)
+$db_connection = null;
+
 function connectDB() {
+    global $db_connection;
+    
+    // Se já temos uma conexão ativa, retorná-la
+    if ($db_connection !== null) {
+        try {
+            // Testar se a conexão ainda é válida
+            $db_connection->query("SELECT 1");
+            return $db_connection;
+        } catch (PDOException $e) {
+            // Se a conexão expirou, limpar e tentar reconectar
+            $db_connection = null;
+        }
+    }
+    
     // Verificar se as variáveis de ambiente do Railway existem
     $host = getenv('DB_HOST') ?: (getenv('MYSQL_HOST') ?: 'localhost');
     $port = getenv('DB_PORT') ?: (getenv('MYSQL_PORT') ?: '3306');
@@ -30,18 +47,21 @@ function connectDB() {
     $password = getenv('DB_PASSWORD') ?: (getenv('MYSQL_PASSWORD') ?: '');
 
     try {
-        $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $username, $password, [
+        $db_connection = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $username, $password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_STRINGIFY_FETCHES => false, // Melhora performance ao evitar conversão automática de tipos
             PDO::MYSQL_ATTR_INIT_COMMAND => "SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO'",
-            PDO::ATTR_TIMEOUT => 10 // Timeout de 10 segundos
+            PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true, // Melhora performance em consultas pequenas
+            PDO::ATTR_TIMEOUT => 15, // Timeout aumentado para 15 segundos
+            PDO::ATTR_PERSISTENT => true // Conexões persistentes para melhor performance
         ]);
         
         // Testar a conexão executando uma consulta simples
-        $pdo->query("SELECT 1");
+        $db_connection->query("SELECT 1");
         
-        return $pdo;
+        return $db_connection;
     } catch (PDOException $e) {
         // Registrar erro detalhado
         $error_msg = "Erro na conexão com o banco de dados: " . $e->getMessage() . 
@@ -834,15 +854,31 @@ if (!file_exists($users_file)) {
     chmod($users_file, 0600);
 }
 
+// Variáveis de cache
+$user_cache = [];
+$cache_timestamp = 0;
+$cache_ttl = 60; // 60 segundos de TTL para o cache (melhor desempenho)
+
 function loadUsers() {
+    global $user_cache, $cache_timestamp, $cache_ttl;
+    
+    // Verificar se o cache é válido (menos de 60 segundos desde a última atualização)
+    if (time() - $cache_timestamp < $cache_ttl && !empty($user_cache)) {
+        return $user_cache;
+    }
+    
     $pdo = connectDB();
     if (!$pdo) {
         // Fallback para arquivo JSON se o banco de dados não estiver disponível
-        return fallbackLoadUsers();
+        $user_cache = fallbackLoadUsers();
+        $cache_timestamp = time();
+        return $user_cache;
     }
     
     try {
-        $stmt = $pdo->query("SELECT * FROM users");
+        // Usar prepared statement otimizada para melhor performance
+        $stmt = $pdo->prepare("SELECT username, password, role, type, credits, tools, expires_at FROM users ORDER BY username ASC");
+        $stmt->execute();
         $users = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $username = $row['username'];
@@ -858,11 +894,18 @@ function loadUsers() {
                 $users[$username]['expires_at'] = strtotime($row['expires_at']);
             }
         }
+        
+        // Atualizar o cache
+        $user_cache = $users;
+        $cache_timestamp = time();
+        
         return $users;
     } catch (PDOException $e) {
         error_log("Erro ao carregar usuários do banco de dados: " . $e->getMessage());
         // Fallback para arquivo JSON se ocorrer erro no banco de dados
-        return fallbackLoadUsers();
+        $user_cache = fallbackLoadUsers();
+        $cache_timestamp = time();
+        return $user_cache;
     }
 }
 
@@ -889,11 +932,23 @@ function addUser($username, $password, $role, $type, $credits = 0, $tools = [], 
         $toolsJson = json_encode($tools);
         
         $stmt = $pdo->prepare("INSERT INTO users (username, password, role, type, credits, tools, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        return $stmt->execute([$username, $hashedPassword, $role, $type, $credits, $toolsJson, $expiresAt]);
+        $result = $stmt->execute([$username, $hashedPassword, $role, $type, $credits, $toolsJson, $expiresAt]);
+        
+        // Limpar o cache após adicionar um novo usuário
+        clearUserCache();
+        
+        return $result;
     } catch (PDOException $e) {
         error_log("Erro ao adicionar usuário: " . $e->getMessage());
         return false;
     }
+}
+
+// Função para limpar o cache de usuários
+function clearUserCache() {
+    global $user_cache, $cache_timestamp;
+    $user_cache = [];
+    $cache_timestamp = 0;
 }
 
 function updateUser($username, $updates) {
@@ -914,7 +969,14 @@ function updateUser($username, $updates) {
         
         $params[] = $username;
         $stmt = $pdo->prepare("UPDATE users SET " . implode(', ', $setParts) . " WHERE username = ?");
-        return $stmt->execute($params);
+        $result = $stmt->execute($params);
+        
+        // Limpar o cache após atualizar um usuário
+        if ($result) {
+            clearUserCache();
+        }
+        
+        return $result;
     } catch (PDOException $e) {
         error_log("Erro ao atualizar usuário: " . $e->getMessage());
         return false;
@@ -927,7 +989,14 @@ function deleteUser($username) {
     
     try {
         $stmt = $pdo->prepare("DELETE FROM users WHERE username = ?");
-        return $stmt->execute([$username]);
+        $result = $stmt->execute([$username]);
+        
+        // Limpar o cache após deletar um usuário
+        if ($result) {
+            clearUserCache();
+        }
+        
+        return $result;
     } catch (PDOException $e) {
         error_log("Erro ao deletar usuário: " . $e->getMessage());
         return false;
@@ -1137,7 +1206,20 @@ if (isset($_POST['add_permanent_user']) && $_SESSION['role'] === 'admin') {
     $new_password = substr($_POST['new_password'] ?? '', 0, 100);
     $selected_tools = $_POST['checkers'] ?? [];
     
-    if ($new_username && $new_password && !empty($selected_tools)) {
+    // Validação mais completa
+    if (empty(trim($new_username))) {
+        $error_message = "Erro: Nome de usuário é obrigatório!";
+    } elseif (empty(trim($new_password))) {
+        $error_message = "Erro: Senha é obrigatória!";
+    } elseif (empty($selected_tools)) {
+        $error_message = "Erro: Selecione pelo menos uma ferramenta!";
+    } elseif (strlen($new_username) < 3 || strlen($new_username) > 20) {
+        $error_message = "Erro: Nome de usuário deve ter entre 3 e 20 caracteres!";
+    } elseif (strlen($new_password) < 6) {
+        $error_message = "Erro: A senha deve ter pelo menos 6 caracteres!";
+    } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $new_username)) {
+        $error_message = "Erro: Nome de usuário contém caracteres inválidos! Use apenas letras, números e underscore.";
+    } else {
         // Verificar se o usuário já existe
         $pdo = connectDB();
         if ($pdo) {
@@ -1147,6 +1229,11 @@ if (isset($_POST['add_permanent_user']) && $_SESSION['role'] === 'admin') {
                 $error_message = "Erro: Usuário '$new_username' já existe!";
             } else {
                 if (addUser($new_username, $new_password, 'user', 'permanent', 0, $selected_tools)) {
+                    // Limpar o cache para forçar recarregamento
+                    global $user_cache, $cache_timestamp;
+                    $user_cache = [];
+                    $cache_timestamp = 0;
+                    
                     sendTelegramMessage("🆕 NOVO USUÁRIO PERMANENTE\n👤 Usuário: <code>$new_username</code>\n⚡ Tipo: Acesso Permanente\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
                     $success_message = "Usuário permanente '$new_username' criado com acesso a: " . implode(', ', $selected_tools);
                 } else {
@@ -1156,8 +1243,6 @@ if (isset($_POST['add_permanent_user']) && $_SESSION['role'] === 'admin') {
         } else {
             $error_message = "Erro na conexão com o banco de dados.";
         }
-    } else {
-        $error_message = "Todos os campos são obrigatórios!";
     }
 }
 
@@ -1167,7 +1252,24 @@ if (isset($_POST['add_rental_user']) && $_SESSION['role'] === 'admin') {
     $rental_hours = intval($_POST['rental_hours'] ?? 0);
     $selected_tools = $_POST['rental_checkers'] ?? [];
     
-    if ($rental_username && $rental_password && $rental_hours > 0 && !empty($selected_tools)) {
+    // Validação mais completa
+    if (empty(trim($rental_username))) {
+        $error_message = "Erro: Nome de usuário é obrigatório!";
+    } elseif (empty(trim($rental_password))) {
+        $error_message = "Erro: Senha é obrigatória!";
+    } elseif ($rental_hours <= 0) {
+        $error_message = "Erro: Informe um número válido de horas!";
+    } elseif (empty($selected_tools)) {
+        $error_message = "Erro: Selecione pelo menos uma ferramenta!";
+    } elseif (strlen($rental_username) < 3 || strlen($rental_username) > 20) {
+        $error_message = "Erro: Nome de usuário deve ter entre 3 e 20 caracteres!";
+    } elseif (strlen($rental_password) < 6) {
+        $error_message = "Erro: A senha deve ter pelo menos 6 caracteres!";
+    } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $rental_username)) {
+        $error_message = "Erro: Nome de usuário contém caracteres inválidos! Use apenas letras, números e underscore.";
+    } elseif ($rental_hours > 720) {
+        $error_message = "Erro: O máximo de horas permitidas é 720 (30 dias)!"; 
+    } else {
         // Verificar se o usuário já existe
         $pdo = connectDB();
         if ($pdo) {
@@ -1178,6 +1280,11 @@ if (isset($_POST['add_rental_user']) && $_SESSION['role'] === 'admin') {
             } else {
                 $expiresAt = date('Y-m-d H:i:s', time() + ($rental_hours * 3600));
                 if (addUser($rental_username, $rental_password, 'user', 'temporary', 0, $selected_tools, $expiresAt)) {
+                    // Limpar o cache para forçar recarregamento
+                    global $user_cache, $cache_timestamp;
+                    $user_cache = [];
+                    $cache_timestamp = 0;
+                    
                     $expireDate = date('d/m/Y H:i:s', strtotime($expiresAt));
                     sendTelegramMessage("⏱️ NOVO ACESSO TEMPORÁRIO\n👤 Usuário: <code>$rental_username</code>\n⏰ Horas: $rental_hours\n⏳ Expira: $expireDate\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
                     $success_message = "Acesso temporário criado para '$rental_username' por $rental_hours hora(s) com ferramentas: " . implode(', ', $selected_tools) . ". Expira em: $expireDate";
@@ -1188,8 +1295,6 @@ if (isset($_POST['add_rental_user']) && $_SESSION['role'] === 'admin') {
         } else {
             $error_message = "Erro na conexão com o banco de dados.";
         }
-    } else {
-        $error_message = "Todos os campos são obrigatórios!";
     }
 }
 
@@ -1199,7 +1304,24 @@ if (isset($_POST['add_credit_user']) && $_SESSION['role'] === 'admin') {
     $credit_amount = floatval($_POST['credit_amount'] ?? 0);
     $selected_tools = $_POST['credit_checkers'] ?? [];
     
-    if ($credit_username && $credit_password && $credit_amount > 0 && !empty($selected_tools)) {
+    // Validação mais completa
+    if (empty(trim($credit_username))) {
+        $error_message = "Erro: Nome de usuário é obrigatório!";
+    } elseif (empty(trim($credit_password))) {
+        $error_message = "Erro: Senha é obrigatória!";
+    } elseif ($credit_amount <= 0) {
+        $error_message = "Erro: Informe um valor válido de créditos!";
+    } elseif (empty($selected_tools)) {
+        $error_message = "Erro: Selecione pelo menos uma ferramenta!";
+    } elseif (strlen($credit_username) < 3 || strlen($credit_username) > 20) {
+        $error_message = "Erro: Nome de usuário deve ter entre 3 e 20 caracteres!";
+    } elseif (strlen($credit_password) < 6) {
+        $error_message = "Erro: A senha deve ter pelo menos 6 caracteres!";
+    } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $credit_username)) {
+        $error_message = "Erro: Nome de usuário contém caracteres inválidos! Use apenas letras, números e underscore.";
+    } elseif ($credit_amount > 999999) {
+        $error_message = "Erro: O valor máximo de créditos permitido é 999999!";
+    } else {
         // Verificar se o usuário já existe
         $pdo = connectDB();
         if ($pdo) {
@@ -1209,6 +1331,11 @@ if (isset($_POST['add_credit_user']) && $_SESSION['role'] === 'admin') {
                 $error_message = "Erro: Usuário '$credit_username' já existe!";
             } else {
                 if (addUser($credit_username, $credit_password, 'user', 'credits', $credit_amount, $selected_tools)) {
+                    // Limpar o cache para forçar recarregamento
+                    global $user_cache, $cache_timestamp;
+                    $user_cache = [];
+                    $cache_timestamp = 0;
+                    
                     sendTelegramMessage("💰 NOVO USUÁRIO POR CRÉDITOS\n👤 Usuário: <code>$credit_username</code>\n💳 Créditos: $credit_amount\n⚡ LIVE: 1.50 créditos | DIE: 0.05 créditos\n🛠️ Ferramentas: " . implode(', ', $selected_tools));
                     $success_message = "Usuário por créditos '$credit_username' criado com $credit_amount créditos e ferramentas: " . implode(', ', $selected_tools) . ". Cada LIVE custa 1.50 créditos, cada DIE custa 0.05 créditos.";
                 } else {
@@ -1218,8 +1345,6 @@ if (isset($_POST['add_credit_user']) && $_SESSION['role'] === 'admin') {
         } else {
             $error_message = "Erro na conexão com o banco de dados.";
         }
-    } else {
-        $error_message = "Todos os campos são obrigatórios!";
     }
 }
 
