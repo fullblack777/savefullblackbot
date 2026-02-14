@@ -1,6 +1,12 @@
 {
   "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "Dockerfile"
+    "builder": "NIXPACKS",
+    "config": {
+      "phpVersion": "8.2",
+      "extensions": ["json", "curl"]
+    }
+  },
+  "deploy": {
+    "startCommand": "php -S 0.0.0.0:$PORT -t ./"
   }
 }
