@@ -169,32 +169,6 @@ if (!file_exists($lives_file)) {
     chmod($lives_file, 0600);
 }
 
-// ============================================
-// FUNÇÕES DE UTILITÁRIOS
-// ============================================
-
-// Carregar usuários
-
-    
-    $user = getUser($username);
-    
-    if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['logged_in'] = true;
-        $_SESSION['username'] = $username;
-        $_SESSION['role'] = $user['role'];
-        $_SESSION['type'] = $user['type'];
-        $_SESSION['login_time'] = time();
-        $_SESSION['login_attempts'] = 0;
-        
-        updateLastLogin($username);
-        
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    } else {
-        $_SESSION['login_attempts']++;
-        $login_error = 'Usuário ou senha incorretos!';
-    }
-}
 
 // ============================================
 // PROCESSAR LOGOUT
