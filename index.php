@@ -34,6 +34,8 @@ function connectDB() {
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO'",
+            PDO::ATTR_TIMEOUT => 10 // Timeout de 10 segundos
         ]);
         
         // Testar a conexão executando uma consulta simples
@@ -41,7 +43,16 @@ function connectDB() {
         
         return $pdo;
     } catch (PDOException $e) {
-        error_log("Erro na conexão com o banco de dados: " . $e->getMessage());
+        // Registrar erro detalhado
+        $error_msg = "Erro na conexão com o banco de dados: " . $e->getMessage() . 
+                    " | Host: $host, Port: $port, DB: $dbname, User: $username";
+        error_log($error_msg);
+        
+        // Em modo de desenvolvimento, também exibir o erro
+        if (getenv('APP_ENV') === 'development' || $_ENV['APP_ENV'] === 'development') {
+            echo "DB Connection Error: " . $e->getMessage();
+        }
+        
         return null;
     }
 }
@@ -214,9 +225,22 @@ function createSampleToolFile($tool, $file_path) {
 
 // Função para inicializar o banco de dados
 function initializeDatabase() {
-    $pdo = connectDB();
+    // Tentar conectar com retry
+    $pdo = null;
+    $maxRetries = 3;
+    $retryCount = 0;
+    
+    while ($retryCount < $maxRetries && !$pdo) {
+        $pdo = connectDB();
+        if (!$pdo) {
+            $retryCount++;
+            error_log("Tentativa {$retryCount} de conexão com o banco de dados falhou. Aguardando antes de tentar novamente...");
+            sleep(2); // Esperar 2 segundos antes de tentar novamente
+        }
+    }
+    
     if (!$pdo) {
-        error_log("Não foi possível conectar ao banco de dados para inicialização.");
+        error_log("Não foi possível conectar ao banco de dados após {$maxRetries} tentativas.");
         return false;
     }
 
