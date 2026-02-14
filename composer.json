@@ -1,5 +1,20 @@
 {
+  "name": "cybersec/checker-system",
+  "description": "Sistema Premium de Checkers CYBERSEC 4.0",
+  "type": "project",
   "require": {
-    "php": "8.2.*"
-  }
+    "php": ">=8.0",
+    "ext-json": "*",
+    "ext-curl": "*"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-latest"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
 }
