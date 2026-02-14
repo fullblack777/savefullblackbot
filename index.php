@@ -17,7 +17,8 @@ session_start();
 
 // Token do Telegram
 define('TELEGRAM_TOKEN', '8586131107:AAF6fDbrjm7CoVI2g1Zkx2agmXJgmbdnCVQ');
-define('TELEGRAM_CHAT', '-1003581267007'); // ou coloque o ID numérico do grupo
+define('TELEGRAM_CHAT', '-1003581267007');
+define('SITE_URL', 'https://cyebrsecofcapis.up.railway.app');
 
 // Diretórios
 define('BASE_PATH', __DIR__);
@@ -206,7 +207,7 @@ function addUser($username, $password, $role, $type, $credits = 0, $expires_at =
     saveUsers($users);
     
     // Notificar Telegram
-    sendTelegramMessage("🆕 *NOVO USUÁRIO CRIADO*\n\n👤 **Usuário:** `$username`\n📋 **Tipo:** " . strtoupper($type) . "\n" . ($type === 'credits' ? "💰 **Créditos:** $credits\n" : ($expires_at ? "⏱️ **Expira:** " . date('d/m/Y H:i', strtotime($expires_at)) . "\n" : "")) . "👑 **Admin:** " . ($_SESSION['username'] ?? 'Sistema'));
+    sendTelegramMessage("🆕 *NOVO USUÁRIO CRIADO*\n\n👤 **Usuário:** `$username`\n📋 **Tipo:** " . strtoupper($type) . "\n" . ($type === 'credits' ? "💰 **Créditos:** $credits\n" : ($expires_at ? "⏱️ **Expira:** " . date('d/m/Y H:i', strtotime($expires_at)) . "\n" : "")) . "👑 **Admin:** " . ($_SESSION['username'] ?? 'Sistema') . "\n🔗 " . SITE_URL);
     
     return true;
 }
@@ -369,7 +370,7 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
                     $success_message = "✅ Créditos recarregados!";
                     
                     // Notificar Telegram
-                    sendTelegramMessage("💰 *CRÉDITOS RECARREGADOS*\n\n👤 **Usuário:** `$username`\n💳 **Créditos:** +$credits\n💰 **Total:** $new_credits\n👑 **Admin:** {$_SESSION['username']}");
+                    sendTelegramMessage("💰 *CRÉDITOS RECARREGADOS*\n\n👤 **Usuário:** `$username`\n💳 **Créditos:** +$credits\n💰 **Total:** $new_credits\n👑 **Admin:** {$_SESSION['username']}\n🔗 " . SITE_URL);
                 } else {
                     $error_message = "❌ Erro ao recarregar!";
                 }
@@ -479,16 +480,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
             $full_response = "✅ LIVE - " . $all_gates[$tool]['name'] . "\n📱 Cartão: $card|$mes|$ano|$cvv\n💳 BIN: $bin\n✅ Status: Aprovada";
             addLive($username, $tool, $card, $bin, $full_response);
             
-            // Notificar live no Telegram
-            sendTelegramMessage("✅ *LIVE ENCONTRADA*\n\n👤 **Usuário:** `$username`\n🔧 **Gate:** " . $all_gates[$tool]['name'] . "\n💳 **BIN:** `$bin`\n📱 **Cartão:** " . substr($card, 0, 6) . "******" . substr($card, -4) . "\n📅 **Data:** " . date('d/m/Y H:i:s'));
+            // Notificar live no Telegram (só BIN)
+            sendTelegramMessage("✅ *LIVE ENCONTRADA*\n\n👤 **Usuário:** `$username`\n🔧 **Gate:** " . $all_gates[$tool]['name'] . "\n💳 **BIN:** `$bin`\n🔗 " . SITE_URL);
         } else {
             $response = "❌ REPROVADA | Cartão: " . substr($card, 0, 6) . "******" . substr($card, -4);
-            $full_response = "❌ DIE - " . $all_gates[$tool]['name'] . "\n📱 Cartão: $card|$mes|$ano|$cvv\n❌ Status: Reprovada";
         }
         
-        // Deduzir créditos
+        // Deduzir créditos (live = 2, die = 0.05)
         if ($user['type'] === 'credits') {
-            $cost = $isLive ? 1.50 : 0.05;
+            $cost = $isLive ? 2.00 : 0.05;
             $remaining = deductCredits($username, $cost);
             $response .= " | 💳 Custo: R$ " . number_format($cost, 2) . " | Restante: R$ " . number_format($remaining, 2);
         }
@@ -517,13 +517,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
     if ($isLive) {
         addLive($username, $tool, $card, $bin, $response);
         
-        // Notificar live no Telegram
-        sendTelegramMessage("✅ *LIVE ENCONTRADA*\n\n👤 **Usuário:** `$username`\n🔧 **Gate:** " . $all_gates[$tool]['name'] . "\n💳 **BIN:** `$bin`\n📱 **Cartão:** " . substr($card, 0, 6) . "******" . substr($card, -4) . "\n📅 **Data:** " . date('d/m/Y H:i:s'));
+        // Notificar live no Telegram (só BIN)
+        sendTelegramMessage("✅ *LIVE ENCONTRADA*\n\n👤 **Usuário:** `$username`\n🔧 **Gate:** " . $all_gates[$tool]['name'] . "\n💳 **BIN:** `$bin`\n🔗 " . SITE_URL);
     }
     
-    // Deduzir créditos
+    // Deduzir créditos (live = 2, die = 0.05)
     if ($user['type'] === 'credits') {
-        $cost = $isLive ? 1.50 : 0.05;
+        $cost = $isLive ? 2.00 : 0.05;
         $remaining = deductCredits($username, $cost);
         $response .= "\n💳 Custo: R$ " . number_format($cost, 2) . " | Restante: R$ " . number_format($remaining, 2);
     }
@@ -536,6 +536,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
 // VERIFICAR ACESSO
 // ============================================
 if (!checkAccess()) {
+    $gates_config = loadGatesConfig();
     // PÁGINA DE LOGIN
 ?>
 <!DOCTYPE html>
@@ -579,7 +580,7 @@ if (!checkAccess()) {
         
         .login-container {
             width: 100%;
-            max-width: 450px;
+            max-width: 500px;
             position: relative;
             z-index: 1;
         }
@@ -589,10 +590,11 @@ if (!checkAccess()) {
             backdrop-filter: blur(10px);
             border: 2px solid #00ff00;
             border-radius: 30px;
-            padding: 50px 40px;
+            padding: 40px;
             box-shadow: 0 0 50px rgba(0, 255, 0, 0.3);
             position: relative;
             overflow: hidden;
+            margin-bottom: 20px;
         }
         
         .login-box::before {
@@ -753,6 +755,54 @@ if (!checkAccess()) {
         .status span {
             color: #00ff00;
         }
+        
+        .gates-status {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .gates-status h3 {
+            color: #00ffff;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .gates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+        
+        .gate-status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            font-size: 12px;
+        }
+        
+        .gate-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .dot-active {
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+            animation: pulse 2s infinite;
+        }
+        
+        .dot-inactive {
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
     </style>
 </head>
 <body>
@@ -789,6 +839,21 @@ if (!checkAccess()) {
             <div class="status">
                 <div>🔒 Sistema Seguro</div>
                 <div>⚡ Online: <span id="status">Ativo</span></div>
+            </div>
+        </div>
+        
+        <!-- Status das Gates -->
+        <div class="gates-status">
+            <h3>🔧 STATUS DAS GATES</h3>
+            <div class="gates-grid">
+                <?php foreach ($all_gates as $key => $gate): 
+                    $isActive = $gates_config[$key] ?? true;
+                ?>
+                <div class="gate-status-item" style="border-left: 3px solid <?php echo $gate['color']; ?>">
+                    <span class="gate-status-dot <?php echo $isActive ? 'dot-active' : 'dot-inactive'; ?>"></span>
+                    <span><?php echo $gate['icon']; ?> <?php echo $gate['name']; ?></span>
+                </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
@@ -2485,7 +2550,7 @@ Exemplos:
                 const isLive = checkIfLive(text);
                 
                 if (userType === 'credits') {
-                    const cost = isLive ? 1.50 : 0.05;
+                    const cost = isLive ? 2.00 : 0.05;
                     currentCredits -= cost;
                     if (currentCredits < 0) currentCredits = 0;
                     updateCredits();
