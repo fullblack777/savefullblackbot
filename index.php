@@ -17,7 +17,7 @@ session_start();
 
 // Token do Telegram
 define('TELEGRAM_TOKEN', '8586131107:AAF6fDbrjm7CoVI2g1Zkx2agmXJgmbdnCVQ');
-define('TELEGRAM_CHAT', '@centralsavefullblack'); // ou coloque o ID numérico do grupo
+define('TELEGRAM_CHAT', '-1003581267007'); // ou coloque o ID numérico do grupo
 
 // Diretórios
 define('BASE_PATH', __DIR__);
