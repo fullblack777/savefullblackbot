@@ -12,13 +12,25 @@ date_default_timezone_set('America/Sao_Paulo');
 session_start();
 
 // ============================================
+// CARREGAR BANCO DE DADOS
+// ============================================
+require_once __DIR__ . '/db.php';
+
+// ============================================
 // CONFIGURAÇÕES DO SISTEMA
 // ============================================
 
-// Token do Telegram
-define('TELEGRAM_TOKEN', '8586131107:AAF6fDbrjm7CoVI2g1Zkx2agmXJgmbdnCVQ');
-define('TELEGRAM_CHAT', '-1003581267007');
-define('SITE_URL', 'https://cyebrsecofcapis.up.railway.app');
+// Carregar configurações do banco
+$settings = loadSettings();
+
+// Token do Telegram (usando valores do banco ou padrão)
+define('TELEGRAM_TOKEN', $settings['telegram_token'] ?? '8586131107:AAF6fDbrjm7CoVI2g1Zkx2agmXJgmbdnCVQ');
+define('TELEGRAM_CHAT', $settings['telegram_chat'] ?? '-1003581267007');
+define('SITE_URL', $settings['site_url'] ?? 'https://cyebrsecofcapis.up.railway.app');
+
+// Custos dos créditos
+define('LIVE_COST', $settings['live_cost'] ?? 2.00);
+define('DIE_COST', $settings['die_cost'] ?? 0.05);
 
 // Diretórios
 define('BASE_PATH', __DIR__);
@@ -30,13 +42,8 @@ if (!file_exists(DATA_PATH)) mkdir(DATA_PATH, 0755, true);
 if (!file_exists(API_PATH)) mkdir(API_PATH, 0755, true);
 
 // ============================================
-// ARQUIVOS DE DADOS
+// CONFIGURAÇÃO DAS GATES (CHECKERS)
 // ============================================
-$users_file = DATA_PATH . 'users_v4.json';
-$lives_file = DATA_PATH . 'lives_v4.json';
-$gates_file = DATA_PATH . 'gates_config.json';
-
-// Configuração das Gates (Checkers)
 $all_gates = [
     'n7' => ['name' => 'N7', 'icon' => '⚡', 'file' => 'n7.php', 'color' => '#00ff00'],
     'auth' => ['name' => 'AUTH', 'icon' => '🔒', 'file' => 'auth.php', 'color' => '#ff00ff'],
@@ -50,6 +57,82 @@ $all_gates = [
     'elo' => ['name' => 'ELO', 'icon' => '💎', 'file' => 'elo.php', 'color' => '#9933ff'],
     'ggsgringa' => ['name' => 'GGS GRINGA', 'icon' => '🌎', 'file' => 'ggsgringa.php', 'color' => '#ff9900']
 ];
+
+// ============================================
+// FUNÇÕES AUXILIARES (REDIRECIONADAS PARA DB)
+// ============================================
+
+// Usuários
+function loadUsers() { return \loadUsers(); }
+function saveUsers($users) { return \saveUsers($users); }
+function getUser($username) { return \getUser($username); }
+function addUser($username, $password, $role, $type, $credits = 0, $expires_at = null) { 
+    return \addUser($username, $password, $role, $type, $credits, $expires_at); 
+}
+function updateUser($username, $data) { return \updateUser($username, $data); }
+function deleteUser($username) { return \deleteUser($username); }
+function deductCredits($username, $amount) { return \deductCredits($username, $amount); }
+function updateLastLogin($username) { return \updateLastLogin($username); }
+
+// Gates
+function loadGatesConfig() { return \loadGatesConfig(); }
+function saveGatesConfig($config) { return \saveGatesConfig($config); }
+function isGateActive($gate) { return \isGateActive($gate); }
+
+// Lives
+function loadLives() { return \loadLives(); }
+function saveLives($lives) { return \saveLives($lives); }
+function addLive($username, $gate, $card, $bin, $response) { 
+    return \addLive($username, $gate, $card, $bin, $response); 
+}
+function getUserLives($username) { return \getUserLives($username); }
+
+// Telegram
+function sendTelegramMessage($message) {
+    $url = "https://api.telegram.org/bot" . TELEGRAM_TOKEN . "/sendMessage";
+    $data = [
+        'chat_id' => TELEGRAM_CHAT,
+        'text' => $message,
+        'parse_mode' => 'Markdown'
+    ];
+    
+    $options = [
+        'http' => [
+            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method' => 'POST',
+            'content' => http_build_query($data),
+            'timeout' => 5
+        ]
+    ];
+    
+    $context = stream_context_create($options);
+    @file_get_contents($url, false, $context);
+}
+
+// Verificar acesso
+function checkAccess() {
+    if (!isset($_SESSION['logged_in'])) return false;
+    
+    $user = getUser($_SESSION['username']);
+    if (!$user) {
+        session_destroy();
+        return false;
+    }
+    
+    if ($user['type'] === 'temporary' && $user['expires_at']) {
+        if (time() > strtotime($user['expires_at'])) {
+            session_destroy();
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+// ============================================
+// CONTINUA SEU CÓDIGO A PARTIR DAQUI...
+// ============================================
+// TODO: Colocar o resto do seu código aqui
 
 // Criar arquivo de configuração das gates se não existir
 if (!file_exists($gates_file)) {
