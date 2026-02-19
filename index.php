@@ -1,6 +1,6 @@
 <?php
 // ============================================
-// CYBERSEC OFC - A ÚLTIMA GERAÇÃO
+// CYBERSEC 4.0 - VERSÃO PREMIUM
 // SISTEMA COMPLETO DE CHECKERS COM LOJA GG
 // ============================================
 
@@ -11,55 +11,6 @@ date_default_timezone_set('America/Sao_Paulo');
 session_start();
 
 // ============================================
-// ANTI-INSPEÇÃO
-// ============================================
-$anti_inspect_script = "
-<script>
-    (function() {
-        // Detecta a abertura do DevTools
-        let devtoolsOpen = false;
-        const element = new Image();
-        Object.defineProperty(element, 'id', {
-            get: function() {
-                devtoolsOpen = true;
-                throw new Error('Inspector detected');
-            }
-        });
-        
-        const checkDevTools = () => {
-            devtoolsOpen = false;
-            console.log(element);
-            console.clear();
-            if (devtoolsOpen) {
-                window.location.href = 'https://www.pornolandia.xxx/video/54944/novinha-gostosa-de-shortinho-curto-rebolando-a-bunda';
-            }
-        };
-        
-        setInterval(checkDevTools, 1000);
-        
-        // Previne atalhos de teclado comuns
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'F12' || 
-                (e.ctrlKey && e.shiftKey && e.key === 'I') || 
-                (e.ctrlKey && e.shiftKey && e.key === 'J') ||
-                (e.ctrlKey && e.key === 'U') ||
-                (e.ctrlKey && e.shiftKey && e.key === 'C')) {
-                e.preventDefault();
-                window.location.href = 'https://www.pornolandia.xxx/video/54944/novinha-gostosa-de-shortinho-curto-rebolando-a-bunda';
-                return false;
-            }
-        });
-        
-        // Previne clique direito
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-        });
-    })();
-</script>
-";
-
-// ============================================
 // CONFIGURAÇÕES DO BANCO DE DADOS SQLITE
 // ============================================
 class Database {
@@ -67,7 +18,7 @@ class Database {
     private $db;
     
     private function __construct() {
-        $db_file = __DIR__ . '/data/cybersecofc.db';
+        $db_file = __DIR__ . '/data/cybersec.db';
         $db_dir = dirname($db_file);
         
         if (!file_exists($db_dir)) {
@@ -176,23 +127,11 @@ class Database {
             )
         ');
         
-        // Tabela de preços dos planos
-        $this->db->exec('
-            CREATE TABLE IF NOT EXISTS plan_prices (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                type TEXT NOT NULL,
-                hours INTEGER,
-                credits INTEGER,
-                price REAL NOT NULL,
-                UNIQUE(type, hours, credits)
-            )
-        ');
-        
         // Inserir configurações padrão se não existirem
         $default_settings = [
-            'telegram_token' => 'SEU_TOKEN_AQUI', // Substitua pelo seu token
-            'telegram_chat' => 'SEU_CHAT_ID_AQUI', // Substitua pelo seu chat ID
-            'site_url' => 'https://' . ($_SERVER['HTTP_HOST'] ?? 'localhost'),
+            'telegram_token' => '8586131107:AAF6fDbrjm7CoVI2g1Zkx2agmXJgmbdnCVQ',
+            'telegram_chat' => '-1003581267007',
+            'site_url' => 'https://' . $_SERVER['HTTP_HOST'],
             'live_cost' => '2.00',
             'die_cost' => '0.05'
         ];
@@ -204,41 +143,22 @@ class Database {
             $stmt->execute();
         }
         
-        // Inserir preços dos planos padrão
-        $plan_prices = [
-            ['hours', 1, null, 25.00],
-            ['hours', 3, null, 50.00],
-            ['hours', 6, null, 95.00],
-            ['hours', 12, null, 130.00],
-            ['credits', null, 20, 12.00],
-            ['credits', null, 60, 20.00],
-            ['credits', null, 90, 40.00]
-        ];
-        
-        foreach ($plan_prices as $plan) {
-            $stmt = $this->db->prepare('INSERT OR IGNORE INTO plan_prices (type, hours, credits, price) VALUES (:type, :hours, :credits, :price)');
-            $stmt->bindValue(':type', $plan[0], SQLITE3_TEXT);
-            $stmt->bindValue(':hours', $plan[1], SQLITE3_INTEGER);
-            $stmt->bindValue(':credits', $plan[2], SQLITE3_INTEGER);
-            $stmt->bindValue(':price', $plan[3], SQLITE3_FLOAT);
-            $stmt->execute();
-        }
         
         // Criar usuário admin padrão se não existir
-        $admin_exists = $this->db->querySingle("SELECT COUNT(*) FROM users WHERE username = 'cybersecofc'");
+        $admin_exists = $this->db->querySingle("SELECT COUNT(*) FROM users WHERE username = 'save'");
         if (!$admin_exists) {
             $stmt = $this->db->prepare('INSERT INTO users (username, password, role, type, credits, cyber_money) VALUES (:username, :password, :role, :type, :credits, :cyber_money)');
-            $stmt->bindValue(':username', 'cybersecofc', SQLITE3_TEXT);
-            $stmt->bindValue(':password', password_hash('cybersecofc', PASSWORD_DEFAULT), SQLITE3_TEXT);
+            $stmt->bindValue(':username', 'save', SQLITE3_TEXT);
+            $stmt->bindValue(':password', password_hash('black', PASSWORD_DEFAULT), SQLITE3_TEXT);
             $stmt->bindValue(':role', 'admin', SQLITE3_TEXT);
             $stmt->bindValue(':type', 'permanent', SQLITE3_TEXT);
-            $stmt->bindValue(':credits', 999999, SQLITE3_FLOAT);
-            $stmt->bindValue(':cyber_money', 999999, SQLITE3_FLOAT);
+            $stmt->bindValue(':credits', 0, SQLITE3_FLOAT);
+            $stmt->bindValue(':cyber_money', 0, SQLITE3_FLOAT);
             $stmt->execute();
         }
         
-        // Garantir que qualquer outro usuário admin não tenha privilégios
-        $stmt = $this->db->prepare("UPDATE users SET role = 'user' WHERE username != 'cybersecofc' AND role = 'admin'");
+        // Garantir que qualquer usuário com nome 'admin' não tenha privilégios de administrador
+        $stmt = $this->db->prepare("UPDATE users SET role = 'user' WHERE username = 'admin' AND role = 'admin'");
         $stmt->execute();
     }
 }
@@ -325,7 +245,7 @@ function updateUser($username, $data) {
 
 function deleteUser($username) {
     $db = getDB();
-    $stmt = $db->prepare('DELETE FROM users WHERE username = :username AND username != "cybersecofc"');
+    $stmt = $db->prepare('DELETE FROM users WHERE username = :username AND username != "admin"');
     $stmt->bindValue(':username', $username, SQLITE3_TEXT);
     return $stmt->execute();
 }
@@ -594,33 +514,14 @@ function getAllBins() {
     return $bins;
 }
 
-// Planos
-function getPlanPrices() {
-    $db = getDB();
-    $result = $db->query('SELECT * FROM plan_prices ORDER BY type, price');
-    $plans = [];
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $plans[] = $row;
-    }
-    return $plans;
-}
-
-function updatePlanPrice($id, $price) {
-    $db = getDB();
-    $stmt = $db->prepare('UPDATE plan_prices SET price = :price WHERE id = :id');
-    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
-    $stmt->bindValue(':price', $price, SQLITE3_FLOAT);
-    return $stmt->execute();
-}
-
 // ============================================
 // CONFIGURAÇÕES DO SISTEMA
 // ============================================
 $settings = loadSettings();
 
-define('TELEGRAM_TOKEN', $settings['telegram_token'] ?? 'SEU_TOKEN_AQUI');
-define('TELEGRAM_CHAT', $settings['telegram_chat'] ?? 'SEU_CHAT_ID_AQUI');
-define('SITE_URL', $settings['site_url'] ?? 'https://' . ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+define('TELEGRAM_TOKEN', $settings['telegram_token'] ?? '8586131107:AAF6fDbrjm7CoVI2g1Zkx2agmXJgmbdnCVQ');
+define('TELEGRAM_CHAT', $settings['telegram_chat'] ?? '-1003581267007');
+define('SITE_URL', $settings['site_url'] ?? 'https://' . $_SERVER['HTTP_HOST']);
 define('LIVE_COST', (float)($settings['live_cost'] ?? 2.00));
 define('DIE_COST', (float)($settings['die_cost'] ?? 0.05));
 
@@ -633,26 +534,30 @@ if (!file_exists(API_PATH)) mkdir(API_PATH, 0755, true);
 // CONFIGURAÇÃO DAS GATES
 // ============================================
 $all_gates = [
-    'braintree' => ['name' => 'BRAINTREE', 'icon' => '💳', 'file' => 'braintree.php', 'color' => '#663399'],
-    'stripe' => ['name' => 'STRIPE', 'icon' => '💵', 'file' => 'stripe.php', 'color' => '#00bcd4'],
-    'gggringa' => ['name' => 'GG GRINGA', 'icon' => '🌎', 'file' => 'gggringa.php', 'color' => '#ff9800'],
-    'cc' => ['name' => 'CC', 'icon' => '💎', 'file' => 'cc.php', 'color' => '#00ff88'],
-    'erede' => ['name' => 'E-REDE', 'icon' => '🔴', 'file' => 'erede.php', 'color' => '#f44336'],
-    'allbins' => ['name' => 'ALLBINS', 'icon' => '📦', 'file' => 'allbins.php', 'color' => '#9c27b0'],
-    'cielo' => ['name' => 'CIELO', 'icon' => '🔵', 'file' => 'cielo.php', 'color' => '#2196f3'],
-    'debitandogringa' => ['name' => 'DEBITANDO GRINGA', 'icon' => '💸', 'file' => 'debitandogringa.php', 'color' => '#ff5722'],
     'n7' => ['name' => 'N7', 'icon' => '⚡', 'file' => 'n7.php', 'color' => '#00ff00'],
-    'visamaster' => ['name' => 'VISA/MASTER', 'icon' => '💳', 'file' => 'visamaster.php', 'color' => '#ff3366'],
-    'charge' => ['name' => 'CHARGE', 'icon' => '💰', 'file' => 'charge.php', 'color' => '#00aaff'],
-    'cnn' => ['name' => 'CNN', 'icon' => '📰', 'file' => 'cnn.php', 'color' => '#ffc107'],
-    'debitandobr' => ['name' => 'DEBITANDO BR', 'icon' => '🇧🇷', 'file' => 'debitandobr.php', 'color' => '#00cc99'],
-    'paypal' => ['name' => 'PAYPAL', 'icon' => '🅿️', 'file' => 'paypal.php', 'color' => '#003087'],
-    'worldpay' => ['name' => 'WORLDPAY', 'icon' => '🌐', 'file' => 'worldpay.php', 'color' => '#4caf50'],
     'auth' => ['name' => 'AUTH', 'icon' => '🔒', 'file' => 'auth.php', 'color' => '#ff00ff'],
-    'zerodola' => ['name' => 'ZERO DOLLA', 'icon' => '0️⃣', 'file' => 'zerodola.php', 'color' => '#ffff00'],
-    '0auth' => ['name' => '0 AUTH', 'icon' => '0️⃣', 'file' => '0auth.php', 'color' => '#aa00ff'],
+    'zerodolar' => ['name' => 'ZERO DOLAR', 'icon' => '💵', 'file' => 'zerodolar.php', 'color' => '#ffff00'],
+    'stripe' => ['name' => 'STRIPE', 'icon' => '💳', 'file' => 'stripe.php', 'color' => '#00ffff'],
+    'braintre' => ['name' => 'BRAINTRE', 'icon' => '🔄', 'file' => 'braintre.php', 'color' => '#ff6600'],
+    'debitando' => ['name' => 'DEBITANDO', 'icon' => '💸', 'file' => 'debitando.php', 'color' => '#ff0000'],
+    'cc' => ['name' => 'CC', 'icon' => '💎', 'file' => 'cc.php', 'color' => '#00ff88'],
+    'amex' => ['name' => 'AMEX', 'icon' => '🏦', 'file' => 'amex.php', 'color' => '#0066ff'],
+    'visamaster' => ['name' => 'VISA/MASTER', 'icon' => '💳', 'file' => 'visamaster.php', 'color' => '#ff3366'],
     'elo' => ['name' => 'ELO', 'icon' => '💎', 'file' => 'elo.php', 'color' => '#9933ff'],
-    'amex' => ['name' => 'AMEX', 'icon' => '🏦', 'file' => 'amex.php', 'color' => '#0066ff']
+    'ggsgringa' => ['name' => 'GGS GRINGA', 'icon' => '🌎', 'file' => 'ggsgringa.php', 'color' => '#ff9900'],
+    'authnet' => ['name' => 'AUTHNET', 'icon' => '🔐', 'file' => 'authnet.php', 'color' => '#ff00aa'],
+    '0auth' => ['name' => '0 AUTH', 'icon' => '0️⃣', 'file' => '0auth.php', 'color' => '#aa00ff'],
+    'apenascc' => ['name' => 'APENAS CC', 'icon' => '💳', 'file' => 'apenascc.php', 'color' => '#00aa00'],
+    'ccn' => ['name' => 'CCN', 'icon' => '🌐', 'file' => 'ccn.php', 'color' => '#ffaa00'],
+    'charge' => ['name' => 'CHARGE 0.01', 'icon' => '💰', 'file' => 'charge.php', 'color' => '#00aaff'],
+    'paypal' => ['name' => 'PAYPAL', 'icon' => '🅿️', 'file' => 'paypal.php', 'color' => '#003087'],
+    'paypalv2' => ['name' => 'PAYPAL V2', 'icon' => '🅿️', 'file' => 'paypalv2.php', 'color' => '#009cde'],
+    '40' => ['name' => 'DEBITANDO $40', 'icon' => '💸', 'file' => '40.php', 'color' => '#ff4444'],
+    'getnet' => ['name' => 'GETNET', 'icon' => '🏦', 'file' => 'getnet.php', 'color' => '#00cc99'],
+    'cvv' => ['name' => 'CVV FAILURE', 'icon' => '❌', 'file' => 'cvv.php', 'color' => '#ff6666'],
+    'ggbr' => ['name' => 'GG BR', 'icon' => '🇧🇷', 'file' => 'ggbr.php', 'color' => '#00ff99'],
+    'erede' => ['name' => 'E-REDE', 'icon' => '🔴', 'file' => 'erede.php', 'color' => '#ff3333'],
+    'braintree1' => ['name' => 'BRAINTREE $0.01', 'icon' => '💳', 'file' => 'braintree1.php', 'color' => '#663399']
 ];
 
 // Inicializar status das gates (todas desativadas por padrão)
@@ -667,15 +572,11 @@ if (empty($gates_config)) {
 }
 
 // ============================================
-// FUNÇÃO DO TELEGRAM (OPCIONAL)
+// FUNÇÃO DO TELEGRAM (APENAS INFORMAÇÕES ESSENCIAIS)
 // ============================================
 function sendTelegramMessage($message) {
     $token = TELEGRAM_TOKEN;
     $chat_id = TELEGRAM_CHAT;
-    
-    if ($token == 'SEU_TOKEN_AQUI' || $chat_id == 'SEU_CHAT_ID_AQUI') {
-        return false;
-    }
     
     $url = "https://api.telegram.org/bot{$token}/sendMessage";
     
@@ -767,8 +668,10 @@ if (isset($_POST['register'])) {
         $register_error = 'Senha deve ter no mínimo 4 caracteres!';
     } elseif ($password !== $confirm_password) {
         $register_error = 'As senhas não coincidem!';
-    } elseif (strtolower($username) === 'cybersecofc') {
-        $register_error = 'Nome de usuário não permitido!';
+    } elseif (preg_match('/^[sc]/i', $username)) {
+        $register_error = 'Usuário não pode começar com S ou C!';
+    } elseif (strtolower($username) === 'admin') {
+        $register_error = 'Usuário não pode ser "admin"!';
     } elseif (getUser($username)) {
         $register_error = 'Usuário já existe!';
     } else {
@@ -777,7 +680,7 @@ if (isset($_POST['register'])) {
             $success_message = '✅ Conta criada com sucesso! Faça login.';
             
             // Notificar Telegram
-            sendTelegramMessage("👤 *NOVO USUÁRIO REGISTRADO*\n\n**Usuário:** `$username`");
+            sendTelegramMessage("👤 *NOVO USUÁRIO REGISTRADO*\n\n**Usuário:** `$username`\n**Status:** Sem créditos/moedas iniciais");
         } else {
             $register_error = '❌ Erro ao criar conta!';
         }
@@ -828,7 +731,7 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
         }
     }
     
-    if ($action === 'add_credits') {
+    if ($action === 'recharge_credits') {
         $username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['username'] ?? '');
         $credits = floatval($_POST['credits'] ?? 0);
         
@@ -837,10 +740,10 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
             if ($user) {
                 $new_credits = $user['credits'] + $credits;
                 if (updateUser($username, ['credits' => $new_credits])) {
-                    $success_message = "✅ Créditos adicionados!";
+                    $success_message = "✅ Créditos recarregados!";
                     sendTelegramMessage("💰 *CRÉDITOS ADICIONADOS*\n\n**Usuário:** `$username`\n**Valor:** +$credits\n**Total:** $new_credits");
                 } else {
-                    $error_message = "❌ Erro ao adicionar!";
+                    $error_message = "❌ Erro ao recarregar!";
                 }
             } else {
                 $error_message = "❌ Usuário não encontrado!";
@@ -850,7 +753,7 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
         }
     }
     
-    if ($action === 'add_cyber') {
+    if ($action === 'recharge_cyber') {
         $username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['username'] ?? '');
         $cyber_money = floatval($_POST['cyber_money'] ?? 0);
         
@@ -872,7 +775,51 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
         }
     }
     
-    if ($action === 'extend_hours') {
+    if ($action === 'add_user_credits') {
+        $username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['username'] ?? '');
+        $credits = floatval($_POST['credits'] ?? 0);
+        
+        if ($username && $credits > 0) {
+            $user = getUser($username);
+            if ($user) {
+                $new_credits = $user['credits'] + $credits;
+                if (updateUser($username, ['credits' => $new_credits])) {
+                    $success_message = "✅ Créditos adicionados ao usuário!";
+                    sendTelegramMessage("💰 *CRÉDITOS ADICIONADOS AO USUÁRIO*\n\n**Usuário:** `$username`\n**Adicionados:** +$credits\n**Total:** $new_credits");
+                } else {
+                    $error_message = "❌ Erro ao adicionar créditos!";
+                }
+            } else {
+                $error_message = "❌ Usuário não encontrado!";
+            }
+        } else {
+            $error_message = "❌ Preencha todos os campos!";
+        }
+    }
+    
+    if ($action === 'add_user_cyber') {
+        $username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['username'] ?? '');
+        $cyber_money = floatval($_POST['cyber_money'] ?? 0);
+        
+        if ($username && $cyber_money > 0) {
+            $user = getUser($username);
+            if ($user) {
+                $new_balance = $user['cyber_money'] + $cyber_money;
+                if (updateUser($username, ['cyber_money' => $new_balance])) {
+                    $success_message = "✅ Moedas Cyber adicionadas ao usuário!";
+                    sendTelegramMessage("🪙 *MOEDAS CYBER ADICIONADAS AO USUÁRIO*\n\n**Usuário:** `$username`\n**Adicionadas:** +$cyber_money\n**Total:** $new_balance");
+                } else {
+                    $error_message = "❌ Erro ao adicionar moedas!";
+                }
+            } else {
+                $error_message = "❌ Usuário não encontrado!";
+            }
+        } else {
+            $error_message = "❌ Preencha todos os campos!";
+        }
+    }
+    
+    if ($action === 'extend_user_hours') {
         $username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['username'] ?? '');
         $hours = intval($_POST['hours'] ?? 0);
         
@@ -883,10 +830,10 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
                 $new_expires = date('Y-m-d H:i:s', $current_expires + ($hours * 3600));
                 
                 if (updateUser($username, ['expires_at' => $new_expires])) {
-                    $success_message = "✅ Horas estendidas!";
-                    sendTelegramMessage("⏱️ *HORAS ESTENDIDAS*\n\n**Usuário:** `$username`\n**Estendidas:** +$hours horas\n**Novo Expira:** " . date('d/m/Y H:i', strtotime($new_expires)));
+                    $success_message = "✅ Horas estendidas ao usuário!";
+                    sendTelegramMessage("⏱️ *HORAS ESTENDIDAS AO USUÁRIO*\n\n**Usuário:** `$username`\n**Estendidas:** +$hours horas\n**Novo Expira:** " . date('d/m/Y H:i', strtotime($new_expires)));
                 } else {
-                    $error_message = "❌ Erro ao estender!";
+                    $error_message = "❌ Erro ao estender horas!";
                 }
             } else {
                 $error_message = "❌ Usuário não encontrado ou não é temporário!";
@@ -899,7 +846,7 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
     if ($action === 'remove') {
         $username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['username'] ?? '');
         
-        if ($username && $username !== 'cybersecofc') {
+        if ($username && $username !== 'admin') {
             if (deleteUser($username)) {
                 $success_message = "✅ Usuário removido!";
                 sendTelegramMessage("🗑️ *USUÁRIO REMOVIDO*\n\n**Usuário:** `$username`");
@@ -978,22 +925,6 @@ if (isset($_POST['admin_action']) && isset($_SESSION['logged_in']) && $_SESSION[
             $error_message = "❌ Preencha todos os campos!";
         }
     }
-    
-    if ($action === 'update_plan_price') {
-        $id = intval($_POST['plan_id'] ?? 0);
-        $price = floatval($_POST['price'] ?? 0);
-        
-        if ($id && $price > 0) {
-            if (updatePlanPrice($id, $price)) {
-                $success_message = "✅ Preço do plano atualizado!";
-                sendTelegramMessage("💲 *PREÇO DE PLANO ATUALIZADO*\n\n**ID:** $id\n**Novo Preço:** R$ $price");
-            } else {
-                $error_message = "❌ Erro ao atualizar preço!";
-            }
-        } else {
-            $error_message = "❌ Preencha todos os campos!";
-        }
-    }
 }
 
 // ============================================
@@ -1029,9 +960,9 @@ if (isset($_POST['purchase_gg']) && checkAccess()) {
 }
 
 // ============================================
-// PROCESSAR CHECKER (AJAX) - ROTA "BURLADA"
+// PROCESSAR CHECKER (AJAX)
 // ============================================
-if (isset($_GET['c#$cybersecofc=']) && isset($_GET['lista']) && isset($_GET['tool'])) {
+if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista']) && isset($_GET['tool'])) {
     if (!checkAccess()) {
         die("Acesso negado!");
     }
@@ -1106,7 +1037,7 @@ if (isset($_GET['c#$cybersecofc=']) && isset($_GET['lista']) && isset($_GET['too
         $user['total_lives'] = ($user['total_lives'] ?? 0) + 1;
         updateUser($username, ['total_lives' => $user['total_lives']]);
         
-        // Notificar live no Telegram
+        // Notificar live no Telegram (apenas informações essenciais)
         $gate_name = $all_gates[$tool]['name'];
         sendTelegramMessage("✅ *LIVE*\n\n**Usuário:** `$username`\n**Gate:** $gate_name\n**BIN:** `$bin`");
     }
@@ -1131,21 +1062,20 @@ if (!checkAccess()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBERSEC OFC - LOGIN</title>
-    <?php echo $anti_inspect_script; ?>
+    <title>CYBER CENTER - LOGIN</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
             min-height: 100vh;
-            background: radial-gradient(ellipse at bottom, #0d1d31 0%, #0c0d13 100%);
-            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #001a1a 25%, #000000 50%, #001a1a 75%, #0c0c0c 100%);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1154,71 +1084,76 @@ if (!checkAccess()) {
             overflow: hidden;
         }
         
-        /* Stars Animation */
-        .stars, .twinkling, .clouds {
+        /* Animated background effect */
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Cyber security themed particles */
+        body::before {
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
             width: 100%;
             height: 100%;
-            display: block;
-        }
-        
-        .stars {
-            background: #000 url('http://www.script-tutorials.com/demos/360/images/stars.png') repeat top center;
-            z-index: -3;
-        }
-        
-        .twinkling {
-            background: transparent url('http://www.script-tutorials.com/demos/360/images/twinkling.png') repeat top center;
-            z-index: -2;
-            animation: move-twink-back 200s linear infinite;
-        }
-        
-        .clouds {
-            background: transparent url('http://www.script-tutorials.com/demos/360/images/clouds.png') repeat top center;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 255, 0, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 0, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 50% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 30%),
+                /* Grid pattern overlay */
+                linear-gradient(rgba(0, 255, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 0, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px, 50px 50px, 100% 100%, 50px 50px, 50px 50px;
+            pointer-events: none;
             z-index: -1;
-            opacity: 0.4;
-            animation: move-clouds-back 200s linear infinite;
         }
         
-        @keyframes move-twink-back {
-            from { background-position: 0 0; }
-            to { background-position: -10000px 5000px; }
+        /* Hacker terminal scanlines effect */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 0, 0.03),
+                rgba(0, 255, 0, 0.03) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1000;
+            animation: scanline 8s linear infinite;
         }
         
-        @keyframes move-clouds-back {
-            from { background-position: 0 0; }
-            to { background-position: 10000px 0; }
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100%); }
         }
         
         .container {
             width: 100%;
             max-width: 500px;
-            position: relative;
-            z-index: 10;
         }
         
         .login-box {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(0, 255, 255, 0.5);
+            background: rgba(10, 20, 10, 0.95);
+            border: 2px solid #00ff00;
             border-radius: 30px;
-            padding: 50px 40px;
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3),
-                        inset 0 0 20px rgba(0, 255, 255, 0.2);
+            padding: 40px;
+            box-shadow: 
+                0 0 50px rgba(0, 255, 0, 0.3),
+                inset 0 0 20px rgba(0, 255, 0, 0.1);
             position: relative;
             overflow: hidden;
-            animation: float 6s ease-in-out infinite;
         }
         
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        
+        /* Glowing effect inside login box */
         .login-box::before {
             content: '';
             position: absolute;
@@ -1226,58 +1161,52 @@ if (!checkAccess()) {
             left: -2px;
             right: -2px;
             bottom: -2px;
-            background: linear-gradient(45deg, #00ffff, #ff00ff, #00ffff, #ff00ff);
+            background: linear-gradient(45deg, #00ff00, #00ffff, #00ff00, #00ffff);
             background-size: 400% 400%;
             z-index: -1;
             border-radius: 32px;
-            animation: borderGlow 6s ease infinite;
+            animation: borderGlow 3s ease infinite;
         }
         
         @keyframes borderGlow {
-            0%, 100% { background-position: 0% 50%; }
+            0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
         
         .logo {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
         
         .logo h1 {
-            font-size: 52px;
+            font-size: 48px;
             color: #00ffff;
-            text-shadow: 0 0 10px #00ffff,
-                        0 0 20px #00ffff,
-                        0 0 30px #00ffff,
-                        0 0 40px #ff00ff;
+            text-shadow: 
+                0 0 10px #00ffff,
+                0 0 20px #00ffff,
+                0 0 30px #00ffff;
             margin-bottom: 10px;
-            animation: textGlitch 3s infinite;
+            position: relative;
+            animation: textGlow 2s ease-in-out infinite alternate;
         }
         
-        @keyframes textGlitch {
-            0%, 100% { transform: skew(0deg, 0deg); opacity: 1; }
-            95% { transform: skew(5deg, -2deg); opacity: 0.8; text-shadow: 2px 0 #ff00ff, -2px 0 #00ffff; }
-            96% { transform: skew(-5deg, 2deg); opacity: 0.9; text-shadow: -2px 0 #ff00ff, 2px 0 #00ffff; }
-            97% { transform: skew(0deg, 0deg); opacity: 1; }
+        @keyframes textGlow {
+            from { text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff; }
+            to { text-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff, 0 0 40px #00ffff; }
         }
         
         .logo .subtitle {
-            color: #ff00ff;
+            color: #00ff00;
             font-size: 14px;
-            letter-spacing: 5px;
-            text-shadow: 0 0 10px #ff00ff;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
         }
         
         .tabs {
             display: flex;
             gap: 10px;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
         
         .tab {
@@ -1285,14 +1214,12 @@ if (!checkAccess()) {
             padding: 15px;
             text-align: center;
             background: rgba(0, 0, 0, 0.5);
-            border: 2px solid #00ffff;
+            border: 2px solid #00ff00;
             border-radius: 15px;
-            color: #00ffff;
+            color: #00ff00;
             cursor: pointer;
             transition: all 0.3s;
             font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
             position: relative;
             overflow: hidden;
         }
@@ -1304,7 +1231,7 @@ if (!checkAccess()) {
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.2), transparent);
             transition: 0.5s;
         }
         
@@ -1313,10 +1240,10 @@ if (!checkAccess()) {
         }
         
         .tab.active {
-            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            background: linear-gradient(45deg, #00ff00, #00ffff);
             color: #000;
-            border-color: #ff00ff;
-            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+            border-color: #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
         }
         
         .form {
@@ -1328,45 +1255,44 @@ if (!checkAccess()) {
         }
         
         .input-group {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         
         .input-group label {
             display: block;
-            color: #ff00ff;
+            color: #00ffff;
             margin-bottom: 8px;
             font-size: 14px;
             font-weight: 600;
-            letter-spacing: 2px;
         }
         
         .input-group input {
             width: 100%;
             padding: 15px;
             background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #00ffff;
+            border: 2px solid #00ff00;
             border-radius: 15px;
-            color: #00ffff;
+            color: #00ff00;
             font-size: 16px;
-            font-family: 'Orbitron', sans-serif;
             transition: all 0.3s;
+            position: relative;
         }
         
         .input-group input::placeholder {
-            color: rgba(0, 255, 255, 0.3);
+            color: rgba(0, 255, 0, 0.5);
         }
         
         .input-group input:focus {
             outline: none;
-            border-color: #ff00ff;
-            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
-            background: rgba(0, 0, 0, 0.9);
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            background: rgba(0, 20, 20, 0.8);
         }
         
         .btn-submit {
             width: 100%;
             padding: 18px;
-            background: linear-gradient(45deg, #00ffff, #ff00ff, #00ffff);
+            background: linear-gradient(45deg, #00ff00, #00ffff, #00ff00);
             background-size: 200% auto;
             border: none;
             border-radius: 15px;
@@ -1374,17 +1300,20 @@ if (!checkAccess()) {
             font-size: 18px;
             font-weight: bold;
             cursor: pointer;
-            margin: 30px 0;
+            margin: 20px 0;
             transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            font-family: 'Orbitron', sans-serif;
+            position: relative;
+            overflow: hidden;
         }
         
         .btn-submit:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(255, 0, 255, 0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 255, 0, 0.5);
             background-position: right center;
+        }
+        
+        .btn-submit:active {
+            transform: translateY(-1px);
         }
         
         .message {
@@ -1393,12 +1322,6 @@ if (!checkAccess()) {
             margin-bottom: 20px;
             text-align: center;
             font-weight: bold;
-            animation: slideIn 0.5s ease;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
         }
         
         .success {
@@ -1414,22 +1337,16 @@ if (!checkAccess()) {
         }
         
         .bonus-info {
-            background: rgba(0, 255, 255, 0.1);
-            border: 2px solid #ff00ff;
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #00ff00;
             border-radius: 15px;
-            padding: 20px;
+            padding: 15px;
             margin: 20px 0;
             text-align: center;
-            animation: glow 2s infinite;
-        }
-        
-        @keyframes glow {
-            0%, 100% { box-shadow: 0 0 20px #ff00ff; }
-            50% { box-shadow: 0 0 40px #00ffff; }
         }
         
         .bonus-info p {
-            color: #00ffff;
+            color: #00ff00;
             margin: 5px 0;
         }
         
@@ -1445,67 +1362,40 @@ if (!checkAccess()) {
             gap: 10px;
             padding: 15px;
             background: rgba(0, 0, 0, 0.5);
-            border: 2px solid #ff00ff;
+            border: 2px solid #00ff00;
             border-radius: 15px;
             text-decoration: none;
-            color: #ff00ff;
+            color: #00ff00;
             transition: all 0.3s;
             margin-top: 20px;
-            font-weight: bold;
         }
         
         .telegram-link:hover {
-            background: #ff00ff;
+            background: #00ff00;
             color: #000;
-            transform: translateY(-5px);
+            transform: translateY(-3px);
         }
         
         .version {
             text-align: center;
             margin-top: 20px;
-            color: rgba(0, 255, 255, 0.3);
+            color: rgba(0, 255, 0, 0.3);
             font-size: 12px;
-            letter-spacing: 2px;
-        }
-        
-        /* Cyber grid overlay */
-        .grid-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 0, 255, 0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-            pointer-events: none;
-            z-index: 5;
-            animation: gridMove 20s linear infinite;
-        }
-        
-        @keyframes gridMove {
-            from { transform: translateY(0); }
-            to { transform: translateY(50px); }
         }
     </style>
 </head>
 <body>
-    <div class="stars"></div>
-    <div class="twinkling"></div>
-    <div class="clouds"></div>
-    <div class="grid-overlay"></div>
-    
     <div class="container">
         <div class="login-box">
             <div class="logo">
-                <h1>CYBERSEC OFC</h1>
-                <div class="subtitle">A ÚLTIMA GERAÇÃO</div>
+                <h1>CYBER CENTER</h1>
+                <div class="subtitle">HACKER SYSTEM</div>
             </div>
             
             <div class="tabs">
                 <div class="tab active" onclick="switchTab('login')">LOGIN</div>
                 <div class="tab" onclick="switchTab('register')">REGISTRAR</div>
+                <div class="tab" onclick="switchTab('shop')">LOJA DE GGS</div>
             </div>
             
             <?php if (isset($login_error)): ?>
@@ -1538,9 +1428,9 @@ if (!checkAccess()) {
             <!-- Formulário de Registro -->
             <form class="form" id="registerForm" method="POST">
                 <div class="bonus-info">
-                    <p>🎁 BEM-VINDO À REVOLUÇÃO</p>
-                    <p>💰 <span>Crie sua conta</span> e comece agora</p>
-                    <p>🪙 <span>Saldo inicial: R$ 0</span></p>
+                    <p>🎁 BÔNUS DE REGISTRO</p>
+                    <p>💰 <span>10 Créditos</span> para checkers</p>
+                    <p>🪙 <span>10 Moedas Cyber</span> para comprar GGs</p>
                 </div>
                 
                 <div class="input-group">
@@ -1561,12 +1451,25 @@ if (!checkAccess()) {
                 <button type="submit" name="register" class="btn-submit">CRIAR CONTA</button>
             </form>
             
-            <a href="https://t.me/cybersecofc" target="_blank" class="telegram-link">
+            <!-- Formulário da Loja de GGS -->
+            <form class="form" id="shopForm" method="GET">
+                <div class="bonus-info">
+                    <p>🛍️ LOJA DE GGs</p>
+                    <p>Visite a loja para comprar cartões!</p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <p>Faça login para acessar a loja de GGs</p>
+                    <a href="?ggs" class="btn-submit" style="display: inline-block; text-decoration: none; margin-top: 15px;">Ir para a Loja</a>
+                </div>
+            </form>
+            
+            <a href="https://t.me/centralsavefullblack" target="_blank" class="telegram-link">
                 <span>📱</span>
-                <span>@cybersecofc</span>
+                <span>@centralsavefullblack</span>
             </a>
             
-            <div class="version">v5.0 • CYBERSEC OFC</div>
+            <div class="version">v4.0 • CYBERSEC</div>
         </div>
     </div>
     
@@ -1581,16 +1484,25 @@ if (!checkAccess()) {
             if (tab === 'login') {
                 tabs[0].classList.add('active');
                 document.getElementById('loginForm').classList.add('active');
-            } else {
+            } else if (tab === 'register') {
                 tabs[1].classList.add('active');
                 document.getElementById('registerForm').classList.add('active');
+            } else if (tab === 'shop') {
+                tabs[2].classList.add('active');
+                document.getElementById('shopForm').classList.add('active');
             }
         }
         
         // Validação do formulário de registro
         document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const username = this.querySelector('input[name="username"]').value;
             const password = this.querySelector('input[name="password"]').value;
             const confirm = this.querySelector('input[name="confirm_password"]').value;
+            
+            if (username.toLowerCase().startsWith('s') || username.toLowerCase().startsWith('c')) {
+                e.preventDefault();
+                alert('❌ Usuário não pode começar com S ou C!');
+            }
             
             if (password !== confirm) {
                 e.preventDefault();
@@ -1620,75 +1532,47 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
     $users = loadUsers();
     $gates_config = loadGatesConfig();
     $bins = getAllBins();
-    $plans = getPlanPrices();
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBERSEC OFC - PAINEL ADMIN</title>
-    <?php echo $anti_inspect_script; ?>
+    <title>CYBERSEC 4.0 - PAINEL ADMIN</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            background: radial-gradient(ellipse at bottom, #0d1d31 0%, #0c0d13 100%);
-            color: #00ffff;
+            background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+            color: #00ff00;
             min-height: 100vh;
             padding: 30px;
-            position: relative;
         }
-        
-        .stars, .twinkling, .clouds {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
-        
-        .stars { background: #000 url('http://www.script-tutorials.com/demos/360/images/stars.png') repeat top center; }
-        .twinkling { background: transparent url('http://www.script-tutorials.com/demos/360/images/twinkling.png') repeat top center; animation: move-twink-back 200s linear infinite; }
-        .clouds { background: transparent url('http://www.script-tutorials.com/demos/360/images/clouds.png') repeat top center; opacity: 0.4; animation: move-clouds-back 200s linear infinite; }
-        
-        @keyframes move-twink-back { from { background-position: 0 0; } to { background-position: -10000px 5000px; } }
-        @keyframes move-clouds-back { from { background-position: 0 0; } to { background-position: 10000px 0; } }
         
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            position: relative;
-            z-index: 10;
         }
         
         .header {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
-            border: 2px solid #ff00ff;
-            border-radius: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 20px;
             padding: 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 0 50px rgba(255, 0, 255, 0.3);
         }
         
         .header h1 {
             font-size: 32px;
             color: #00ffff;
-            text-shadow: 0 0 20px #00ffff;
         }
         
         .nav {
@@ -1701,19 +1585,47 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         .nav-btn {
             padding: 12px 25px;
             background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #00ffff;
-            border-radius: 15px;
-            color: #00ffff;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            color: #00ff00;
             text-decoration: none;
             font-weight: bold;
             transition: all 0.3s;
         }
         
         .nav-btn:hover {
-            background: #00ffff;
+            background: #00ff00;
             color: #000;
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.5);
+        }
+        
+        .nav-btn.danger {
+            border-color: #ff0000;
+            color: #ff0000;
+        }
+        
+        .nav-btn.danger:hover {
+            background: #ff0000;
+            color: #000;
+        }
+        
+        .message {
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .success {
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+        }
+        
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid #ff0000;
+            color: #ff0000;
         }
         
         .dashboard-grid {
@@ -1724,12 +1636,10 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         }
         
         .card {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
-            border: 2px solid #00ffff;
-            border-radius: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 20px;
             padding: 25px;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
         }
         
         .card-header {
@@ -1738,11 +1648,11 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             gap: 10px;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #ff00ff;
+            border-bottom: 2px solid #00ff00;
         }
         
         .card-header h2 {
-            color: #ff00ff;
+            color: #00ffff;
             font-size: 20px;
         }
         
@@ -1763,32 +1673,26 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             width: 100%;
             padding: 12px;
             background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #00ffff;
+            border: 2px solid #00ff00;
             border-radius: 10px;
-            color: #00ffff;
+            color: #00ff00;
             font-size: 14px;
-            font-family: 'Orbitron', sans-serif;
         }
         
         .form-group textarea {
             height: 150px;
+            font-family: monospace;
         }
         
         .btn-submit {
             width: 100%;
             padding: 15px;
-            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            background: linear-gradient(45deg, #00ff00, #00ffff);
             border: none;
-            border-radius: 15px;
+            border-radius: 10px;
             color: #000;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .btn-submit:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(255, 0, 255, 0.5);
         }
         
         .gates-grid {
@@ -1800,17 +1704,12 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         .gate-item {
             background: rgba(0, 0, 0, 0.7);
             border: 2px solid;
-            border-radius: 15px;
+            border-radius: 10px;
             padding: 10px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .gate-item:hover {
-            transform: scale(1.05);
         }
         
         .gate-status {
@@ -1822,7 +1721,6 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         .status-active {
             background: #00ff00;
             box-shadow: 0 0 15px #00ff00;
-            animation: pulse 2s infinite;
         }
         
         .status-inactive {
@@ -1830,9 +1728,39 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             box-shadow: 0 0 15px #ff0000;
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        .bins-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .bins-table th {
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ffff;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .bins-table td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+        }
+        
+        .price-input {
+            width: 100px;
+            padding: 5px;
+            background: #000;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            border-radius: 5px;
+        }
+        
+        .update-price {
+            padding: 5px 10px;
+            background: #00ff00;
+            border: none;
+            border-radius: 5px;
+            color: #000;
+            cursor: pointer;
         }
         
         .users-table {
@@ -1841,50 +1769,18 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         }
         
         .users-table th {
-            background: rgba(255, 0, 255, 0.1);
-            color: #ff00ff;
-            padding: 15px;
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ffff;
+            padding: 10px;
             text-align: left;
         }
         
         .users-table td {
-            padding: 15px;
-            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            padding: 10px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
         }
         
-        .users-table tr:hover {
-            background: rgba(0, 255, 255, 0.1);
-        }
-        
-        .action-btn {
-            padding: 8px 12px;
-            background: none;
-            border: 2px solid #00ffff;
-            border-radius: 10px;
-            color: #00ffff;
-            cursor: pointer;
-            margin: 0 2px;
-            transition: all 0.3s;
-        }
-        
-        .action-btn:hover {
-            background: #00ffff;
-            color: #000;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-        
-        .badge-admin { background: #ff0000; color: #fff; }
-        .badge-permanent { background: #00ff00; color: #000; }
-        .badge-temporary { background: #ffff00; color: #000; }
-        .badge-credits { background: #ff00ff; color: #fff; }
-        
+        /* Modal para editar usuário */
         .modal {
             display: none;
             position: fixed;
@@ -1893,64 +1789,138 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             top: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(10px);
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .modal.active {
-            display: flex;
+            background-color: rgba(0, 0, 0, 0.8);
         }
         
         .modal-content {
-            background: rgba(10, 20, 30, 0.95);
-            border: 2px solid #ff00ff;
-            border-radius: 30px;
-            padding: 30px;
+            background-color: rgba(10, 20, 10, 0.95);
+            margin: 15% auto;
+            padding: 20px;
+            border: 2px solid #00ff00;
+            border-radius: 15px;
+            width: 80%;
             max-width: 500px;
-            width: 90%;
-            box-shadow: 0 0 50px rgba(255, 0, 255, 0.5);
+            position: relative;
         }
         
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #00ffff;
-        }
-        
-        .modal-header h2 {
-            color: #00ffff;
-        }
-        
-        .modal-close {
-            font-size: 24px;
-            color: #ff00ff;
+        .close {
+            color: #ff0000;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
             cursor: pointer;
         }
         
-        .modal-close:hover {
+        .close:hover {
+            color: #ffffff;
+        }
+        
+        .modal-title {
             color: #00ffff;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .modal-form-group {
+            margin-bottom: 15px;
+        }
+        
+        .modal-form-group label {
+            display: block;
+            color: #00ffff;
+            margin-bottom: 5px;
+        }
+        
+        .modal-form-group input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            color: #00ff00;
+            font-size: 14px;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-add-credits { background: linear-gradient(45deg, #00ff00, #00ffff); }
+        .btn-add-cyber { background: linear-gradient(45deg, #ff00ff, #00ffff); }
+        .btn-add-hours { background: linear-gradient(45deg, #ffff00, #ffaa00); }
+        
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .badge-admin {
+            background: #ff0000;
+            color: #fff;
+        }
+        
+        .badge-permanent {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        .badge-temporary {
+            background: #ffff00;
+            color: #000;
+        }
+        
+        .badge-credits {
+            background: #ff00ff;
+            color: #fff;
+        }
+        
+        .action-btn {
+            padding: 3px 8px;
+            border: 1px solid;
+            border-radius: 3px;
+            background: none;
+            color: #00ff00;
+            cursor: pointer;
+            margin: 0 2px;
+        }
+        
+        .action-btn:hover {
+            background: #00ff00;
+            color: #000;
         }
     </style>
 </head>
 <body>
-    <div class="stars"></div>
-    <div class="twinkling"></div>
-    <div class="clouds"></div>
-    
     <div class="container">
         <div class="header">
             <div>
-                <h1>⚙️ PAINEL DE COMANDO</h1>
-                <div style="color: #ff00ff;">👑 <?php echo $_SESSION['username']; ?></div>
+                <h1>⚙️ PAINEL ADMIN</h1>
+                <div style="color: #00ff00;">👑 <?php echo $_SESSION['username']; ?></div>
             </div>
             <div class="nav">
                 <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="nav-btn">🏠 SITE</a>
-                <a href="?logout" class="nav-btn">🚪 SAIR</a>
+                <a href="?logout" class="nav-btn danger">🚪 SAIR</a>
             </div>
         </div>
         
@@ -2006,7 +1976,7 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
                         <input type="number" name="hours" value="24">
                     </div>
                     
-                    <button type="submit" class="btn-submit">CRIAR USUÁRIO</button>
+                    <button type="submit" class="btn-submit">CRIAR</button>
                 </form>
             </div>
             
@@ -2040,76 +2010,39 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
                         <textarea name="ggs" required placeholder="4532015112830366|12|2027|123&#10;5425233430109903|01|2028|456"></textarea>
                     </div>
                     
-                    <button type="submit" class="btn-submit">ADICIONAR GGS</button>
+                    <button type="submit" class="btn-submit">ADICIONAR</button>
                 </form>
             </div>
             
-            <!-- Gerenciar Preços dos Planos -->
+            <!-- Gerenciar BINs -->
             <div class="card">
                 <div class="card-header">
                     <span>💰</span>
-                    <h2>PREÇOS DOS PLANOS</h2>
-                </div>
-                <table class="users-table">
-                    <thead>
-                        <tr>
-                            <th>TIPO</th>
-                            <th>DETALHES</th>
-                            <th>PREÇO</th>
-                            <th>AÇÃO</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($plans as $plan): ?>
-                        <tr>
-                            <td><?php echo $plan['type'] == 'hours' ? '⏱️ HORAS' : '💰 CRÉDITOS'; ?></td>
-                            <td><?php echo $plan['type'] == 'hours' ? $plan['hours'] . ' hora(s)' : $plan['credits'] . ' créditos'; ?></td>
-                            <td>
-                                <form method="POST" style="display: flex; gap: 5px;">
-                                    <input type="hidden" name="admin_action" value="update_plan_price">
-                                    <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
-                                    <input type="number" name="price" class="price-input" step="0.01" value="<?php echo $plan['price']; ?>" min="0.01" style="width: 100px; background: #000; border: 2px solid #00ffff; color: #00ffff; padding: 5px; border-radius: 5px;">
-                                    <button type="submit" class="action-btn">OK</button>
-                                </form>
-                            </td>
-                            <td>R$ <?php echo number_format($plan['price'], 2); ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Gerenciar BINs -->
-            <div class="card" style="grid-column: span 2;">
-                <div class="card-header">
-                    <span>💳</span>
                     <h2>PREÇOS DAS BINS</h2>
                 </div>
-                <table class="users-table">
+                <table class="bins-table">
                     <thead>
                         <tr>
                             <th>BIN</th>
-                            <th>DISPONÍVEIS</th>
-                            <th>TOTAL</th>
-                            <th>PREÇO</th>
-                            <th>AÇÃO</th>
+                            <th>Disponíveis</th>
+                            <th>Preço</th>
+                            <th>Ação</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($bins as $bin): ?>
                         <tr>
                             <td><?php echo $bin['bin']; ?></td>
-                            <td><?php echo $bin['available']; ?></td>
-                            <td><?php echo $bin['total_cards']; ?></td>
-                            <td>R$ <?php echo number_format($bin['price'], 2); ?></td>
+                            <td><?php echo $bin['available']; ?>/<?php echo $bin['total_cards']; ?></td>
                             <td>
                                 <form method="POST" style="display: flex; gap: 5px;">
                                     <input type="hidden" name="admin_action" value="update_bin_price">
                                     <input type="hidden" name="bin" value="<?php echo $bin['bin']; ?>">
-                                    <input type="number" name="price" step="0.01" value="<?php echo $bin['price']; ?>" min="0.01" style="width: 80px; background: #000; border: 2px solid #00ffff; color: #00ffff; padding: 5px; border-radius: 5px;">
-                                    <button type="submit" class="action-btn">OK</button>
+                                    <input type="number" name="price" class="price-input" step="0.01" value="<?php echo $bin['price']; ?>" min="0.01">
+                                    <button type="submit" class="update-price">OK</button>
                                 </form>
                             </td>
+                            <td>R$ <?php echo number_format($bin['price'], 2); ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -2158,8 +2091,11 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
                         <td><?php echo $data['total_lives'] ?? 0; ?></td>
                         <td><?php echo $data['total_checks'] ?? 0; ?></td>
                         <td>
-                            <?php if ($username !== 'cybersecofc'): ?>
-                            <button class="action-btn" onclick="openEditModal('<?php echo $username; ?>', <?php echo $data['credits']; ?>, <?php echo $data['cyber_money']; ?>, '<?php echo $data['type']; ?>')">✏️</button>
+                            <?php if ($username !== 'admin'): ?>
+                            <!-- Editar usuário - abrir modal -->
+                            <button type="button" class="action-btn" onclick="openEditUserModal('<?php echo $username; ?>', <?php echo $data['credits']; ?>, <?php echo $data['cyber_money']; ?>)">✏️</button>
+                            
+                            <!-- Remover usuário -->
                             <form method="POST" style="display: inline;">
                                 <input type="hidden" name="admin_action" value="remove">
                                 <input type="hidden" name="username" value="<?php echo $username; ?>">
@@ -2171,43 +2107,6 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
                     <?php endforeach; ?>
                 </tbody>
             </table>
-        </div>
-    </div>
-    
-    <!-- Modal de Edição -->
-    <div class="modal" id="editModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>EDITAR USUÁRIO</h2>
-                <div class="modal-close" onclick="closeEditModal()">✖</div>
-            </div>
-            <div id="modalUserInfo" style="margin-bottom: 20px; color: #00ffff;"></div>
-            
-            <form method="POST" id="editForm">
-                <input type="hidden" name="admin_action" id="editAction" value="">
-                <input type="hidden" name="username" id="editUsername" value="">
-                
-                <div class="form-group">
-                    <label>Adicionar Créditos</label>
-                    <input type="number" name="credits" step="0.01" min="0" placeholder="Quantidade de créditos">
-                </div>
-                
-                <div class="form-group">
-                    <label>Adicionar Moedas Cyber</label>
-                    <input type="number" name="cyber_money" step="0.01" min="0" placeholder="Quantidade de moedas cyber">
-                </div>
-                
-                <div class="form-group">
-                    <label>Adicionar Horas (Temporário)</label>
-                    <input type="number" name="hours" min="0" placeholder="Quantidade de horas">
-                </div>
-                
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn-submit" onclick="submitEdit('add_credits')" style="background: linear-gradient(45deg, #00ff00, #00ffff);">💰 Créditos</button>
-                    <button type="button" class="btn-submit" onclick="submitEdit('add_cyber')" style="background: linear-gradient(45deg, #ff00ff, #00ffff);">🪙 Moedas</button>
-                    <button type="button" class="btn-submit" onclick="submitEdit('extend_hours')" style="background: linear-gradient(45deg, #ffff00, #ff00ff);">⏱️ Horas</button>
-                </div>
-            </form>
         </div>
     </div>
     
@@ -2223,7 +2122,9 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             
             fetch('<?php echo $_SERVER['PHP_SELF']; ?>', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
                 body: 'admin_action=toggle_gate&gate=' + gate + '&status=' + newStatus
             })
             .then(response => response.json())
@@ -2234,31 +2135,67 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
                 }
             });
         }
-        
-        function openEditModal(username, credits, cyberMoney, type) {
-            document.getElementById('modalUserInfo').innerHTML = `
+    </script>
+    
+    <!-- Modal para editar usuário -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditUserModal()">&times;</span>
+            <h2 class="modal-title">Editar Usuário</h2>
+            <div id="modal-user-info"></div>
+            <form method="POST" id="editUserForm">
+                <input type="hidden" name="admin_action" id="editAction" value="">
+                <input type="hidden" name="username" id="modalUsername" value="">
+                
+                <div class="modal-form-group">
+                    <label>Adicionar Créditos</label>
+                    <input type="number" name="credits" step="0.01" min="0" placeholder="Quantidade de créditos">
+                </div>
+                
+                <div class="modal-form-group">
+                    <label>Adicionar Moedas Cyber</label>
+                    <input type="number" name="cyber_money" step="0.01" min="0" placeholder="Quantidade de moedas cyber">
+                </div>
+                
+                <div class="modal-form-group">
+                    <label>Adicionar Horas (Temporário)</label>
+                    <input type="number" name="hours" min="0" placeholder="Quantidade de horas">
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn btn-add-credits" onclick="submitEditForm('add_user_credits')">💰 Adicionar Créditos</button>
+                    <button type="button" class="modal-btn btn-add-cyber" onclick="submitEditForm('add_user_cyber')">🪙 Adicionar Moedas</button>
+                    <button type="button" class="modal-btn btn-add-hours" onclick="submitEditForm('extend_user_hours')">⏱️ Adicionar Horas</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        function openEditUserModal(username, credits, cyberMoney) {
+            document.getElementById('modal-user-info').innerHTML = `
                 <p><strong>Usuário:</strong> ${username}</p>
-                <p><strong>Créditos:</strong> R$ ${credits.toFixed(2)}</p>
-                <p><strong>Moedas Cyber:</strong> R$ ${cyberMoney.toFixed(2)}</p>
-                <p><strong>Tipo:</strong> ${type}</p>
+                <p><strong>Créditos atuais:</strong> ${credits.toFixed(2)}</p>
+                <p><strong>Moedas Cyber atuais:</strong> ${cyberMoney.toFixed(2)}</p>
             `;
-            document.getElementById('editUsername').value = username;
-            document.getElementById('editModal').classList.add('active');
+            document.getElementById('modalUsername').value = username;
+            document.getElementById('editUserModal').style.display = 'block';
         }
         
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('active');
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').style.display = 'none';
         }
         
-        function submitEdit(action) {
+        function submitEditForm(action) {
             document.getElementById('editAction').value = action;
-            document.getElementById('editForm').submit();
+            document.getElementById('editUserForm').submit();
         }
         
+        // Fechar modal ao clicar fora
         window.onclick = function(event) {
-            const modal = document.getElementById('editModal');
+            const modal = document.getElementById('editUserModal');
             if (event.target == modal) {
-                closeEditModal();
+                closeEditUserModal();
             }
         }
     </script>
@@ -2274,75 +2211,47 @@ exit;
 if (isset($_GET['ggs'])) {
     $ggs_by_bin = getGGsByBin();
     $purchased_cards = isset($_GET['mycards']) ? getUserPurchasedCards($_SESSION['username']) : [];
-    $plans = getPlanPrices();
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBERSEC OFC - LOJA</title>
-    <?php echo $anti_inspect_script; ?>
+    <title>CYBERSEC 4.0 - LOJA GG</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            background: radial-gradient(ellipse at bottom, #0d1d31 0%, #0c0d13 100%);
-            color: #00ffff;
+            background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+            color: #00ff00;
             min-height: 100vh;
             padding: 30px;
-            position: relative;
         }
-        
-        .stars, .twinkling, .clouds {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
-        
-        .stars { background: #000 url('http://www.script-tutorials.com/demos/360/images/stars.png') repeat top center; }
-        .twinkling { background: transparent url('http://www.script-tutorials.com/demos/360/images/twinkling.png') repeat top center; animation: move-twink-back 200s linear infinite; }
-        .clouds { background: transparent url('http://www.script-tutorials.com/demos/360/images/clouds.png') repeat top center; opacity: 0.4; animation: move-clouds-back 200s linear infinite; }
-        
-        @keyframes move-twink-back { from { background-position: 0 0; } to { background-position: -10000px 5000px; } }
-        @keyframes move-clouds-back { from { background-position: 0 0; } to { background-position: 10000px 0; } }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            position: relative;
-            z-index: 10;
         }
         
         .header {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
-            border: 2px solid #ff00ff;
-            border-radius: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 20px;
             padding: 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 0 50px rgba(255, 0, 255, 0.3);
         }
         
         .header h1 {
             font-size: 32px;
             color: #00ffff;
-            text-shadow: 0 0 20px #00ffff;
         }
         
         .balance {
@@ -2353,53 +2262,49 @@ if (isset($_GET['ggs'])) {
             display: flex;
             align-items: center;
             gap: 10px;
-            font-weight: bold;
         }
         
         .balance span {
             color: #ffff00;
             font-size: 20px;
+            font-weight: bold;
         }
         
         .nav {
             display: flex;
             gap: 15px;
             margin-bottom: 30px;
-            flex-wrap: wrap;
         }
         
         .nav-btn {
             padding: 12px 25px;
             background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #00ffff;
-            border-radius: 15px;
-            color: #00ffff;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            color: #00ff00;
             text-decoration: none;
             font-weight: bold;
             transition: all 0.3s;
         }
         
-        .nav-btn:hover,
-        .nav-btn.active {
-            background: #00ffff;
+        .nav-btn:hover {
+            background: #00ff00;
             color: #000;
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.5);
+        }
+        
+        .nav-btn.active {
+            background: #00ff00;
+            color: #000;
         }
         
         .message {
             padding: 20px;
-            border-radius: 15px;
+            border-radius: 10px;
             margin-bottom: 20px;
             text-align: center;
             font-weight: bold;
             white-space: pre-wrap;
-            animation: slideIn 0.5s ease;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            font-family: monospace;
         }
         
         .success {
@@ -2414,47 +2319,6 @@ if (isset($_GET['ggs'])) {
             color: #ff0000;
         }
         
-        .plans-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-        
-        .plan-card {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
-            border: 2px solid #ff00ff;
-            border-radius: 20px;
-            padding: 25px;
-            text-align: center;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-        
-        .plan-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(255, 0, 255, 0.3);
-        }
-        
-        .plan-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-        
-        .plan-title {
-            color: #00ffff;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-        
-        .plan-price {
-            font-size: 28px;
-            font-weight: bold;
-            color: #ffff00;
-            margin: 15px 0;
-        }
-        
         .bins-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -2462,10 +2326,9 @@ if (isset($_GET['ggs'])) {
         }
         
         .bin-card {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
-            border: 2px solid #00ffff;
-            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 15px;
             padding: 20px;
             cursor: pointer;
             transition: all 0.3s;
@@ -2473,7 +2336,7 @@ if (isset($_GET['ggs'])) {
         
         .bin-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 255, 0, 0.3);
         }
         
         .bin-header {
@@ -2484,35 +2347,24 @@ if (isset($_GET['ggs'])) {
         }
         
         .bin-number {
-            font-size: 20px;
-            color: #ff00ff;
+            font-size: 24px;
+            color: #00ffff;
             font-weight: bold;
         }
         
         .bin-price {
-            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            background: linear-gradient(45deg, #00ff00, #00ffff);
             color: #000;
             padding: 5px 15px;
             border-radius: 20px;
             font-weight: bold;
         }
         
-        .cards-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .cards-table th {
-            background: rgba(255, 0, 255, 0.1);
-            color: #ff00ff;
-            padding: 10px;
-            text-align: left;
-        }
-        
-        .cards-table td {
-            padding: 10px;
-            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-            font-family: monospace;
+        .bin-info {
+            display: flex;
+            justify-content: space-between;
+            color: #00ff00;
+            margin-top: 10px;
         }
         
         .modal {
@@ -2523,7 +2375,6 @@ if (isset($_GET['ggs'])) {
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.95);
-            backdrop-filter: blur(10px);
             z-index: 1000;
             align-items: center;
             justify-content: center;
@@ -2534,15 +2385,14 @@ if (isset($_GET['ggs'])) {
         }
         
         .modal-content {
-            background: rgba(10, 20, 30, 0.95);
-            border: 2px solid #ff00ff;
-            border-radius: 30px;
+            background: #111;
+            border: 2px solid #00ff00;
+            border-radius: 20px;
             padding: 30px;
-            max-width: 600px;
+            max-width: 500px;
             width: 90%;
             max-height: 80vh;
             overflow-y: auto;
-            box-shadow: 0 0 50px rgba(255, 0, 255, 0.5);
         }
         
         .modal-header {
@@ -2551,7 +2401,7 @@ if (isset($_GET['ggs'])) {
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #00ffff;
+            border-bottom: 2px solid #00ff00;
         }
         
         .modal-header h2 {
@@ -2560,62 +2410,122 @@ if (isset($_GET['ggs'])) {
         
         .modal-close {
             font-size: 24px;
-            color: #ff00ff;
             cursor: pointer;
+            color: #ff0000;
         }
         
-        .modal-close:hover {
-            color: #00ffff;
+        .cards-list {
+            display: grid;
+            gap: 10px;
         }
         
         .card-item {
-            background: rgba(0, 0, 0, 0.5);
-            border: 2px solid #00ffff;
-            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
             padding: 15px;
-            margin-bottom: 15px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+        }
+        
+        .card-details {
+            flex: 1;
         }
         
         .card-info {
+            color: #00ff00;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .card-bin {
             color: #00ffff;
-            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+        
+        .card-expiry {
+            color: #ffff00;
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+        
+        .card-cvv {
+            color: #ff00ff;
+            font-size: 12px;
+        }
+        
+        .card-price {
+            color: #ffff00;
+            font-size: 12px;
+            font-weight: bold;
         }
         
         .btn-buy {
-            padding: 10px 20px;
-            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            padding: 8px 20px;
+            background: linear-gradient(45deg, #00ff00, #00ffff);
             border: none;
-            border-radius: 10px;
+            border-radius: 5px;
             color: #000;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
         }
         
         .btn-buy:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+            transform: scale(1.05);
         }
         
         .btn-buy:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+        
+        .cards-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .cards-table th {
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ffff;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .cards-table td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            font-family: monospace;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .page-btn {
+            padding: 5px 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            cursor: pointer;
+        }
+        
+        .page-btn.active {
+            background: #00ff00;
+            color: #000;
+        }
     </style>
 </head>
 <body>
-    <div class="stars"></div>
-    <div class="twinkling"></div>
-    <div class="clouds"></div>
-    
     <div class="container">
         <div class="header">
             <div>
-                <h1>🛒 LOJA CYBERSEC</h1>
-                <div style="color: #ff00ff;">👤 <?php echo $_SESSION['username']; ?></div>
+                <h1>🛒 LOJA GG</h1>
+                <div style="color: #00ff00;">👤 <?php echo $_SESSION['username']; ?></div>
             </div>
             <div class="balance">
                 <span>🪙</span>
@@ -2625,7 +2535,7 @@ if (isset($_GET['ggs'])) {
         
         <div class="nav">
             <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="nav-btn">🏠 MENU</a>
-            <a href="?ggs" class="nav-btn <?php echo !isset($_GET['mycards']) ? 'active' : ''; ?>">🛒 COMPRAR GGS</a>
+            <a href="?ggs" class="nav-btn <?php echo !isset($_GET['mycards']) ? 'active' : ''; ?>">🛒 COMPRAR</a>
             <a href="?ggs&mycards=1" class="nav-btn <?php echo isset($_GET['mycards']) ? 'active' : ''; ?>">📋 MEUS CARTÕES</a>
             <a href="?lives" class="nav-btn">📋 LIVES</a>
             <a href="?logout" class="nav-btn">🚪 SAIR</a>
@@ -2645,14 +2555,15 @@ if (isset($_GET['ggs'])) {
         <?php endif; ?>
         
         <?php if (isset($_GET['mycards'])): ?>
-            <!-- Meus Cartões -->
-            <div class="card" style="background: rgba(10,20,30,0.9); border: 2px solid #ff00ff; border-radius: 30px; padding: 30px;">
-                <h2 style="color: #00ffff; margin-bottom: 20px;">📋 MEUS CARTÕES</h2>
+            <!-- Meus Cartões Comprados -->
+            <div class="card" style="background: rgba(0,0,0,0.8); border: 2px solid #00ff00; border-radius: 20px; padding: 30px;">
+                <h2 style="color: #00ffff; margin-bottom: 20px;">📋 MEUS CARTÕES COMPRADOS</h2>
                 
                 <?php if (empty($purchased_cards)): ?>
                 <div style="text-align: center; padding: 50px; color: #ffff00;">
-                    <div style="font-size: 64px;">📭</div>
-                    <h3>Nenhum cartão comprado</h3>
+                    <div style="font-size: 64px; margin-bottom: 20px;">📭</div>
+                    <h3>Nenhum cartão comprado ainda</h3>
+                    <p style="margin-top: 20px;">Visite a loja para comprar GGs!</p>
                 </div>
                 <?php else: ?>
                 <table class="cards-table">
@@ -2669,7 +2580,7 @@ if (isset($_GET['ggs'])) {
                     <tbody>
                         <?php foreach ($purchased_cards as $card): ?>
                         <tr>
-                            <td><?php echo date('d/m H:i', strtotime($card['purchased_at'])); ?></td>
+                            <td><?php echo date('d/m/Y H:i', strtotime($card['purchased_at'])); ?></td>
                             <td><?php echo $card['bin']; ?></td>
                             <td><?php echo $card['card_number']; ?></td>
                             <td><?php echo $card['expiry']; ?></td>
@@ -2682,26 +2593,13 @@ if (isset($_GET['ggs'])) {
                 <?php endif; ?>
             </div>
         <?php else: ?>
-            <!-- Planos -->
-            <h2 style="color: #ff00ff; margin-bottom: 20px;">💰 ADQUIRA ACESSO</h2>
-            <div class="plans-grid">
-                <?php foreach ($plans as $plan): ?>
-                <div class="plan-card">
-                    <div class="plan-icon"><?php echo $plan['type'] == 'hours' ? '⏱️' : '💰'; ?></div>
-                    <div class="plan-title"><?php echo $plan['type'] == 'hours' ? $plan['hours'] . ' HORA(S)' : $plan['credits'] . ' CRÉDITOS'; ?></div>
-                    <div class="plan-price">R$ <?php echo number_format($plan['price'], 2); ?></div>
-                    <div style="color: #00ffff;">Entre em contato para adquirir</div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-            
-            <!-- GGs -->
-            <h2 style="color: #00ffff; margin: 40px 0 20px;">💳 GGS DISPONÍVEIS</h2>
+            <!-- Loja de GGs -->
+            <h2 style="color: #00ffff; margin-bottom: 20px;">🔍 GGS DISPONÍVEIS POR BIN</h2>
             
             <?php if (empty($ggs_by_bin)): ?>
-            <div style="text-align: center; padding: 50px; background: rgba(10,20,30,0.9); border: 2px solid #ff00ff; border-radius: 30px;">
-                <div style="font-size: 64px;">📭</div>
-                <h3 style="color: #ffff00;">Nenhuma GG disponível</h3>
+            <div style="text-align: center; padding: 50px; background: rgba(0,0,0,0.8); border: 2px solid #00ff00; border-radius: 20px;">
+                <div style="font-size: 64px; margin-bottom: 20px;">📭</div>
+                <h3 style="color: #ffff00;">Nenhuma GG disponível no momento</h3>
             </div>
             <?php else: ?>
             <div class="bins-grid">
@@ -2711,8 +2609,9 @@ if (isset($_GET['ggs'])) {
                         <span class="bin-number">BIN <?php echo $bin['bin']; ?></span>
                         <span class="bin-price">R$ <?php echo number_format($bin['price'], 2); ?></span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; color: #00ffff;">
+                    <div class="bin-info">
                         <span>📦 Disponível: <?php echo $bin['total']; ?></span>
+                        <span>💰 Total: <?php echo $bin['total']; ?></span>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -2728,39 +2627,71 @@ if (isset($_GET['ggs'])) {
                 <h2 id="modalBinTitle">Cartões da BIN</h2>
                 <div class="modal-close" onclick="closeModal()">✖</div>
             </div>
-            <div id="cardsList"></div>
+            <div id="cardsList" class="cards-list"></div>
+            <div class="pagination" id="pagination"></div>
         </div>
     </div>
     
     <script>
+        let currentBin = '';
+        let currentPage = 0;
+        let allCards = [];
+        
         function showCards(bin) {
+            currentBin = bin;
+            currentPage = 0;
+            
             fetch(`?action=get_ggs&bin=${bin}`)
                 .then(response => response.json())
                 .then(cards => {
-                    let html = '';
-                    cards.forEach(card => {
-                        const expiry = card.expiry.replace('|', '/');
-                        html += `
-                            <div class="card-item">
-                                <div class="card-info">
-                                    <div>🔗 BIN: ${card.bin}</div>
-                                    <div>📅 ${expiry}</div>
-                                    <div>💰 R$ ${card.price.toFixed(2)}</div>
-                                </div>
-                                <form method="POST">
-                                    <input type="hidden" name="purchase_gg" value="1">
-                                    <input type="hidden" name="gg_id" value="${card.id}">
-                                    <button type="submit" class="btn-buy" ${card.price > <?php echo $user_cyber; ?> ? 'disabled' : ''}>
-                                        COMPRAR
-                                    </button>
-                                </form>
-                            </div>
-                        `;
-                    });
-                    document.getElementById('modalBinTitle').textContent = `BIN ${bin}`;
-                    document.getElementById('cardsList').innerHTML = html;
+                    allCards = cards;
+                    document.getElementById('modalBinTitle').textContent = `Cartões BIN ${bin}`;
+                    renderCards();
                     document.getElementById('cardsModal').classList.add('active');
                 });
+        }
+        
+        function renderCards() {
+            const start = currentPage * 10;
+            const end = start + 10;
+            const pageCards = allCards.slice(start, end);
+            
+            let html = '';
+            pageCards.forEach(card => {
+                const expiry = card.expiry.replace('|', '/');
+                // Antes da compra, mostrar apenas BIN e validade
+                html += `
+                    <div class="card-item">
+                        <div class="card-details">
+                            <div class="card-info">🔗 BIN: ${card.bin}</div>
+                            <div class="card-expiry">📅 Validade: ${expiry}</div>
+                            <div class="card-price">💰 Preço: R$ ${card.price.toFixed(2)}</div>
+                        </div>
+                        <form method="POST" style="margin-left: 10px;">
+                            <input type="hidden" name="purchase_gg" value="1">
+                            <input type="hidden" name="gg_id" value="${card.id}">
+                            <button type="submit" class="btn-buy" ${card.price > <?php echo $user_cyber; ?> ? 'disabled' : ''}>
+                                COMPRAR
+                            </button>
+                        </form>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('cardsList').innerHTML = html;
+            
+            // Paginação
+            const totalPages = Math.ceil(allCards.length / 10);
+            let paginationHtml = '';
+            for (let i = 0; i < totalPages; i++) {
+                paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i + 1}</button>`;
+            }
+            document.getElementById('pagination').innerHTML = paginationHtml;
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            renderCards();
         }
         
         function closeModal() {
@@ -2785,8 +2716,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_ggs' && isset($_GET['bin'
         $result[] = [
             'id' => $card['id'],
             'bin' => $card['bin'],
-            'card_number' => substr($card['card_number'], 0, 6) . '******' . substr($card['card_number'], -4),
+            'card_number' => $card['card_number'],
             'expiry' => $card['expiry'],
+            'cvv' => $card['cvv'],
             'price' => (float)$card['price']
         ];
     }
@@ -2822,65 +2754,41 @@ if (isset($_GET['lives'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBERSEC OFC - LIVES</title>
-    <?php echo $anti_inspect_script; ?>
+    <title>CYBERSEC 4.0 - MINHAS LIVES</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            background: radial-gradient(ellipse at bottom, #0d1d31 0%, #0c0d13 100%);
-            color: #00ffff;
+            background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+            color: #00ff00;
             min-height: 100vh;
             padding: 30px;
-            position: relative;
         }
-        
-        .stars, .twinkling, .clouds {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
-        
-        .stars { background: #000 url('http://www.script-tutorials.com/demos/360/images/stars.png') repeat top center; }
-        .twinkling { background: transparent url('http://www.script-tutorials.com/demos/360/images/twinkling.png') repeat top center; animation: move-twink-back 200s linear infinite; }
-        .clouds { background: transparent url('http://www.script-tutorials.com/demos/360/images/clouds.png') repeat top center; opacity: 0.4; animation: move-clouds-back 200s linear infinite; }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            position: relative;
-            z-index: 10;
         }
         
         .header {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.8);
             border: 2px solid #00ff00;
-            border-radius: 30px;
+            border-radius: 20px;
             padding: 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 0 50px rgba(0, 255, 0, 0.3);
         }
         
         .header h1 {
             font-size: 32px;
-            color: #00ff00;
-            text-shadow: 0 0 20px #00ff00;
+            color: #00ffff;
         }
         
         .nav {
@@ -2888,24 +2796,40 @@ if (isset($_GET['lives'])) {
             gap: 15px;
         }
         
-        .nav-btn {
+        .btn {
             padding: 12px 25px;
             background: rgba(0, 0, 0, 0.7);
             border: 2px solid #00ff00;
-            border-radius: 15px;
+            border-radius: 10px;
             color: #00ff00;
             text-decoration: none;
             font-weight: bold;
             transition: all 0.3s;
         }
         
-        .nav-btn:hover {
+        .btn:hover {
             background: #00ff00;
             color: #000;
-            transform: translateY(-5px);
         }
         
-        .stats-grid {
+        .btn-export {
+            border-color: #ffff00;
+            color: #ffff00;
+        }
+        
+        .btn-export:hover {
+            background: #ffff00;
+            color: #000;
+        }
+        
+        .lives-container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 20px;
+            padding: 30px;
+        }
+        
+        .lives-stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 20px;
@@ -2913,9 +2837,9 @@ if (isset($_GET['lives'])) {
         }
         
         .stat-box {
-            background: rgba(10, 20, 30, 0.9);
-            border: 2px solid #ff00ff;
-            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #00ff00;
+            border-radius: 15px;
             padding: 20px;
             text-align: center;
         }
@@ -2923,7 +2847,7 @@ if (isset($_GET['lives'])) {
         .stat-value {
             font-size: 36px;
             font-weight: bold;
-            color: #ffff00;
+            color: #00ffff;
             margin: 10px 0;
         }
         
@@ -2933,16 +2857,16 @@ if (isset($_GET['lives'])) {
         }
         
         .live-card {
-            background: rgba(10, 20, 30, 0.9);
+            background: rgba(0, 0, 0, 0.7);
             border: 2px solid #00ff00;
-            border-radius: 20px;
+            border-radius: 15px;
             padding: 20px;
             transition: all 0.3s;
         }
         
         .live-card:hover {
             transform: translateX(10px);
-            border-color: #ff00ff;
+            border-color: #00ffff;
         }
         
         .live-header {
@@ -2951,7 +2875,7 @@ if (isset($_GET['lives'])) {
             align-items: center;
             margin-bottom: 15px;
             padding-bottom: 10px;
-            border-bottom: 1px solid #ff00ff;
+            border-bottom: 1px solid #00ff00;
         }
         
         .live-gate {
@@ -2963,13 +2887,14 @@ if (isset($_GET['lives'])) {
         }
         
         .live-date {
-            color: #ff00ff;
+            color: #00ffff;
+            font-size: 14px;
         }
         
         .live-bin {
             display: inline-block;
-            background: rgba(255, 0, 255, 0.2);
-            border: 1px solid #ff00ff;
+            background: rgba(0, 255, 0, 0.2);
+            border: 1px solid #00ff00;
             padding: 5px 15px;
             border-radius: 20px;
             margin: 10px 0;
@@ -2977,10 +2902,10 @@ if (isset($_GET['lives'])) {
         
         .live-response {
             background: rgba(0, 0, 0, 0.5);
-            border: 1px solid #00ffff;
+            border: 1px solid #00ff00;
             border-radius: 10px;
             padding: 15px;
-            font-family: monospace;
+            font-family: 'Courier New', monospace;
             font-size: 12px;
             white-space: pre-wrap;
             max-height: 200px;
@@ -2990,35 +2915,32 @@ if (isset($_GET['lives'])) {
         .empty {
             text-align: center;
             padding: 50px;
-            background: rgba(10,20,30,0.9);
-            border: 2px solid #ff00ff;
-            border-radius: 30px;
+            color: #ffff00;
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
-    <div class="stars"></div>
-    <div class="twinkling"></div>
-    <div class="clouds"></div>
-    
     <div class="container">
         <div class="header">
             <div>
                 <h1>📋 MINHAS LIVES</h1>
-                <div style="color: #ff00ff;">👤 <?php echo $_SESSION['username']; ?></div>
+                <div style="color: #00ff00;">👤 <?php echo $_SESSION['username']; ?></div>
             </div>
             <div class="nav">
-                <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="nav-btn">🏠 MENU</a>
-                <a href="?ggs" class="nav-btn">🛒 LOJA</a>
-                <a href="?lives&export=1" class="nav-btn">📥 EXPORTAR</a>
-                <a href="?logout" class="nav-btn">🚪 SAIR</a>
+                <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="btn">🏠 MENU</a>
+                <a href="?ggs" class="btn">🛒 LOJA</a>
+                <a href="?lives&export=1" class="btn btn-export">📥 EXPORTAR</a>
+                <a href="?logout" class="btn">🚪 SAIR</a>
             </div>
         </div>
         
         <?php if (empty($lives)): ?>
-        <div class="empty">
-            <div style="font-size: 64px; margin-bottom: 20px;">📭</div>
-            <h2 style="color: #ffff00;">Nenhuma live encontrada</h2>
+        <div class="lives-container">
+            <div class="empty">
+                <div style="font-size: 64px; margin-bottom: 20px;">📭</div>
+                <h2>Nenhuma live encontrada</h2>
+            </div>
         </div>
         <?php else: ?>
         
@@ -3028,42 +2950,44 @@ if (isset($_GET['lives'])) {
         $last_live = $lives[0]['created_at'];
         ?>
         
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div>✅ TOTAL</div>
-                <div class="stat-value"><?php echo $total_lives; ?></div>
-            </div>
-            <div class="stat-box">
-                <div>🔧 GATES</div>
-                <div class="stat-value"><?php echo $unique_gates; ?></div>
-            </div>
-            <div class="stat-box">
-                <div>⏱️ ÚLTIMA</div>
-                <div class="stat-value" style="font-size: 16px;"><?php echo date('d/m H:i', strtotime($last_live)); ?></div>
-            </div>
-        </div>
-        
-        <div class="lives-grid">
-            <?php foreach ($lives as $live): ?>
-            <div class="live-card">
-                <div class="live-header">
-                    <span class="live-gate"><?php echo strtoupper($live['gate']); ?></span>
-                    <span class="live-date"><?php echo date('d/m/Y H:i:s', strtotime($live['created_at'])); ?></span>
+        <div class="lives-container">
+            <div class="lives-stats">
+                <div class="stat-box">
+                    <div>✅ Total</div>
+                    <div class="stat-value"><?php echo $total_lives; ?></div>
                 </div>
-                
-                <div class="live-bin">
-                    💳 BIN: <?php echo $live['bin']; ?>
+                <div class="stat-box">
+                    <div>🔧 Gates</div>
+                    <div class="stat-value"><?php echo $unique_gates; ?></div>
                 </div>
-                
-                <div style="margin-bottom: 10px;">
-                    <strong>📱 Cartão:</strong> <?php echo substr($live['card'], 0, 6) . '******' . substr($live['card'], -4); ?>
-                </div>
-                
-                <div class="live-response">
-                    <?php echo nl2br(htmlspecialchars($live['response'])); ?>
+                <div class="stat-box">
+                    <div>⏱️ Última</div>
+                    <div class="stat-value" style="font-size: 16px;"><?php echo date('d/m/Y H:i', strtotime($last_live)); ?></div>
                 </div>
             </div>
-            <?php endforeach; ?>
+            
+            <div class="lives-grid">
+                <?php foreach ($lives as $live): ?>
+                <div class="live-card">
+                    <div class="live-header">
+                        <span class="live-gate"><?php echo strtoupper($live['gate']); ?></span>
+                        <span class="live-date"><?php echo date('d/m/Y H:i:s', strtotime($live['created_at'])); ?></span>
+                    </div>
+                    
+                    <div class="live-bin">
+                        💳 BIN: <?php echo $live['bin']; ?>
+                    </div>
+                    
+                    <div style="margin-bottom: 10px;">
+                        <strong>📱 Cartão:</strong> <?php echo substr($live['card'], 0, 6) . '******' . substr($live['card'], -4); ?>
+                    </div>
+                    
+                    <div class="live-response">
+                        <?php echo nl2br(htmlspecialchars($live['response'])); ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
         </div>
         <?php endif; ?>
     </div>
@@ -3096,59 +3020,36 @@ if (isset($_GET['tool'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $gate['name']; ?> - CYBERSEC OFC</title>
-    <?php echo $anti_inspect_script; ?>
+    <title><?php echo $gate['name']; ?> - CYBERSEC 4.0</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            background: radial-gradient(ellipse at bottom, #0d1d31 0%, #0c0d13 100%);
-            color: <?php echo $gate['color']; ?>;
+            background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+            color: #00ff00;
             min-height: 100vh;
             padding: 30px;
-            position: relative;
         }
-        
-        .stars, .twinkling, .clouds {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
-        
-        .stars { background: #000 url('http://www.script-tutorials.com/demos/360/images/stars.png') repeat top center; }
-        .twinkling { background: transparent url('http://www.script-tutorials.com/demos/360/images/twinkling.png') repeat top center; animation: move-twink-back 200s linear infinite; }
-        .clouds { background: transparent url('http://www.script-tutorials.com/demos/360/images/clouds.png') repeat top center; opacity: 0.4; animation: move-clouds-back 200s linear infinite; }
         
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            position: relative;
-            z-index: 10;
         }
         
         .header {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.8);
             border: 2px solid <?php echo $gate['color']; ?>;
-            border-radius: 30px;
+            border-radius: 20px;
             padding: 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 0 50px <?php echo $gate['color']; ?>33;
         }
         
         .header h1 {
@@ -3156,19 +3057,16 @@ if (isset($_GET['tool'])) {
             display: flex;
             align-items: center;
             gap: 15px;
-            color: <?php echo $gate['color']; ?>;
-            text-shadow: 0 0 20px <?php echo $gate['color']; ?>;
         }
         
         .user-info {
             background: rgba(0, 0, 0, 0.5);
-            border: 2px solid #ff00ff;
-            border-radius: 15px;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
             padding: 10px 20px;
             display: flex;
             align-items: center;
             gap: 10px;
-            color: #ff00ff;
         }
         
         .nav {
@@ -3182,9 +3080,9 @@ if (isset($_GET['tool'])) {
         .nav-btn {
             padding: 12px 25px;
             background: rgba(0, 0, 0, 0.7);
-            border: 2px solid <?php echo $gate['color']; ?>;
-            border-radius: 15px;
-            color: <?php echo $gate['color']; ?>;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            color: #00ff00;
             text-decoration: none;
             font-weight: bold;
             transition: all 0.3s;
@@ -3192,10 +3090,33 @@ if (isset($_GET['tool'])) {
         }
         
         .nav-btn:hover {
-            background: <?php echo $gate['color']; ?>;
+            background: #00ff00;
             color: #000;
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px <?php echo $gate['color']; ?>80;
+        }
+        
+        .nav-btn.start {
+            background: linear-gradient(45deg, #00ff00, #00ffff);
+            color: #000;
+        }
+        
+        .nav-btn.stop {
+            border-color: #ff0000;
+            color: #ff0000;
+        }
+        
+        .nav-btn.stop:hover {
+            background: #ff0000;
+            color: #000;
+        }
+        
+        .nav-btn.clear {
+            border-color: #ffff00;
+            color: #ffff00;
+        }
+        
+        .nav-btn.clear:hover {
+            background: #ffff00;
+            color: #000;
         }
         
         .loading {
@@ -3218,7 +3139,9 @@ if (isset($_GET['tool'])) {
             animation: spin 1s linear infinite;
         }
         
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         
         .status-bar {
             display: flex;
@@ -3228,25 +3151,30 @@ if (isset($_GET['tool'])) {
         
         .status-item {
             flex: 1;
-            background: rgba(10, 20, 30, 0.9);
+            background: rgba(0, 0, 0, 0.7);
             border: 2px solid;
-            border-radius: 20px;
-            padding: 20px;
+            border-radius: 10px;
+            padding: 15px;
             text-align: center;
         }
         
-        .status-credits { border-color: #ff00ff; color: #ff00ff; }
-        .status-cyber { border-color: #ffff00; color: #ffff00; }
+        .status-credits {
+            border-color: #ff00ff;
+        }
+        
+        .status-cyber {
+            border-color: #ffff00;
+        }
         
         textarea {
             width: 100%;
             height: 200px;
             background: rgba(0, 0, 0, 0.7);
             border: 2px solid <?php echo $gate['color']; ?>;
-            border-radius: 20px;
-            color: <?php echo $gate['color']; ?>;
+            border-radius: 15px;
+            color: #00ff00;
             padding: 20px;
-            font-family: monospace;
+            font-family: 'Courier New', monospace;
             font-size: 14px;
             resize: vertical;
             margin-bottom: 30px;
@@ -3260,15 +3188,15 @@ if (isset($_GET['tool'])) {
         }
         
         .stat-box {
-            background: rgba(10, 20, 30, 0.9);
+            background: rgba(0, 0, 0, 0.7);
             border: 2px solid <?php echo $gate['color']; ?>;
-            border-radius: 20px;
+            border-radius: 15px;
             padding: 20px;
             text-align: center;
         }
         
         .stat-label {
-            color: #ff00ff;
+            color: #00ffff;
             font-size: 14px;
             margin-bottom: 10px;
         }
@@ -3276,7 +3204,7 @@ if (isset($_GET['tool'])) {
         .stat-value {
             font-size: 32px;
             font-weight: bold;
-            color: <?php echo $gate['color']; ?>;
+            color: #00ff00;
         }
         
         .results-grid {
@@ -3286,26 +3214,30 @@ if (isset($_GET['tool'])) {
         }
         
         .result-box {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.7);
             border: 2px solid;
-            border-radius: 20px;
+            border-radius: 15px;
             padding: 20px;
             max-height: 500px;
             overflow-y: auto;
         }
         
-        .result-box.live { border-color: #00ff00; }
-        .result-box.die { border-color: #ff0000; }
+        .result-box.live {
+            border-color: #00ff00;
+        }
+        
+        .result-box.die {
+            border-color: #ff0000;
+        }
         
         .result-box h3 {
-            color: #ff00ff;
+            color: #00ffff;
             margin-bottom: 20px;
             padding-bottom: 10px;
             border-bottom: 2px solid;
             position: sticky;
             top: 0;
-            background: rgba(10, 20, 30, 0.95);
+            background: rgba(0, 0, 0, 0.9);
         }
         
         .result-item {
@@ -3314,13 +3246,18 @@ if (isset($_GET['tool'])) {
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 15px;
-            font-family: monospace;
+            font-family: 'Courier New', monospace;
             font-size: 12px;
             white-space: pre-wrap;
         }
         
-        .result-item.live { border-left-color: #00ff00; }
-        .result-item.die { border-left-color: #ff0000; }
+        .result-item.live {
+            border-left-color: #00ff00;
+        }
+        
+        .result-item.die {
+            border-left-color: #ff0000;
+        }
         
         .credits-counter {
             position: fixed;
@@ -3334,7 +3271,6 @@ if (isset($_GET['tool'])) {
             font-weight: bold;
             font-size: 18px;
             z-index: 100;
-            backdrop-filter: blur(10px);
         }
         
         .cyber-counter {
@@ -3349,15 +3285,10 @@ if (isset($_GET['tool'])) {
             font-weight: bold;
             font-size: 18px;
             z-index: 100;
-            backdrop-filter: blur(10px);
         }
     </style>
 </head>
 <body>
-    <div class="stars"></div>
-    <div class="twinkling"></div>
-    <div class="clouds"></div>
-    
     <?php if ($user_type === 'credits'): ?>
     <div class="credits-counter">
         💳 <span id="currentCredits"><?php echo number_format($user_credits, 2); ?></span>
@@ -3386,9 +3317,9 @@ if (isset($_GET['tool'])) {
             <a href="?admin=true" class="nav-btn">⚙ ADMIN</a>
             <?php endif; ?>
             <a href="?lives" class="nav-btn">📋 LIVES</a>
-            <button class="nav-btn" onclick="startCheck()">▶ INICIAR</button>
-            <button class="nav-btn" onclick="stopCheck()">⏹ PARAR</button>
-            <button class="nav-btn" onclick="clearAll()">🗑 LIMPAR</button>
+            <button class="nav-btn start" onclick="startCheck()">▶ INICIAR</button>
+            <button class="nav-btn stop" onclick="stopCheck()">⏹ PARAR</button>
+            <button class="nav-btn clear" onclick="clearAll()">🗑 LIMPAR</button>
             <a href="?logout" class="nav-btn">🚪 SAIR</a>
             <div class="loading" id="loading">
                 <div class="spinner"></div>
@@ -3399,14 +3330,14 @@ if (isset($_GET['tool'])) {
         <div class="status-bar">
             <?php if ($user_type === 'credits'): ?>
             <div class="status-item status-credits">
-                <div style="font-size: 14px; margin-bottom: 5px;">💰 CRÉDITOS</div>
-                <div style="font-size: 28px;"><?php echo number_format($user_credits, 2); ?></div>
+                <div style="color: #ff00ff;">💰 CRÉDITOS</div>
+                <div style="font-size: 24px;"><?php echo number_format($user_credits, 2); ?></div>
             </div>
             <?php endif; ?>
             
             <div class="status-item status-cyber">
-                <div style="font-size: 14px; margin-bottom: 5px;">🪙 MOEDAS CYBER</div>
-                <div style="font-size: 28px;"><?php echo number_format($user_cyber, 2); ?></div>
+                <div style="color: #ffff00;">🪙 MOEDAS CYBER</div>
+                <div style="font-size: 24px;"><?php echo number_format($user_cyber, 2); ?></div>
             </div>
         </div>
         
@@ -3423,11 +3354,11 @@ Exemplos:
                 <div class="stat-value" id="totalCount">0</div>
             </div>
             <div class="stat-box">
-                <div class="stat-label">✅ LIVES</div>
+                <div class="stat-label">✅ APROVADOS</div>
                 <div class="stat-value" id="liveCount">0</div>
             </div>
             <div class="stat-box">
-                <div class="stat-label">❌ DIES</div>
+                <div class="stat-label">❌ REPROVADOS</div>
                 <div class="stat-value" id="dieCount">0</div>
             </div>
             <div class="stat-box">
@@ -3526,8 +3457,7 @@ Exemplos:
             const item = items[currentIndex];
             
             try {
-                // URL com a rota "burlada"
-                const res = await fetch(`?c#$cybersecofc=1&tool=${toolName}&lista=${encodeURIComponent(item)}`);
+                const res = await fetch(`?action=check&tool=${toolName}&lista=${encodeURIComponent(item)}`);
                 const text = await res.text();
                 
                 const isLive = checkIfLive(text);
@@ -3536,7 +3466,6 @@ Exemplos:
                     const cost = isLive ? <?php echo LIVE_COST; ?> : <?php echo DIE_COST; ?>;
                     currentCredits -= cost;
                     if (currentCredits < 0) currentCredits = 0;
-                    updateCounters();
                 }
                 
                 addResult(item, text, isLive);
@@ -3598,90 +3527,48 @@ $ggs_available = count(getGGsByBin());
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBERSEC OFC - MENU</title>
-    <?php echo $anti_inspect_script; ?>
+    <title>CYBERSEC 4.0 - MENU PRINCIPAL</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
             min-height: 100vh;
-            background: radial-gradient(ellipse at bottom, #0d1d31 0%, #0c0d13 100%);
-            color: #00ffff;
+            background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+            color: #00ff00;
             padding: 30px;
-            position: relative;
-            overflow-x: hidden;
         }
-        
-        .stars, .twinkling, .clouds {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
-        
-        .stars { background: #000 url('http://www.script-tutorials.com/demos/360/images/stars.png') repeat top center; }
-        .twinkling { background: transparent url('http://www.script-tutorials.com/demos/360/images/twinkling.png') repeat top center; animation: move-twink-back 200s linear infinite; }
-        .clouds { background: transparent url('http://www.script-tutorials.com/demos/360/images/clouds.png') repeat top center; opacity: 0.4; animation: move-clouds-back 200s linear infinite; }
-        
-        @keyframes move-twink-back { from { background-position: 0 0; } to { background-position: -10000px 5000px; } }
-        @keyframes move-clouds-back { from { background-position: 0 0; } to { background-position: 10000px 0; } }
         
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            position: relative;
-            z-index: 10;
         }
         
         .header {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
-            border: 2px solid #ff00ff;
-            border-radius: 50px;
-            padding: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 30px;
+            padding: 50px;
             margin-bottom: 40px;
             text-align: center;
             position: relative;
-            box-shadow: 0 0 50px rgba(255, 0, 255, 0.3);
-            animation: float 6s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
         }
         
         .header h1 {
-            font-size: 72px;
+            font-size: 64px;
             color: #00ffff;
-            text-shadow: 0 0 30px #00ffff,
-                         0 0 60px #ff00ff;
+            text-shadow: 0 0 30px #00ffff;
             margin-bottom: 20px;
-            animation: textGlitch 3s infinite;
-        }
-        
-        @keyframes textGlitch {
-            0%, 100% { transform: skew(0deg, 0deg); }
-            95% { transform: skew(5deg, -2deg); text-shadow: 5px 0 #ff00ff, -5px 0 #00ffff; }
-            96% { transform: skew(-5deg, 2deg); text-shadow: -5px 0 #ff00ff, 5px 0 #00ffff; }
-            97% { transform: skew(0deg, 0deg); }
         }
         
         .header p {
-            color: #ff00ff;
-            font-size: 18px;
-            letter-spacing: 8px;
+            color: #00ff00;
+            font-size: 16px;
+            letter-spacing: 5px;
         }
         
         .user-info {
@@ -3689,20 +3576,21 @@ $ggs_available = count(getGGsByBin());
             top: 30px;
             right: 30px;
             background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #00ffff;
-            border-radius: 20px;
-            padding: 15px 25px;
+            border: 2px solid #00ff00;
+            border-radius: 15px;
+            padding: 12px 25px;
             display: flex;
             align-items: center;
             gap: 10px;
         }
         
         .user-badge {
-            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            background: linear-gradient(45deg, #00ff00, #00ffff);
             color: #000;
             padding: 5px 15px;
             border-radius: 20px;
             font-weight: bold;
+            font-size: 12px;
         }
         
         .status-bar {
@@ -3714,35 +3602,47 @@ $ggs_available = count(getGGsByBin());
         }
         
         .status-item {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.7);
             border: 2px solid;
-            border-radius: 30px;
-            padding: 25px 50px;
+            border-radius: 15px;
+            padding: 20px 40px;
             text-align: center;
-            min-width: 250px;
-            transition: all 0.3s;
+            min-width: 200px;
         }
         
-        .status-item:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 30px currentColor;
+        .status-credits {
+            border-color: #ff00ff;
         }
         
-        .status-credits { border-color: #ff00ff; color: #ff00ff; }
-        .status-cyber { border-color: #ffff00; color: #ffff00; }
-        .status-gates { border-color: #00ffff; color: #00ffff; }
+        .status-cyber {
+            border-color: #ffff00;
+        }
+        
+        .status-gates {
+            border-color: #00ff00;
+        }
         
         .status-label {
+            color: #00ffff;
             font-size: 14px;
             margin-bottom: 10px;
-            color: inherit;
         }
         
-        .status-value {
-            font-size: 36px;
+        .value {
+            font-size: 28px;
             font-weight: bold;
-            color: inherit;
+        }
+        
+        .status-credits .value {
+            color: #ff00ff;
+        }
+        
+        .status-cyber .value {
+            color: #ffff00;
+        }
+        
+        .status-gates .value {
+            color: #00ff00;
         }
         
         .nav {
@@ -3756,75 +3656,64 @@ $ggs_available = count(getGGsByBin());
         .nav-btn {
             padding: 15px 35px;
             background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #00ffff;
-            border-radius: 25px;
-            color: #00ffff;
+            border: 2px solid #00ff00;
+            border-radius: 15px;
+            color: #00ff00;
             text-decoration: none;
             font-weight: bold;
             transition: all 0.3s;
             display: flex;
             align-items: center;
             gap: 10px;
-            position: relative;
         }
         
         .nav-btn:hover {
-            background: #00ffff;
+            background: #00ff00;
             color: #000;
             transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0, 255, 255, 0.3);
         }
         
-        .ggs-badge {
-            background: #ff00ff;
+        .nav-btn.ggs {
+            border-color: #ffff00;
+            color: #ffff00;
+        }
+        
+        .nav-btn.ggs:hover {
+            background: #ffff00;
             color: #000;
-            padding: 2px 8px;
-            border-radius: 15px;
-            font-size: 12px;
-            margin-left: 5px;
+        }
+        
+        .nav-btn.lives {
+            border-color: #00ffff;
+            color: #00ffff;
+        }
+        
+        .nav-btn.lives:hover {
+            background: #00ffff;
+            color: #000;
         }
         
         .gates-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 25px;
             margin-top: 30px;
         }
         
         .gate-card {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.7);
             border: 2px solid;
-            border-radius: 30px;
+            border-radius: 20px;
             padding: 30px;
             text-decoration: none;
-            color: inherit;
+            color: #00ff00;
             transition: all 0.3s;
             position: relative;
-            overflow: hidden;
-        }
-        
-        .gate-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transform: rotate(45deg);
-            transition: 0.5s;
-            opacity: 0;
-        }
-        
-        .gate-card:hover::before {
-            opacity: 1;
-            left: 100%;
         }
         
         .gate-card:hover {
-            transform: translateY(-10px) scale(1.02);
-            box-shadow: 0 30px 60px rgba(0, 255, 255, 0.3);
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 255, 0, 0.3);
         }
         
         .gate-card.inactive {
@@ -3834,7 +3723,7 @@ $ggs_available = count(getGGsByBin());
         }
         
         .gate-icon {
-            font-size: 64px;
+            font-size: 48px;
             text-align: center;
             margin-bottom: 20px;
         }
@@ -3843,27 +3732,27 @@ $ggs_available = count(getGGsByBin());
             color: #00ffff;
             text-align: center;
             margin-bottom: 15px;
-            font-size: 22px;
+            font-size: 20px;
         }
         
         .gate-status {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 16px;
-            height: 16px;
+            top: 15px;
+            right: 15px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
         }
         
         .status-active {
             background: #00ff00;
-            box-shadow: 0 0 20px #00ff00;
+            box-shadow: 0 0 15px #00ff00;
             animation: pulse 2s infinite;
         }
         
         .status-inactive {
             background: #ff0000;
-            box-shadow: 0 0 20px #ff0000;
+            box-shadow: 0 0 15px #ff0000;
         }
         
         @keyframes pulse {
@@ -3879,47 +3768,44 @@ $ggs_available = count(getGGsByBin());
         }
         
         .info-card {
-            background: rgba(10, 20, 30, 0.9);
-            backdrop-filter: blur(10px);
-            border: 2px solid #ff00ff;
-            border-radius: 30px;
-            padding: 30px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff00;
+            border-radius: 20px;
+            padding: 25px;
             text-align: center;
-            transition: all 0.3s;
         }
         
-        .info-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0 30px #ff00ff;
-        }
-        
-        .info-icon {
-            font-size: 48px;
+        .info-card .icon {
+            font-size: 32px;
             margin-bottom: 15px;
         }
         
-        .info-title {
+        .info-card .title {
             color: #00ffff;
             font-size: 14px;
             margin-bottom: 10px;
         }
         
-        .info-value {
-            font-size: 28px;
+        .info-card .value {
+            font-size: 24px;
             font-weight: bold;
-            color: #ffff00;
+        }
+        
+        .ggs-badge {
+            background: #ffff00;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="stars"></div>
-    <div class="twinkling"></div>
-    <div class="clouds"></div>
-    
     <div class="container">
         <div class="header">
-            <h1>🚀 CYBERSEC OFC</h1>
-            <p>A ÚLTIMA GERAÇÃO</p>
+            <h1>🚀 CYBERSEC 4.0</h1>
+            <p>PREMIUM CHECKER SYSTEM</p>
             
             <div class="user-info">
                 <span>👤 <?php echo $_SESSION['username']; ?></span>
@@ -3933,36 +3819,36 @@ $ggs_available = count(getGGsByBin());
             <?php if ($user_type === 'credits'): ?>
             <div class="status-item status-credits">
                 <div class="status-label">💰 CRÉDITOS</div>
-                <div class="status-value"><?php echo number_format($user_credits, 2); ?></div>
+                <div class="value"><?php echo number_format($user_credits, 2); ?></div>
             </div>
             <?php endif; ?>
             
             <div class="status-item status-cyber">
                 <div class="status-label">🪙 MOEDAS CYBER</div>
-                <div class="status-value"><?php echo number_format($user_cyber, 2); ?></div>
+                <div class="value"><?php echo number_format($user_cyber, 2); ?></div>
             </div>
             
             <div class="status-item status-gates">
                 <div class="status-label">🔧 GATES ATIVAS</div>
-                <div class="status-value"><?php echo count($active_gates); ?>/<?php echo count($all_gates); ?></div>
+                <div class="value"><?php echo count($active_gates); ?>/<?php echo count($all_gates); ?></div>
             </div>
         </div>
         
         <div class="nav">
-            <a href="?ggs" class="nav-btn">
+            <a href="?ggs" class="nav-btn ggs">
                 🛒 LOJA GG
                 <?php if ($ggs_available > 0): ?>
                 <span class="ggs-badge"><?php echo $ggs_available; ?></span>
                 <?php endif; ?>
             </a>
-            <a href="?lives" class="nav-btn">📋 MINHAS LIVES</a>
+            <a href="?lives" class="nav-btn lives">📋 MINHAS LIVES</a>
             <?php if ($user_role === 'admin'): ?>
-            <a href="?admin=true" class="nav-btn">⚙ PAINEL ADMIN</a>
+            <a href="?admin=true" class="nav-btn">⚙ ADMIN</a>
             <?php endif; ?>
             <a href="?logout" class="nav-btn">🚪 SAIR</a>
         </div>
         
-        <h2 style="color: #ff00ff; margin-bottom: 20px; text-align: center;">🔧 CHECKERS DISPONÍVEIS</h2>
+        <h2 style="color: #00ffff; margin-bottom: 20px; text-align: center;">🔧 CHECKERS DISPONÍVEIS</h2>
         
         <div class="gates-grid">
             <?php foreach ($all_gates as $key => $gate): 
@@ -3972,38 +3858,43 @@ $ggs_available = count(getGGsByBin());
                 <div class="gate-icon"><?php echo $gate['icon']; ?></div>
                 <h3><?php echo $gate['name']; ?></h3>
                 <div class="gate-status <?php echo $isActive ? 'status-active' : 'status-inactive'; ?>"></div>
+                <p style="color: #00ff00; font-size: 12px; margin-top: 15px;">
+                    <?php echo $isActive ? '✅ Disponível' : '⛔ Desativado'; ?>
+                </p>
             </a>
             <?php endforeach; ?>
         </div>
         
         <div class="info-grid">
             <div class="info-card">
-                <div class="info-icon">📊</div>
-                <div class="info-title">TOTAL DE CHECKS</div>
-                <div class="info-value"><?php echo $current_user['total_checks'] ?? 0; ?></div>
+                <div class="icon">📊</div>
+                <div class="title">TOTAL DE CHECKS</div>
+                <div class="value"><?php echo $current_user['total_checks'] ?? 0; ?></div>
             </div>
             
             <div class="info-card">
-                <div class="info-icon">✅</div>
-                <div class="info-title">TOTAL DE LIVES</div>
-                <div class="info-value"><?php echo $current_user['total_lives'] ?? 0; ?></div>
+                <div class="icon">✅</div>
+                <div class="title">TOTAL DE LIVES</div>
+                <div class="value"><?php echo $current_user['total_lives'] ?? 0; ?></div>
             </div>
             
             <div class="info-card">
-                <div class="info-icon">📅</div>
-                <div class="info-title">MEMBRO DESDE</div>
-                <div class="info-value"><?php echo isset($current_user['created_at']) ? date('d/m/Y', strtotime($current_user['created_at'])) : date('d/m/Y'); ?></div>
+                <div class="icon">📅</div>
+                <div class="title">MEMBRO DESDE</div>
+                <div class="value"><?php echo isset($current_user['created_at']) ? date('d/m/Y', strtotime($current_user['created_at'])) : date('d/m/Y'); ?></div>
             </div>
             
             <div class="info-card">
-                <div class="info-icon">🔐</div>
-                <div class="info-title">ÚLTIMO ACESSO</div>
-                <div class="info-value"><?php echo isset($current_user['last_login']) ? date('d/m H:i', strtotime($current_user['last_login'])) : 'Primeiro'; ?></div>
+                <div class="icon">🔐</div>
+                <div class="title">ÚLTIMO ACESSO</div>
+                <div class="value"><?php echo isset($current_user['last_login']) ? date('d/m/Y H:i', strtotime($current_user['last_login'])) : 'Primeiro acesso'; ?></div>
             </div>
         </div>
     </div>
 </body>
 </html>
 <?php
+// Fim do código
+?>php
 // Fim do código
 ?>
