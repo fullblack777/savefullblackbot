@@ -572,7 +572,7 @@ if (empty($gates_config)) {
 }
 
 // ============================================
-// FUNÇÃO DO TELEGRAM (APENAS INFORMAÇÕES ESSENCIAIS)
+// FUNÇÃO DO TELEGRAM
 // ============================================
 function sendTelegramMessage($message) {
     $token = TELEGRAM_TOKEN;
@@ -642,11 +642,14 @@ if (isset($_POST['login'])) {
     
     $username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
+    $cybercap_verified = isset($_POST['cybercap_verified']) && $_POST['cybercap_verified'] === 'true';
     $cybercap_answer = intval($_POST['cybercap'] ?? -1);
     
     // Verificar CyberCap
-    if ($cybercap_answer !== $_SESSION['cybercap_result']) {
-        $login_error = 'CyberCap verification failed';
+    if (!$cybercap_verified) {
+        $login_error = 'Please complete the CyberCap verification';
+    } elseif ($cybercap_answer !== $_SESSION['cybercap_result']) {
+        $login_error = 'Incorrect CyberCap answer';
         // Gerar novo desafio
         $_SESSION['cybercap_num1'] = rand(1, 9);
         $_SESSION['cybercap_num2'] = rand(1, 9);
@@ -681,11 +684,14 @@ if (isset($_POST['register'])) {
     $username = preg_replace('/[^a-zA-Z0-9_]/', '', $_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
+    $cybercap_verified = isset($_POST['cybercap_verified']) && $_POST['cybercap_verified'] === 'true';
     $cybercap_answer = intval($_POST['cybercap'] ?? -1);
     
     // Verificar CyberCap
-    if ($cybercap_answer !== $_SESSION['cybercap_result']) {
-        $register_error = 'CyberCap verification failed';
+    if (!$cybercap_verified) {
+        $register_error = 'Please complete the CyberCap verification';
+    } elseif ($cybercap_answer !== $_SESSION['cybercap_result']) {
+        $register_error = 'Incorrect CyberCap answer';
         // Gerar novo desafio
         $_SESSION['cybercap_num1'] = rand(1, 9);
         $_SESSION['cybercap_num2'] = rand(1, 9);
@@ -1096,10 +1102,10 @@ if (!checkAccess()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBERSEC OFC - Enterprise Login</title>
+    <title>CYBERSEC OFC - Login</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -1108,95 +1114,76 @@ if (!checkAccess()) {
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #0a0c10;
-            color: #e1e4e8;
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0c0f;
+            color: #e4e6eb;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
             line-height: 1.5;
-        }
-
-        /* Background subtle grid */
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image: 
-                linear-gradient(rgba(0, 255, 255, 0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 255, 255, 0.02) 1px, transparent 1px);
-            background-size: 60px 60px;
-            pointer-events: none;
         }
 
         .container {
             width: 100%;
-            max-width: 440px;
+            max-width: 480px;
             padding: 20px;
-            position: relative;
-            z-index: 10;
         }
 
         .brand {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 32px;
         }
 
         .brand h1 {
-            font-size: 32px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #8b949e, #e4e6eb);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: -0.5px;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .brand p {
             color: #6e7681;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 400;
         }
 
-        .glass-card {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 255, 255, 0.1);
-            border-radius: 24px;
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
             padding: 32px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
         }
 
         .tabs {
             display: flex;
             gap: 8px;
-            margin-bottom: 32px;
-            background: rgba(0, 0, 0, 0.2);
+            margin-bottom: 24px;
+            background: #0d1117;
             padding: 4px;
-            border-radius: 12px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
         }
 
         .tab {
             flex: 1;
-            padding: 12px;
+            padding: 10px;
             text-align: center;
-            border-radius: 10px;
-            font-weight: 600;
+            border-radius: 6px;
             font-size: 14px;
+            font-weight: 500;
             color: #8b949e;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
 
         .tab.active {
-            background: rgba(0, 255, 255, 0.1);
-            color: #00ffff;
+            background: #21262d;
+            color: #e4e6eb;
         }
 
         .form {
@@ -1207,67 +1194,106 @@ if (!checkAccess()) {
             display: block;
         }
 
-        .input-group {
+        .form-group {
             margin-bottom: 20px;
         }
 
-        .input-group label {
+        .form-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 500;
             color: #8b949e;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
-        .input-group input {
+        .form-group input {
             width: 100%;
-            padding: 14px 16px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 14px;
+            background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 12px;
-            color: #e1e4e8;
-            font-size: 15px;
-            transition: all 0.2s ease;
+            border-radius: 8px;
+            color: #e4e6eb;
+            font-size: 14px;
+            transition: all 0.2s;
         }
 
-        .input-group input:focus {
+        .form-group input:focus {
             outline: none;
-            border-color: #00ffff;
-            box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.1);
+            border-color: #2f81f7;
+            box-shadow: 0 0 0 3px rgba(47, 129, 247, 0.1);
         }
 
-        .input-group input::placeholder {
-            color: #484f58;
+        .form-group input::placeholder {
+            color: #6e7681;
         }
 
-        /* CyberCap modern styling */
+        /* CyberCap - Estilo igual reCAPTCHA */
         .cybercap-container {
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid #30363d;
-            border-radius: 16px;
-            padding: 20px;
             margin: 24px 0;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            background: #0d1117;
+            overflow: hidden;
+        }
+
+        .cybercap-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .cybercap-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #30363d;
+            border-radius: 4px;
+            background: #0d1117;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .cybercap-checkbox.checked {
+            background: #238636;
+            border-color: #2ea043;
+        }
+
+        .cybercap-checkbox.checked::after {
+            content: "✓";
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
         }
 
         .cybercap-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 16px;
-            color: #8b949e;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+            color: #e4e6eb;
         }
 
-        .cybercap-title span {
-            color: #00ffff;
+        .cybercap-logo {
+            color: #8b949e;
+            font-size: 12px;
+            font-weight: 400;
         }
 
         .cybercap-challenge {
+            display: none;
+            padding: 20px;
+            background: #0d1117;
+        }
+
+        .cybercap-challenge.active {
+            display: block;
+        }
+
+        .challenge-content {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1275,127 +1301,99 @@ if (!checkAccess()) {
             margin-bottom: 16px;
         }
 
-        .cybercap-number {
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            width: 60px;
-            height: 60px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            font-weight: 700;
-            color: #000;
-            box-shadow: 0 10px 20px -10px rgba(0, 255, 255, 0.3);
-        }
-
-        .cybercap-plus {
+        .challenge-number {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px 24px;
             font-size: 24px;
-            font-weight: 700;
-            color: #00ffff;
+            font-weight: 600;
+            color: #2f81f7;
         }
 
-        .cybercap-equals {
-            font-size: 24px;
-            font-weight: 700;
-            color: #ff00ff;
-        }
-
-        .cybercap-input {
-            width: 100%;
-            padding: 14px;
-            background: #000;
-            border: 1px solid #00ffff;
-            border-radius: 12px;
-            color: #00ffff;
+        .challenge-operator {
             font-size: 20px;
             font-weight: 600;
+            color: #8b949e;
+        }
+
+        .challenge-input {
+            width: 100%;
+            padding: 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #e4e6eb;
+            font-size: 16px;
             text-align: center;
         }
 
-        .cybercap-input:focus {
+        .challenge-input:focus {
             outline: none;
-            box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.2);
+            border-color: #2f81f7;
         }
 
         .btn-primary {
             width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            padding: 14px;
+            background: #238636;
             border: none;
-            border-radius: 12px;
-            color: #000;
-            font-weight: 700;
+            border-radius: 8px;
+            color: #fff;
             font-size: 16px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
-            margin-top: 8px;
+            transition: background 0.2s;
+            margin: 8px 0 16px;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -10px rgba(0, 255, 255, 0.4);
+            background: #2ea043;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .message {
-            padding: 14px 16px;
-            border-radius: 12px;
-            margin-bottom: 24px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
             font-size: 14px;
             font-weight: 500;
         }
 
         .message.error {
-            background: rgba(255, 0, 0, 0.1);
-            border: 1px solid #ff4444;
-            color: #ff8888;
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid #f85149;
+            color: #f85149;
         }
 
         .message.success {
-            background: rgba(0, 255, 0, 0.1);
-            border: 1px solid #00ff00;
-            color: #88ff88;
+            background: rgba(46, 160, 67, 0.1);
+            border: 1px solid #2ea043;
+            color: #2ea043;
         }
 
-        .footer-links {
+        .footer {
             margin-top: 24px;
             text-align: center;
         }
 
-        .footer-links a {
+        .footer a {
             color: #6e7681;
             text-decoration: none;
             font-size: 13px;
-            font-weight: 500;
-            transition: color 0.2s ease;
+            transition: color 0.2s;
         }
 
-        .footer-links a:hover {
-            color: #00ffff;
-        }
-
-        .telegram-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 16px;
-            padding: 10px 20px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid #30363d;
-            border-radius: 30px;
-            color: #8b949e;
-            text-decoration: none;
-            font-size: 13px;
-            transition: all 0.2s ease;
-        }
-
-        .telegram-link:hover {
-            border-color: #00ffff;
-            color: #00ffff;
+        .footer a:hover {
+            color: #2f81f7;
         }
 
         .version {
-            margin-top: 24px;
+            margin-top: 20px;
             color: #30363d;
             font-size: 12px;
             text-align: center;
@@ -1409,11 +1407,11 @@ if (!checkAccess()) {
             <p>Enterprise Security Platform</p>
         </div>
 
-        <div class="glass-card">
+        <div class="card">
             <div class="tabs">
-                <div class="tab active" onclick="switchTab('login')">LOGIN</div>
-                <div class="tab" onclick="switchTab('register')">REGISTER</div>
-                <div class="tab" onclick="switchTab('shop')">SHOP</div>
+                <div class="tab active" onclick="switchTab('login')">Login</div>
+                <div class="tab" onclick="switchTab('register')">Register</div>
+                <div class="tab" onclick="switchTab('shop')">Shop</div>
             </div>
 
             <?php if (isset($login_error)): ?>
@@ -1429,90 +1427,95 @@ if (!checkAccess()) {
             <?php endif; ?>
 
             <!-- Login Form -->
-            <form class="form active" id="loginForm" method="POST">
-                <div class="input-group">
-                    <label>USERNAME</label>
+            <form class="form active" id="loginForm" method="POST" onsubmit="return validateCyberCap('login')">
+                <div class="form-group">
+                    <label>Username</label>
                     <input type="text" name="username" required placeholder="Enter your username">
                 </div>
-
-                <div class="input-group">
-                    <label>PASSWORD</label>
+                <div class="form-group">
+                    <label>Password</label>
                     <input type="password" name="password" required placeholder="Enter your password">
                 </div>
 
-                <!-- CyberCap -->
+                <!-- CyberCap Component -->
                 <div class="cybercap-container">
-                    <div class="cybercap-title">
-                        <span>🛡️</span> CYBERCAP VERIFICATION
+                    <div class="cybercap-header" onclick="toggleCyberCap('login')">
+                        <div class="cybercap-checkbox" id="loginCyberCapCheck"></div>
+                        <div class="cybercap-title">I'm not a robot</div>
+                        <div class="cybercap-logo">CyberCap</div>
                     </div>
-                    <div class="cybercap-challenge">
-                        <div class="cybercap-number"><?php echo $_SESSION['cybercap_num1']; ?></div>
-                        <div class="cybercap-plus">+</div>
-                        <div class="cybercap-number"><?php echo $_SESSION['cybercap_num2']; ?></div>
-                        <div class="cybercap-equals">=</div>
+                    <div class="cybercap-challenge" id="loginCyberCapChallenge">
+                        <div class="challenge-content">
+                            <span class="challenge-number"><?php echo $_SESSION['cybercap_num1']; ?></span>
+                            <span class="challenge-operator">+</span>
+                            <span class="challenge-number"><?php echo $_SESSION['cybercap_num2']; ?></span>
+                        </div>
+                        <input type="number" class="challenge-input" id="loginCyberCapAnswer" placeholder="Enter result" autocomplete="off">
+                        <input type="hidden" name="cybercap_verified" id="loginCyberCapVerified" value="false">
+                        <input type="hidden" name="cybercap" id="loginCyberCapValue" value="">
                     </div>
-                    <input type="number" name="cybercap" class="cybercap-input" required placeholder="?" autocomplete="off">
                 </div>
 
-                <button type="submit" name="login" class="btn-primary">ACCESS PLATFORM</button>
+                <button type="submit" name="login" class="btn-primary">Sign In</button>
             </form>
 
             <!-- Register Form -->
-            <form class="form" id="registerForm" method="POST">
-                <div class="input-group">
-                    <label>USERNAME</label>
+            <form class="form" id="registerForm" method="POST" onsubmit="return validateCyberCap('register')">
+                <div class="form-group">
+                    <label>Username</label>
                     <input type="text" name="username" required placeholder="Minimum 3 characters" pattern="[a-zA-Z0-9_]{3,}">
                 </div>
-
-                <div class="input-group">
-                    <label>PASSWORD</label>
+                <div class="form-group">
+                    <label>Password</label>
                     <input type="password" name="password" required placeholder="Minimum 4 characters" minlength="4">
                 </div>
-
-                <div class="input-group">
-                    <label>CONFIRM PASSWORD</label>
+                <div class="form-group">
+                    <label>Confirm Password</label>
                     <input type="password" name="confirm_password" required placeholder="Confirm your password">
                 </div>
 
-                <!-- CyberCap -->
+                <!-- CyberCap Component -->
                 <div class="cybercap-container">
-                    <div class="cybercap-title">
-                        <span>🛡️</span> CYBERCAP VERIFICATION
+                    <div class="cybercap-header" onclick="toggleCyberCap('register')">
+                        <div class="cybercap-checkbox" id="registerCyberCapCheck"></div>
+                        <div class="cybercap-title">I'm not a robot</div>
+                        <div class="cybercap-logo">CyberCap</div>
                     </div>
-                    <div class="cybercap-challenge">
-                        <div class="cybercap-number"><?php echo $_SESSION['cybercap_num1']; ?></div>
-                        <div class="cybercap-plus">+</div>
-                        <div class="cybercap-number"><?php echo $_SESSION['cybercap_num2']; ?></div>
-                        <div class="cybercap-equals">=</div>
+                    <div class="cybercap-challenge" id="registerCyberCapChallenge">
+                        <div class="challenge-content">
+                            <span class="challenge-number"><?php echo $_SESSION['cybercap_num1']; ?></span>
+                            <span class="challenge-operator">+</span>
+                            <span class="challenge-number"><?php echo $_SESSION['cybercap_num2']; ?></span>
+                        </div>
+                        <input type="number" class="challenge-input" id="registerCyberCapAnswer" placeholder="Enter result" autocomplete="off">
+                        <input type="hidden" name="cybercap_verified" id="registerCyberCapVerified" value="false">
+                        <input type="hidden" name="cybercap" id="registerCyberCapValue" value="">
                     </div>
-                    <input type="number" name="cybercap" class="cybercap-input" required placeholder="?" autocomplete="off">
                 </div>
 
-                <button type="submit" name="register" class="btn-primary">CREATE ACCOUNT</button>
+                <button type="submit" name="register" class="btn-primary">Create Account</button>
             </form>
 
             <!-- Shop Form -->
             <form class="form" id="shopForm" method="GET" action="?ggs">
                 <div style="text-align: center; padding: 20px 0;">
                     <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">🛒</div>
-                    <h3 style="color: #00ffff; margin-bottom: 12px;">GG Shop</h3>
+                    <h3 style="color: #e4e6eb; margin-bottom: 12px;">GG Shop</h3>
                     <p style="color: #8b949e; margin-bottom: 24px;">Access the premium card shop after login.</p>
-                    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 32px;">GO TO SHOP</button>
+                    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 32px;">Go to Shop</button>
                 </div>
             </form>
 
-            <div class="footer-links">
-                <a href="https://t.me/centralsavefullblack" target="_blank" class="telegram-link">
-                    <span>📱</span>
-                    @centralsavefullblack
-                </a>
+            <div class="footer">
+                <a href="https://t.me/centralsavefullblack" target="_blank">@centralsavefullblack</a>
             </div>
-
             <div class="version">v4.0 • Enterprise Edition</div>
         </div>
     </div>
 
     <script>
+        let activeCyberCap = null;
+
         function switchTab(tab) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
@@ -1520,14 +1523,75 @@ if (!checkAccess()) {
             if (tab === 'login') {
                 document.querySelectorAll('.tab')[0].classList.add('active');
                 document.getElementById('loginForm').classList.add('active');
+                resetCyberCap('login');
             } else if (tab === 'register') {
                 document.querySelectorAll('.tab')[1].classList.add('active');
                 document.getElementById('registerForm').classList.add('active');
+                resetCyberCap('register');
             } else if (tab === 'shop') {
                 document.querySelectorAll('.tab')[2].classList.add('active');
                 document.getElementById('shopForm').classList.add('active');
             }
         }
+
+        function toggleCyberCap(formId) {
+            const checkEl = document.getElementById(formId + 'CyberCapCheck');
+            const challengeEl = document.getElementById(formId + 'CyberCapChallenge');
+            
+            if (activeCyberCap && activeCyberCap !== formId) {
+                resetCyberCap(activeCyberCap);
+            }
+            
+            if (!checkEl.classList.contains('checked')) {
+                checkEl.classList.add('checked');
+                challengeEl.classList.add('active');
+                activeCyberCap = formId;
+            }
+        }
+
+        function resetCyberCap(formId) {
+            const checkEl = document.getElementById(formId + 'CyberCapCheck');
+            const challengeEl = document.getElementById(formId + 'CyberCapChallenge');
+            const verifiedEl = document.getElementById(formId + 'CyberCapVerified');
+            const answerEl = document.getElementById(formId + 'CyberCapAnswer');
+            
+            if (checkEl) checkEl.classList.remove('checked');
+            if (challengeEl) challengeEl.classList.remove('active');
+            if (verifiedEl) verifiedEl.value = 'false';
+            if (answerEl) answerEl.value = '';
+            
+            if (activeCyberCap === formId) {
+                activeCyberCap = null;
+            }
+        }
+
+        function validateCyberCap(formId) {
+            const verifiedEl = document.getElementById(formId + 'CyberCapVerified');
+            const answerEl = document.getElementById(formId + 'CyberCapAnswer');
+            const valueEl = document.getElementById(formId + 'CyberCapValue');
+            
+            if (!verifiedEl || verifiedEl.value !== 'true') {
+                alert('Please complete the CyberCap verification');
+                return false;
+            }
+            
+            if (answerEl && valueEl) {
+                valueEl.value = answerEl.value;
+            }
+            
+            return true;
+        }
+
+        // Handle CyberCap answer input
+        document.getElementById('loginCyberCapAnswer')?.addEventListener('input', function(e) {
+            const verifiedEl = document.getElementById('loginCyberCapVerified');
+            verifiedEl.value = 'true';
+        });
+
+        document.getElementById('registerCyberCapAnswer')?.addEventListener('input', function(e) {
+            const verifiedEl = document.getElementById('registerCyberCapVerified');
+            verifiedEl.value = 'true';
+        });
 
         // Form validation for register
         document.getElementById('registerForm')?.addEventListener('submit', function(e) {
@@ -1538,9 +1602,13 @@ if (!checkAccess()) {
             if (username.toLowerCase().startsWith('s') || username.toLowerCase().startsWith('c')) {
                 e.preventDefault();
                 alert('Username cannot start with S or C');
-            } else if (password !== confirm) {
+                return false;
+            }
+            
+            if (password !== confirm) {
                 e.preventDefault();
                 alert('Passwords do not match');
+                return false;
             }
         });
     </script>
@@ -1572,8 +1640,8 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBERSEC - Admin Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>CYBERSEC - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -1583,9 +1651,8 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #0a0c10;
-            color: #e1e4e8;
-            min-height: 100vh;
+            background: #0a0c0f;
+            color: #e4e6eb;
             padding: 30px;
         }
 
@@ -1595,11 +1662,10 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         }
 
         .header {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 24px 32px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
@@ -1608,10 +1674,8 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
 
         .header h1 {
             font-size: 24px;
-            font-weight: 600;
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 500;
+            color: #e4e6eb;
         }
 
         .header-actions {
@@ -1620,56 +1684,50 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         }
 
         .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 6px;
             font-size: 14px;
+            font-weight: 500;
             text-decoration: none;
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-        }
-
-        .btn-outline {
-            background: transparent;
-            border-color: #30363d;
+            transition: all 0.2s;
+            border: 1px solid #30363d;
+            background: #0d1117;
             color: #8b949e;
         }
 
-        .btn-outline:hover {
-            border-color: #00ffff;
-            color: #00ffff;
+        .btn:hover {
+            border-color: #2f81f7;
+            color: #e4e6eb;
         }
 
         .btn-danger {
-            background: rgba(255, 0, 0, 0.1);
-            border-color: #ff4444;
-            color: #ff8888;
+            border-color: #f85149;
+            color: #f85149;
         }
 
         .btn-danger:hover {
-            background: #ff4444;
-            color: #000;
+            background: #f85149;
+            color: #0d1117;
         }
 
-        .dashboard-grid {
+        .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 24px;
             margin-bottom: 30px;
         }
 
         .card {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 255, 255, 0.1);
-            border-radius: 16px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
             padding: 24px;
         }
 
         .card-header {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 20px;
             padding-bottom: 16px;
             border-bottom: 1px solid #30363d;
@@ -1677,8 +1735,8 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
 
         .card-header h2 {
             font-size: 18px;
-            font-weight: 600;
-            color: #00ffff;
+            font-weight: 500;
+            color: #e4e6eb;
         }
 
         .form-group {
@@ -1689,20 +1747,19 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             display: block;
             margin-bottom: 6px;
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 500;
             color: #8b949e;
-            text-transform: uppercase;
         }
 
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 12px;
+            background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 8px;
-            color: #e1e4e8;
+            border-radius: 6px;
+            color: #e4e6eb;
             font-size: 14px;
         }
 
@@ -1710,63 +1767,60 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #00ffff;
+            border-color: #2f81f7;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            border: none;
-            border-radius: 8px;
-            padding: 12px;
-            color: #000;
-            font-weight: 600;
             width: 100%;
+            padding: 12px;
+            background: #238636;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -10px rgba(0, 255, 255, 0.3);
+            background: #2ea043;
         }
 
-        .gates-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
+        .gates-scroll {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 8px;
+        }
+
+        .gates-row {
+            display: inline-flex;
+            gap: 12px;
         }
 
         .gate-item {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid;
-            border-radius: 8px;
-            padding: 12px;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 8px;
+            padding: 10px 16px;
+            background: #0d1117;
+            border: 1px solid;
+            border-radius: 6px;
             cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .gate-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.1);
         }
 
         .gate-status {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
         }
 
         .status-active {
-            background: #00ff00;
-            box-shadow: 0 0 10px #00ff00;
+            background: #2ea043;
+            box-shadow: 0 0 10px #2ea043;
         }
 
         .status-inactive {
-            background: #ff4444;
-            box-shadow: 0 0 10px #ff4444;
+            background: #f85149;
+            box-shadow: 0 0 10px #f85149;
         }
 
         .users-table {
@@ -1775,11 +1829,11 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         }
 
         .users-table th {
-            background: rgba(0, 0, 0, 0.3);
-            color: #00ffff;
-            padding: 12px;
             text-align: left;
-            font-weight: 600;
+            padding: 12px;
+            background: #0d1117;
+            color: #8b949e;
+            font-weight: 500;
             font-size: 13px;
         }
 
@@ -1790,45 +1844,44 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
 
         .badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 2px 8px;
+            border-radius: 12px;
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 500;
         }
 
         .badge-admin {
-            background: #ff4444;
-            color: #000;
+            background: #f85149;
+            color: #0d1117;
         }
 
         .badge-permanent {
-            background: #00ff00;
-            color: #000;
+            background: #2ea043;
+            color: #0d1117;
         }
 
         .badge-temporary {
-            background: #ffff00;
-            color: #000;
+            background: #f7b731;
+            color: #0d1117;
         }
 
         .badge-credits {
-            background: #ff00ff;
+            background: #2f81f7;
             color: #fff;
         }
 
         .action-btn {
             padding: 4px 8px;
-            background: transparent;
+            background: #0d1117;
             border: 1px solid #30363d;
             border-radius: 4px;
             color: #8b949e;
             cursor: pointer;
-            margin: 0 2px;
         }
 
         .action-btn:hover {
-            border-color: #00ffff;
-            color: #00ffff;
+            border-color: #2f81f7;
+            color: #e4e6eb;
         }
     </style>
 </head>
@@ -1837,26 +1890,26 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         <div class="header">
             <h1>⚙️ Admin Dashboard</h1>
             <div class="header-actions">
-                <span style="color: #ff00ff;">👑 <?php echo $_SESSION['username']; ?></span>
-                <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="btn btn-outline">Main Site</a>
+                <span style="color: #8b949e;">👑 <?php echo $_SESSION['username']; ?></span>
+                <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="btn">Main</a>
                 <a href="?logout" class="btn btn-danger">Logout</a>
             </div>
         </div>
 
         <?php if (isset($success_message)): ?>
-        <div style="background: rgba(0, 255, 0, 0.1); border: 1px solid #00ff00; border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; color: #88ff88;"><?php echo $success_message; ?></div>
+        <div style="background: rgba(46, 160, 67, 0.1); border: 1px solid #2ea043; border-radius: 6px; padding: 12px 20px; margin-bottom: 20px; color: #2ea043;"><?php echo $success_message; ?></div>
         <?php endif; ?>
         
         <?php if (isset($error_message)): ?>
-        <div style="background: rgba(255, 0, 0, 0.1); border: 1px solid #ff4444; border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; color: #ff8888;"><?php echo $error_message; ?></div>
+        <div style="background: rgba(248, 81, 73, 0.1); border: 1px solid #f85149; border-radius: 6px; padding: 12px 20px; margin-bottom: 20px; color: #f85149;"><?php echo $error_message; ?></div>
         <?php endif; ?>
 
-        <div class="dashboard-grid">
+        <div class="grid">
             <!-- Create User -->
             <div class="card">
                 <div class="card-header">
                     <span>👤</span>
-                    <h2>CREATE USER</h2>
+                    <h2>Create User</h2>
                 </div>
                 <form method="POST">
                     <input type="hidden" name="admin_action" value="add_user">
@@ -1871,9 +1924,9 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
                     <div class="form-group">
                         <label>Type</label>
                         <select name="type" id="userType" onchange="toggleUserFields()">
-                            <option value="permanent">♾️ Permanent</option>
-                            <option value="temporary">⏱️ Temporary</option>
-                            <option value="credits">💰 Credits</option>
+                            <option value="permanent">Permanent</option>
+                            <option value="temporary">Temporary</option>
+                            <option value="credits">Credits</option>
                         </select>
                     </div>
                     <div class="form-group" id="creditsField">
@@ -1888,23 +1941,25 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
                         <label>Hours</label>
                         <input type="number" name="hours" value="24">
                     </div>
-                    <button type="submit" class="btn-primary">CREATE USER</button>
+                    <button type="submit" class="btn-primary">Create</button>
                 </form>
             </div>
 
-            <!-- Manage Gates -->
+            <!-- Gate Management -->
             <div class="card">
                 <div class="card-header">
                     <span>🔧</span>
-                    <h2>GATE MANAGEMENT</h2>
+                    <h2>Gate Management</h2>
                 </div>
-                <div class="gates-grid">
-                    <?php foreach ($all_gates as $key => $gate): ?>
-                    <div class="gate-item" style="border-color: <?php echo $gate['color']; ?>40" onclick="toggleGate('<?php echo $key; ?>')">
-                        <span><?php echo $gate['icon']; ?> <?php echo $gate['name']; ?></span>
-                        <div class="gate-status <?php echo ($gates_config[$key] ?? false) ? 'status-active' : 'status-inactive'; ?>" id="status-<?php echo $key; ?>"></div>
+                <div class="gates-scroll">
+                    <div class="gates-row">
+                        <?php foreach ($all_gates as $key => $gate): ?>
+                        <div class="gate-item" style="border-color: <?php echo $gate['color']; ?>40" onclick="toggleGate('<?php echo $key; ?>')">
+                            <span><?php echo $gate['icon']; ?> <?php echo $gate['name']; ?></span>
+                            <div class="gate-status <?php echo ($gates_config[$key] ?? false) ? 'status-active' : 'status-inactive'; ?>" id="status-<?php echo $key; ?>"></div>
+                        </div>
+                        <?php endforeach; ?>
                     </div>
-                    <?php endforeach; ?>
                 </div>
             </div>
 
@@ -1912,15 +1967,15 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             <div class="card">
                 <div class="card-header">
                     <span>📥</span>
-                    <h2>ADD GGS</h2>
+                    <h2>Add GGs</h2>
                 </div>
                 <form method="POST">
                     <input type="hidden" name="admin_action" value="add_ggs">
                     <div class="form-group">
-                        <label>Cards (format: number|month|year|cvv)</label>
-                        <textarea name="ggs" required placeholder="4532015112830366|12|2027|123&#10;5425233430109903|01|2028|456"></textarea>
+                        <label>Cards (number|month|year|cvv)</label>
+                        <textarea name="ggs" required rows="5" placeholder="4532015112830366|12|2027|123&#10;5425233430109903|01|2028|456"></textarea>
                     </div>
-                    <button type="submit" class="btn-primary">ADD CARDS</button>
+                    <button type="submit" class="btn-primary">Add Cards</button>
                 </form>
             </div>
 
@@ -1928,92 +1983,96 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             <div class="card">
                 <div class="card-header">
                     <span>💰</span>
-                    <h2>BIN PRICES</h2>
+                    <h2>BIN Prices</h2>
                 </div>
-                <table style="width: 100%;">
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>BIN</th>
+                                <th>Available</th>
+                                <th>Price</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($bins as $bin): ?>
+                            <tr>
+                                <td><?php echo $bin['bin']; ?></td>
+                                <td><?php echo $bin['available']; ?>/<?php echo $bin['total_cards']; ?></td>
+                                <td>R$ <?php echo number_format($bin['price'], 2); ?></td>
+                                <td>
+                                    <form method="POST" style="display: flex; gap: 5px;">
+                                        <input type="hidden" name="admin_action" value="update_bin_price">
+                                        <input type="hidden" name="bin" value="<?php echo $bin['bin']; ?>">
+                                        <input type="number" name="price" step="0.01" value="<?php echo $bin['price']; ?>" min="0.01" style="width: 80px; background: #0d1117; border: 1px solid #30363d; color: #e4e6eb; padding: 4px; border-radius: 4px;">
+                                        <button type="submit" style="background: #238636; border: none; color: #fff; padding: 4px 8px; border-radius: 4px; cursor: pointer;">OK</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="card">
+            <div class="card-header">
+                <span>📋</span>
+                <h2>Users</h2>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="users-table">
                     <thead>
                         <tr>
-                            <th>BIN</th>
-                            <th>Available</th>
-                            <th>Price</th>
-                            <th></th>
+                            <th>Username</th>
+                            <th>Type</th>
+                            <th>Credits</th>
+                            <th>Cyber</th>
+                            <th>Expires</th>
+                            <th>Lives</th>
+                            <th>Checks</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($bins as $bin): ?>
+                        <?php foreach ($users as $username => $data): ?>
                         <tr>
-                            <td><?php echo $bin['bin']; ?></td>
-                            <td><?php echo $bin['available']; ?>/<?php echo $bin['total_cards']; ?></td>
-                            <td>R$ <?php echo number_format($bin['price'], 2); ?></td>
                             <td>
-                                <form method="POST" style="display: flex; gap: 5px;">
-                                    <input type="hidden" name="admin_action" value="update_bin_price">
-                                    <input type="hidden" name="bin" value="<?php echo $bin['bin']; ?>">
-                                    <input type="number" name="price" step="0.01" value="<?php echo $bin['price']; ?>" min="0.01" style="width: 80px; background: #000; border: 1px solid #30363d; color: #00ffff; padding: 4px; border-radius: 4px;">
-                                    <button type="submit" style="background: #00ffff; border: none; color: #000; padding: 4px 8px; border-radius: 4px; cursor: pointer;">OK</button>
+                                <?php echo $username; ?>
+                                <?php if ($data['role'] === 'admin'): ?>
+                                <span class="badge badge-admin">ADMIN</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><span class="badge badge-<?php echo $data['type']; ?>"><?php echo strtoupper($data['type']); ?></span></td>
+                            <td><?php echo number_format($data['credits'], 2); ?></td>
+                            <td><?php echo number_format($data['cyber_money'], 2); ?></td>
+                            <td>
+                                <?php if ($data['type'] === 'temporary' && $data['expires_at']): ?>
+                                    <?php echo date('d/m H:i', strtotime($data['expires_at'])); ?>
+                                <?php else: ?>
+                                    -
+                                <?php endif; ?>
+                            </td>
+                            <td><?php echo $data['total_lives'] ?? 0; ?></td>
+                            <td><?php echo $data['total_checks'] ?? 0; ?></td>
+                            <td>
+                                <?php if ($username !== 'admin'): ?>
+                                <button class="action-btn" onclick="editUser('<?php echo $username; ?>', <?php echo $data['credits']; ?>, <?php echo $data['cyber_money']; ?>)">✏️</button>
+                                <form method="POST" style="display: inline;">
+                                    <input type="hidden" name="admin_action" value="remove">
+                                    <input type="hidden" name="username" value="<?php echo $username; ?>">
+                                    <button class="action-btn" onclick="return confirm('Remove user?')">🗑️</button>
                                 </form>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
-        </div>
-
-        <!-- Users Table -->
-        <div class="card" style="margin-top: 30px;">
-            <div class="card-header">
-                <span>📋</span>
-                <h2>USERS</h2>
-            </div>
-            <table class="users-table">
-                <thead>
-                    <tr>
-                        <th>USERNAME</th>
-                        <th>TYPE</th>
-                        <th>CREDITS</th>
-                        <th>CYBER</th>
-                        <th>EXPIRES</th>
-                        <th>LIVES</th>
-                        <th>CHECKS</th>
-                        <th>ACTIONS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($users as $username => $data): ?>
-                    <tr>
-                        <td>
-                            <?php echo $username; ?>
-                            <?php if ($data['role'] === 'admin'): ?>
-                            <span class="badge badge-admin">ADMIN</span>
-                            <?php endif; ?>
-                        </td>
-                        <td><span class="badge badge-<?php echo $data['type']; ?>"><?php echo strtoupper($data['type']); ?></span></td>
-                        <td><?php echo number_format($data['credits'], 2); ?></td>
-                        <td><?php echo number_format($data['cyber_money'], 2); ?></td>
-                        <td>
-                            <?php if ($data['type'] === 'temporary' && $data['expires_at']): ?>
-                                <?php echo date('d/m H:i', strtotime($data['expires_at'])); ?>
-                            <?php else: ?>
-                                -
-                            <?php endif; ?>
-                        </td>
-                        <td><?php echo $data['total_lives'] ?? 0; ?></td>
-                        <td><?php echo $data['total_checks'] ?? 0; ?></td>
-                        <td>
-                            <?php if ($username !== 'admin'): ?>
-                            <button class="action-btn" onclick="editUser('<?php echo $username; ?>', <?php echo $data['credits']; ?>, <?php echo $data['cyber_money']; ?>)">✏️</button>
-                            <form method="POST" style="display: inline;">
-                                <input type="hidden" name="admin_action" value="remove">
-                                <input type="hidden" name="username" value="<?php echo $username; ?>">
-                                <button class="action-btn" onclick="return confirm('Remove user?')">🗑️</button>
-                            </form>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
         </div>
     </div>
 
@@ -2063,7 +2122,7 @@ exit;
 }
 
 // ============================================
-// LOJA DE GGS (versão profissional)
+// LOJA DE GGS (com rolagem horizontal)
 // ============================================
 if (isset($_GET['ggs'])) {
     $ggs_by_bin = getGGsByBin();
@@ -2075,7 +2134,7 @@ if (isset($_GET['ggs'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CYBERSEC - GG Shop</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -2085,9 +2144,8 @@ if (isset($_GET['ggs'])) {
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #0a0c10;
-            color: #e1e4e8;
-            min-height: 100vh;
+            background: #0a0c0f;
+            color: #e4e6eb;
             padding: 30px;
         }
 
@@ -2097,11 +2155,10 @@ if (isset($_GET['ggs'])) {
         }
 
         .header {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 24px 32px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
@@ -2110,19 +2167,17 @@ if (isset($_GET['ggs'])) {
 
         .header h1 {
             font-size: 24px;
-            font-weight: 600;
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 500;
+            color: #e4e6eb;
         }
 
         .balance {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid #ffff00;
-            border-radius: 8px;
-            padding: 10px 20px;
-            color: #ffff00;
-            font-weight: 600;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 8px 16px;
+            color: #2ea043;
+            font-weight: 500;
         }
 
         .nav {
@@ -2132,65 +2187,72 @@ if (isset($_GET['ggs'])) {
         }
 
         .nav-btn {
-            padding: 10px 20px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 8px;
+            border-radius: 6px;
             color: #8b949e;
             text-decoration: none;
+            font-size: 14px;
             font-weight: 500;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
 
         .nav-btn:hover,
         .nav-btn.active {
-            border-color: #00ffff;
-            color: #00ffff;
+            border-color: #2f81f7;
+            color: #e4e6eb;
         }
 
-        .bins-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
+        .bins-scroll {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 8px;
             margin-top: 20px;
         }
 
+        .bins-row {
+            display: inline-flex;
+            gap: 16px;
+        }
+
         .bin-card {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 24px;
+            display: inline-block;
+            width: 280px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
+            white-space: normal;
         }
 
         .bin-card:hover {
-            transform: translateY(-4px);
-            border-color: #00ffff;
-            box-shadow: 0 10px 30px -15px rgba(0, 255, 255, 0.3);
+            border-color: #2f81f7;
+            transform: translateY(-2px);
         }
 
         .bin-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .bin-number {
-            font-size: 20px;
-            font-weight: 700;
-            color: #00ffff;
+            font-size: 18px;
+            font-weight: 600;
+            color: #e4e6eb;
         }
 
         .bin-price {
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            color: #000;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 14px;
+            background: #238636;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
         }
 
         .bin-info {
@@ -2204,11 +2266,11 @@ if (isset($_GET['ggs'])) {
         }
 
         .cards-table th {
-            background: rgba(0, 0, 0, 0.3);
-            color: #00ffff;
-            padding: 12px;
             text-align: left;
-            font-weight: 600;
+            padding: 12px;
+            background: #0d1117;
+            color: #8b949e;
+            font-weight: 500;
             font-size: 13px;
         }
 
@@ -2225,7 +2287,6 @@ if (isset($_GET['ggs'])) {
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
             align-items: center;
             justify-content: center;
             z-index: 1000;
@@ -2236,10 +2297,10 @@ if (isset($_GET['ggs'])) {
         }
 
         .modal-content {
-            background: #1a1e24;
-            border: 1px solid #00ffff;
-            border-radius: 16px;
-            padding: 32px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
             max-width: 500px;
             width: 90%;
             max-height: 80vh;
@@ -2256,43 +2317,43 @@ if (isset($_GET['ggs'])) {
         }
 
         .modal-header h2 {
-            color: #00ffff;
-            font-size: 20px;
+            font-size: 18px;
+            font-weight: 500;
+            color: #e4e6eb;
         }
 
         .modal-close {
-            font-size: 24px;
+            font-size: 20px;
             cursor: pointer;
             color: #8b949e;
         }
 
         .modal-close:hover {
-            color: #ff4444;
+            color: #f85149;
         }
 
         .card-item {
-            background: rgba(0, 0, 0, 0.3);
+            background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 16px;
             margin-bottom: 12px;
         }
 
         .btn-buy {
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            border: none;
-            border-radius: 6px;
-            padding: 8px 20px;
-            color: #000;
-            font-weight: 600;
-            cursor: pointer;
             width: 100%;
-            margin-top: 10px;
+            padding: 10px;
+            background: #238636;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 12px;
         }
 
         .btn-buy:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+            background: #2ea043;
         }
 
         .btn-buy:disabled {
@@ -2308,8 +2369,8 @@ if (isset($_GET['ggs'])) {
         }
 
         .page-btn {
-            padding: 6px 12px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 10px;
+            background: #0d1117;
             border: 1px solid #30363d;
             border-radius: 4px;
             color: #8b949e;
@@ -2317,8 +2378,8 @@ if (isset($_GET['ggs'])) {
         }
 
         .page-btn.active {
-            border-color: #00ffff;
-            color: #00ffff;
+            border-color: #2f81f7;
+            color: #e4e6eb;
         }
     </style>
 </head>
@@ -2330,75 +2391,79 @@ if (isset($_GET['ggs'])) {
         </div>
 
         <div class="nav">
-            <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="nav-btn">Main Menu</a>
-            <a href="?ggs" class="nav-btn <?php echo !isset($_GET['mycards']) ? 'active' : ''; ?>">Buy Cards</a>
+            <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="nav-btn">Main</a>
+            <a href="?ggs" class="nav-btn <?php echo !isset($_GET['mycards']) ? 'active' : ''; ?>">Buy</a>
             <a href="?ggs&mycards=1" class="nav-btn <?php echo isset($_GET['mycards']) ? 'active' : ''; ?>">My Cards</a>
             <a href="?lives" class="nav-btn">Lives</a>
             <a href="?logout" class="nav-btn">Logout</a>
         </div>
 
         <?php if (isset($_SESSION['purchase_result'])): ?>
-        <div style="background: rgba(0, 255, 0, 0.1); border: 1px solid #00ff00; border-radius: 8px; padding: 16px; margin-bottom: 20px; white-space: pre-wrap; font-family: monospace;">
+        <div style="background: rgba(46, 160, 67, 0.1); border: 1px solid #2ea043; border-radius: 6px; padding: 16px; margin-bottom: 20px; white-space: pre-wrap; font-family: monospace;">
             <?php echo nl2br($_SESSION['purchase_result']); ?>
         </div>
         <?php unset($_SESSION['purchase_result']); ?>
         <?php endif; ?>
 
         <?php if (isset($_GET['mycards'])): ?>
-            <div class="card" style="background: rgba(22,27,34,0.8); border: 1px solid rgba(0,255,255,0.1); border-radius: 12px; padding: 24px;">
-                <h2 style="color: #00ffff; margin-bottom: 20px;">📋 My Purchased Cards</h2>
+            <div style="background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 24px;">
+                <h2 style="font-size: 18px; font-weight: 500; color: #e4e6eb; margin-bottom: 20px;">📋 My Purchased Cards</h2>
                 <?php if (empty($purchased_cards)): ?>
                 <div style="text-align: center; padding: 40px; color: #8b949e;">
                     <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
                     <h3>No cards purchased yet</h3>
                 </div>
                 <?php else: ?>
-                <table class="cards-table">
-                    <thead>
-                        <tr>
-                            <th>DATE</th>
-                            <th>BIN</th>
-                            <th>CARD</th>
-                            <th>EXPIRY</th>
-                            <th>CVV</th>
-                            <th>PRICE</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($purchased_cards as $card): ?>
-                        <tr>
-                            <td><?php echo date('d/m/Y H:i', strtotime($card['purchased_at'])); ?></td>
-                            <td><?php echo $card['bin']; ?></td>
-                            <td><?php echo $card['card_number']; ?></td>
-                            <td><?php echo $card['expiry']; ?></td>
-                            <td><?php echo $card['cvv']; ?></td>
-                            <td>R$ <?php echo number_format($card['price'], 2); ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <div style="overflow-x: auto;">
+                    <table class="cards-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>BIN</th>
+                                <th>Card</th>
+                                <th>Expiry</th>
+                                <th>CVV</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($purchased_cards as $card): ?>
+                            <tr>
+                                <td><?php echo date('d/m/Y H:i', strtotime($card['purchased_at'])); ?></td>
+                                <td><?php echo $card['bin']; ?></td>
+                                <td><?php echo $card['card_number']; ?></td>
+                                <td><?php echo $card['expiry']; ?></td>
+                                <td><?php echo $card['cvv']; ?></td>
+                                <td>R$ <?php echo number_format($card['price'], 2); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
                 <?php endif; ?>
             </div>
         <?php else: ?>
-            <h2 style="color: #00ffff; margin-bottom: 20px;">🔍 Available Cards by BIN</h2>
+            <h2 style="font-size: 18px; font-weight: 500; color: #e4e6eb; margin-bottom: 16px;">🔍 Available Cards</h2>
             <?php if (empty($ggs_by_bin)): ?>
-            <div style="text-align: center; padding: 60px; background: rgba(22,27,34,0.8); border-radius: 12px;">
+            <div style="text-align: center; padding: 60px; background: #161b22; border: 1px solid #30363d; border-radius: 8px;">
                 <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
-                <h3 style="color: #8b949e;">No cards available at the moment</h3>
+                <h3 style="color: #8b949e;">No cards available</h3>
             </div>
             <?php else: ?>
-            <div class="bins-grid">
-                <?php foreach ($ggs_by_bin as $bin): ?>
-                <div class="bin-card" onclick="showCards('<?php echo $bin['bin']; ?>')">
-                    <div class="bin-header">
-                        <span class="bin-number">BIN <?php echo $bin['bin']; ?></span>
-                        <span class="bin-price">R$ <?php echo number_format($bin['price'], 2); ?></span>
+            <div class="bins-scroll">
+                <div class="bins-row">
+                    <?php foreach ($ggs_by_bin as $bin): ?>
+                    <div class="bin-card" onclick="showCards('<?php echo $bin['bin']; ?>')">
+                        <div class="bin-header">
+                            <span class="bin-number">BIN <?php echo $bin['bin']; ?></span>
+                            <span class="bin-price">R$ <?php echo number_format($bin['price'], 2); ?></span>
+                        </div>
+                        <div class="bin-info">
+                            <span>📦 Available: <?php echo $bin['total']; ?></span>
+                        </div>
                     </div>
-                    <div class="bin-info">
-                        <span>📦 Available: <?php echo $bin['total']; ?></span>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-                <?php endforeach; ?>
             </div>
             <?php endif; ?>
         <?php endif; ?>
@@ -2409,7 +2474,7 @@ if (isset($_GET['ggs'])) {
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalBinTitle">Cards</h2>
-                <span class="modal-close" onclick="closeModal()">✖</span>
+                <span class="modal-close" onclick="closeModal()">✕</span>
             </div>
             <div id="cardsList"></div>
             <div class="pagination" id="pagination"></div>
@@ -2429,7 +2494,7 @@ if (isset($_GET['ggs'])) {
                 .then(response => response.json())
                 .then(cards => {
                     allCards = cards;
-                    document.getElementById('modalBinTitle').textContent = `BIN ${bin} Cards`;
+                    document.getElementById('modalBinTitle').textContent = `BIN ${bin}`;
                     renderCards();
                     document.getElementById('cardsModal').classList.add('active');
                 });
@@ -2451,7 +2516,7 @@ if (isset($_GET['ggs'])) {
                             <input type="hidden" name="purchase_gg" value="1">
                             <input type="hidden" name="gg_id" value="${card.id}">
                             <button type="submit" class="btn-buy" ${card.price > <?php echo $user_cyber; ?> ? 'disabled' : ''}>
-                                PURCHASE
+                                Purchase
                             </button>
                         </form>
                     </div>
@@ -2508,7 +2573,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_ggs' && isset($_GET['bin'
 }
 
 // ============================================
-// HISTÓRICO DE LIVES (versão profissional)
+// HISTÓRICO DE LIVES
 // ============================================
 if (isset($_GET['lives'])) {
     $lives = getUserLives($_SESSION['username']);
@@ -2534,7 +2599,7 @@ if (isset($_GET['lives'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CYBERSEC - Live History</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -2544,9 +2609,8 @@ if (isset($_GET['lives'])) {
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #0a0c10;
-            color: #e1e4e8;
-            min-height: 100vh;
+            background: #0a0c0f;
+            color: #e4e6eb;
             padding: 30px;
         }
 
@@ -2556,11 +2620,10 @@ if (isset($_GET['lives'])) {
         }
 
         .header {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 24px 32px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
@@ -2569,10 +2632,8 @@ if (isset($_GET['lives'])) {
 
         .header h1 {
             font-size: 24px;
-            font-weight: 600;
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 500;
+            color: #e4e6eb;
         }
 
         .nav {
@@ -2581,44 +2642,43 @@ if (isset($_GET['lives'])) {
         }
 
         .btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 500;
-            text-decoration: none;
-            transition: all 0.2s ease;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 6px 12px;
+            background: #0d1117;
             border: 1px solid #30363d;
+            border-radius: 4px;
             color: #8b949e;
+            text-decoration: none;
+            font-size: 13px;
+            transition: all 0.2s;
         }
 
         .btn:hover {
-            border-color: #00ffff;
-            color: #00ffff;
+            border-color: #2f81f7;
+            color: #e4e6eb;
         }
 
         .btn-export {
-            border-color: #ffff00;
-            color: #ffff00;
+            border-color: #2ea043;
+            color: #2ea043;
         }
 
         .btn-export:hover {
-            background: #ffff00;
-            color: #000;
+            background: #2ea043;
+            color: #0d1117;
         }
 
         .lives-container {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 255, 255, 0.1);
-            border-radius: 12px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
             padding: 24px;
         }
 
         .live-card {
-            background: rgba(0, 0, 0, 0.3);
+            background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 20px;
+            border-radius: 6px;
+            padding: 16px;
             margin-bottom: 16px;
         }
 
@@ -2632,32 +2692,32 @@ if (isset($_GET['lives'])) {
         }
 
         .live-gate {
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            color: #000;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 13px;
+            background: #238636;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
         }
 
         .live-date {
             color: #8b949e;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .live-detail {
-            margin-bottom: 8px;
-            font-size: 14px;
+            margin-bottom: 6px;
+            font-size: 13px;
         }
 
         .live-detail strong {
-            color: #00ffff;
+            color: #2f81f7;
         }
 
         .live-response {
-            background: #000;
+            background: #0a0c0f;
             border: 1px solid #30363d;
-            border-radius: 6px;
+            border-radius: 4px;
             padding: 12px;
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 12px;
@@ -2677,7 +2737,7 @@ if (isset($_GET['lives'])) {
         <div class="header">
             <h1>📋 Live History</h1>
             <div class="nav">
-                <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="btn">Main Menu</a>
+                <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="btn">Main</a>
                 <a href="?ggs" class="btn">Shop</a>
                 <a href="?lives&export=1" class="btn btn-export">Export</a>
                 <a href="?logout" class="btn">Logout</a>
@@ -2723,7 +2783,7 @@ exit;
 }
 
 // ============================================
-// FERRAMENTA ESPECÍFICA (versão profissional)
+// FERRAMENTA ESPECÍFICA
 // ============================================
 if (isset($_GET['tool'])) {
     $selected_tool = $_GET['tool'];
@@ -2746,7 +2806,7 @@ if (isset($_GET['tool'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $gate['name']; ?> - CYBERSEC</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -2756,9 +2816,8 @@ if (isset($_GET['tool'])) {
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #0a0c10;
-            color: #e1e4e8;
-            min-height: 100vh;
+            background: #0a0c0f;
+            color: #e4e6eb;
             padding: 30px;
         }
 
@@ -2768,11 +2827,10 @@ if (isset($_GET['tool'])) {
         }
 
         .header {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid <?php echo $gate['color']; ?>40;
-            border-radius: 16px;
-            padding: 24px 32px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
@@ -2781,7 +2839,7 @@ if (isset($_GET['tool'])) {
 
         .header h1 {
             font-size: 24px;
-            font-weight: 600;
+            font-weight: 500;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -2792,13 +2850,11 @@ if (isset($_GET['tool'])) {
         }
 
         .user-info {
-            background: rgba(0, 0, 0, 0.3);
+            background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 8px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 14px;
         }
 
         .nav {
@@ -2809,53 +2865,54 @@ if (isset($_GET['tool'])) {
         }
 
         .nav-btn {
-            padding: 8px 20px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 6px 16px;
+            background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 6px;
+            border-radius: 4px;
             color: #8b949e;
             text-decoration: none;
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
 
         .nav-btn:hover {
-            border-color: #00ffff;
-            color: #00ffff;
+            border-color: #2f81f7;
+            color: #e4e6eb;
         }
 
         .nav-btn.start {
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            border: none;
-            color: #000;
+            background: #238636;
+            border-color: #2ea043;
+            color: #fff;
         }
 
         .nav-btn.stop {
-            border-color: #ff4444;
-            color: #ff8888;
+            border-color: #f85149;
+            color: #f85149;
         }
 
         .nav-btn.stop:hover {
-            background: #ff4444;
-            color: #000;
+            background: #f85149;
+            color: #0d1117;
         }
 
         .nav-btn.clear {
-            border-color: #ffff00;
-            color: #ffff00;
+            border-color: #f7b731;
+            color: #f7b731;
         }
 
         .nav-btn.clear:hover {
-            background: #ffff00;
-            color: #000;
+            background: #f7b731;
+            color: #0d1117;
         }
 
         .loading {
             display: none;
             align-items: center;
             gap: 8px;
-            color: #ffff00;
+            color: #2f81f7;
         }
 
         .loading.active {
@@ -2865,7 +2922,7 @@ if (isset($_GET['tool'])) {
         .spinner {
             width: 16px;
             height: 16px;
-            border: 2px solid #ffff00;
+            border: 2px solid #2f81f7;
             border-top-color: transparent;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -2878,12 +2935,12 @@ if (isset($_GET['tool'])) {
         textarea {
             width: 100%;
             height: 200px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid <?php echo $gate['color']; ?>40;
-            border-radius: 8px;
-            color: #e1e4e8;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #e4e6eb;
             padding: 16px;
-            font-family: 'Monaco', 'Menlo', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 13px;
             resize: vertical;
             margin-bottom: 30px;
@@ -2891,7 +2948,7 @@ if (isset($_GET['tool'])) {
 
         textarea:focus {
             outline: none;
-            border-color: <?php echo $gate['color']; ?>;
+            border-color: #2f81f7;
         }
 
         .stats-grid {
@@ -2902,24 +2959,23 @@ if (isset($_GET['tool'])) {
         }
 
         .stat-box {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid <?php echo $gate['color']; ?>40;
-            border-radius: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
             padding: 16px;
             text-align: center;
         }
 
         .stat-label {
             color: #8b949e;
-            font-size: 13px;
+            font-size: 12px;
             margin-bottom: 8px;
         }
 
         .stat-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: <?php echo $gate['color']; ?>;
+            font-size: 24px;
+            font-weight: 600;
+            color: #e4e6eb;
         }
 
         .results-grid {
@@ -2929,74 +2985,75 @@ if (isset($_GET['tool'])) {
         }
 
         .result-box {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(10px);
+            background: #161b22;
             border: 1px solid;
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 20px;
             max-height: 500px;
             overflow-y: auto;
         }
 
         .result-box.live {
-            border-color: #00ff00;
+            border-color: #2ea043;
         }
 
         .result-box.die {
-            border-color: #ff4444;
+            border-color: #f85149;
         }
 
         .result-box h3 {
-            color: <?php echo $gate['color']; ?>;
+            color: #e4e6eb;
+            font-size: 16px;
+            font-weight: 500;
             margin-bottom: 16px;
             padding-bottom: 8px;
             border-bottom: 1px solid #30363d;
             position: sticky;
             top: 0;
-            background: rgba(22, 27, 34, 0.95);
+            background: #161b22;
         }
 
         .result-item {
-            background: rgba(0, 0, 0, 0.3);
+            background: #0d1117;
             border-left: 4px solid;
             border-radius: 4px;
             padding: 12px;
             margin-bottom: 12px;
-            font-family: 'Monaco', 'Menlo', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 12px;
             white-space: pre-wrap;
         }
 
         .result-item.live {
-            border-left-color: #00ff00;
+            border-left-color: #2ea043;
         }
 
         .result-item.die {
-            border-left-color: #ff4444;
+            border-left-color: #f85149;
         }
 
         .credits-counter, .cyber-counter {
             position: fixed;
             bottom: 30px;
-            background: rgba(22, 27, 34, 0.9);
-            backdrop-filter: blur(10px);
+            background: #161b22;
             border: 1px solid;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-weight: 600;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
             z-index: 100;
         }
 
         .credits-counter {
             right: 30px;
-            border-color: #ff00ff;
-            color: #ff00ff;
+            border-color: #f7b731;
+            color: #f7b731;
         }
 
         .cyber-counter {
             left: 30px;
-            border-color: #ffff00;
-            color: #ffff00;
+            border-color: #2f81f7;
+            color: #2f81f7;
         }
     </style>
 </head>
@@ -3017,13 +3074,11 @@ if (isset($_GET['tool'])) {
                 <span><?php echo $gate['icon']; ?></span>
                 <?php echo $gate['name']; ?>
             </h1>
-            <div class="user-info">
-                <span>👤 <?php echo $_SESSION['username']; ?></span>
-            </div>
+            <div class="user-info">👤 <?php echo $_SESSION['username']; ?></div>
         </div>
 
         <div class="nav">
-            <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="nav-btn">Main Menu</a>
+            <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="nav-btn">Main</a>
             <a href="?ggs" class="nav-btn">Shop</a>
             <?php if ($user_role === 'admin'): ?>
             <a href="?admin=true" class="nav-btn">Admin</a>
@@ -3039,12 +3094,7 @@ if (isset($_GET['tool'])) {
             </div>
         </div>
 
-        <textarea id="dataInput" placeholder="Paste cards (one per line):
-number|month|year|cvv
-
-Example:
-4532015112830366|12|2027|123
-5425233430109903|01|2028|456"></textarea>
+        <textarea id="dataInput" placeholder="Paste cards (one per line):&#10;number|month|year|cvv"></textarea>
 
         <div class="stats-grid">
             <div class="stat-box">
@@ -3215,7 +3265,7 @@ exit;
 }
 
 // ============================================
-// MENU PRINCIPAL (versão profissional)
+// MENU PRINCIPAL (com rolagem horizontal)
 // ============================================
 $gates_config = loadGatesConfig();
 $active_gates = array_filter($gates_config, function($v) { return $v; });
@@ -3226,8 +3276,8 @@ $ggs_available = count(getGGsByBin());
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBERSEC - Main Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>CYBERSEC - Main</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -3237,9 +3287,8 @@ $ggs_available = count(getGGsByBin());
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #0a0c10;
-            color: #e1e4e8;
-            min-height: 100vh;
+            background: #0a0c0f;
+            color: #e4e6eb;
             padding: 30px;
         }
 
@@ -3249,256 +3298,256 @@ $ggs_available = count(getGGsByBin());
         }
 
         .header {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 255, 255, 0.1);
-            border-radius: 16px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
             padding: 40px;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             text-align: center;
             position: relative;
         }
 
         .header h1 {
-            font-size: 42px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            color: #e4e6eb;
+            margin-bottom: 8px;
         }
 
         .header p {
             color: #8b949e;
             font-size: 14px;
-            letter-spacing: 2px;
         }
 
         .user-info {
             position: absolute;
             top: 20px;
             right: 30px;
-            background: rgba(0, 0, 0, 0.3);
+            background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 8px 16px;
+            border-radius: 6px;
+            padding: 6px 12px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .user-badge {
-            background: linear-gradient(135deg, #00ffff, #ff00ff);
-            color: #000;
-            padding: 2px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
+            background: #2f81f7;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
         }
 
         .status-bar {
             display: flex;
             justify-content: center;
-            gap: 30px;
-            margin-bottom: 40px;
-            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
         .status-item {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid;
-            border-radius: 12px;
-            padding: 20px 40px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 16px 32px;
             text-align: center;
-            min-width: 200px;
+            min-width: 160px;
         }
 
         .status-credits {
-            border-color: #ff00ff;
+            border-color: #f7b731;
         }
 
         .status-cyber {
-            border-color: #ffff00;
+            border-color: #2f81f7;
         }
 
         .status-gates {
-            border-color: #00ffff;
+            border-color: #2ea043;
         }
 
         .status-label {
             color: #8b949e;
-            font-size: 13px;
-            margin-bottom: 8px;
+            font-size: 12px;
+            margin-bottom: 6px;
         }
 
         .value {
-            font-size: 28px;
-            font-weight: 700;
+            font-size: 20px;
+            font-weight: 600;
         }
 
         .status-credits .value {
-            color: #ff00ff;
+            color: #f7b731;
         }
 
         .status-cyber .value {
-            color: #ffff00;
+            color: #2f81f7;
         }
 
         .status-gates .value {
-            color: #00ffff;
+            color: #2ea043;
         }
 
         .nav {
             display: flex;
-            gap: 16px;
-            margin-bottom: 50px;
+            gap: 12px;
+            margin-bottom: 40px;
             justify-content: center;
-            flex-wrap: wrap;
         }
 
         .nav-btn {
-            padding: 12px 28px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 20px;
+            background: #0d1117;
             border: 1px solid #30363d;
-            border-radius: 8px;
+            border-radius: 6px;
             color: #8b949e;
             text-decoration: none;
+            font-size: 14px;
             font-weight: 500;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .nav-btn:hover {
-            border-color: #00ffff;
-            color: #00ffff;
-            transform: translateY(-2px);
+            border-color: #2f81f7;
+            color: #e4e6eb;
         }
 
         .nav-btn.ggs {
-            border-color: #ffff00;
-            color: #ffff00;
+            border-color: #2ea043;
+            color: #2ea043;
         }
 
         .nav-btn.ggs:hover {
-            background: #ffff00;
-            color: #000;
+            background: #2ea043;
+            color: #0d1117;
         }
 
         .nav-btn.lives {
-            border-color: #ff00ff;
-            color: #ff00ff;
+            border-color: #f7b731;
+            color: #f7b731;
         }
 
         .nav-btn.lives:hover {
-            background: #ff00ff;
-            color: #000;
+            background: #f7b731;
+            color: #0d1117;
         }
 
-        .gates-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
+        .gates-scroll {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 16px;
             margin-top: 20px;
         }
 
+        .gates-row {
+            display: inline-flex;
+            gap: 16px;
+        }
+
         .gate-card {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(10px);
+            display: inline-block;
+            width: 220px;
+            background: #161b22;
             border: 1px solid;
-            border-radius: 12px;
-            padding: 24px;
+            border-radius: 6px;
+            padding: 20px;
             text-decoration: none;
-            color: #e1e4e8;
-            transition: all 0.2s ease;
+            color: #e4e6eb;
+            transition: all 0.2s;
             position: relative;
+            white-space: normal;
         }
 
         .gate-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 30px -15px rgba(0, 255, 255, 0.3);
+            transform: translateY(-2px);
+            border-color: #2f81f7 !important;
         }
 
         .gate-card.inactive {
             opacity: 0.5;
-            filter: grayscale(1);
             pointer-events: none;
         }
 
         .gate-icon {
-            font-size: 32px;
+            font-size: 24px;
             text-align: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .gate-card h3 {
-            color: #00ffff;
-            text-align: center;
-            margin-bottom: 12px;
             font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 8px;
+            color: #e4e6eb;
         }
 
         .gate-status {
             position: absolute;
-            top: 16px;
-            right: 16px;
-            width: 8px;
-            height: 8px;
+            top: 12px;
+            right: 12px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
         }
 
         .status-active {
-            background: #00ff00;
-            box-shadow: 0 0 10px #00ff00;
+            background: #2ea043;
+            box-shadow: 0 0 8px #2ea043;
         }
 
         .status-inactive {
-            background: #ff4444;
-            box-shadow: 0 0 10px #ff4444;
+            background: #f85149;
+            box-shadow: 0 0 8px #f85149;
         }
 
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-top: 50px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-top: 40px;
         }
 
         .info-card {
-            background: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 24px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 16px;
             text-align: center;
         }
 
         .info-card .icon {
-            font-size: 24px;
-            margin-bottom: 12px;
+            font-size: 20px;
+            margin-bottom: 8px;
         }
 
         .info-card .title {
             color: #8b949e;
-            font-size: 13px;
-            margin-bottom: 8px;
+            font-size: 12px;
+            margin-bottom: 4px;
         }
 
         .info-card .value {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 600;
-            color: #00ffff;
+            color: #e4e6eb;
         }
 
         .ggs-badge {
-            background: #ffff00;
-            color: #000;
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: 11px;
-            margin-left: 8px;
+            background: #2ea043;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            margin-left: 6px;
         }
     </style>
 </head>
@@ -3506,7 +3555,7 @@ $ggs_available = count(getGGsByBin());
     <div class="container">
         <div class="header">
             <h1>🚀 CYBERSEC 4.0</h1>
-            <p>ENTERPRISE CHECKER PLATFORM</p>
+            <p>Enterprise Checker Platform</p>
 
             <div class="user-info">
                 <span>👤 <?php echo $_SESSION['username']; ?></span>
@@ -3519,75 +3568,77 @@ $ggs_available = count(getGGsByBin());
         <div class="status-bar">
             <?php if ($user_type === 'credits'): ?>
             <div class="status-item status-credits">
-                <div class="status-label">CREDITS</div>
+                <div class="status-label">Credits</div>
                 <div class="value"><?php echo number_format($user_credits, 2); ?></div>
             </div>
             <?php endif; ?>
 
             <div class="status-item status-cyber">
-                <div class="status-label">CYBER COINS</div>
+                <div class="status-label">Cyber Coins</div>
                 <div class="value"><?php echo number_format($user_cyber, 2); ?></div>
             </div>
 
             <div class="status-item status-gates">
-                <div class="status-label">ACTIVE GATES</div>
+                <div class="status-label">Active Gates</div>
                 <div class="value"><?php echo count($active_gates); ?>/<?php echo count($all_gates); ?></div>
             </div>
         </div>
 
         <div class="nav">
             <a href="?ggs" class="nav-btn ggs">
-                🛒 GG SHOP
+                🛒 GG Shop
                 <?php if ($ggs_available > 0): ?>
                 <span class="ggs-badge"><?php echo $ggs_available; ?></span>
                 <?php endif; ?>
             </a>
-            <a href="?lives" class="nav-btn lives">📋 LIVE HISTORY</a>
+            <a href="?lives" class="nav-btn lives">📋 Live History</a>
             <?php if ($user_role === 'admin'): ?>
-            <a href="?admin=true" class="nav-btn">⚙ ADMIN</a>
+            <a href="?admin=true" class="nav-btn">⚙ Admin</a>
             <?php endif; ?>
-            <a href="?logout" class="nav-btn">🚪 LOGOUT</a>
+            <a href="?logout" class="nav-btn">🚪 Logout</a>
         </div>
 
-        <h2 style="color: #00ffff; margin-bottom: 20px; text-align: center;">🔧 AVAILABLE CHECKERS</h2>
+        <h2 style="font-size: 18px; font-weight: 500; color: #e4e6eb; margin-bottom: 16px;">🔧 Available Checkers</h2>
 
-        <div class="gates-grid">
-            <?php foreach ($all_gates as $key => $gate): 
-                $isActive = $gates_config[$key] ?? false;
-            ?>
-            <a href="?tool=<?php echo $key; ?>" class="gate-card <?php echo !$isActive ? 'inactive' : ''; ?>" style="border-color: <?php echo $gate['color']; ?>40">
-                <div class="gate-icon"><?php echo $gate['icon']; ?></div>
-                <h3><?php echo $gate['name']; ?></h3>
-                <div class="gate-status <?php echo $isActive ? 'status-active' : 'status-inactive'; ?>"></div>
-                <p style="color: #8b949e; font-size: 12px; text-align: center;">
-                    <?php echo $isActive ? '● Active' : '○ Inactive'; ?>
-                </p>
-            </a>
-            <?php endforeach; ?>
+        <div class="gates-scroll">
+            <div class="gates-row">
+                <?php foreach ($all_gates as $key => $gate): 
+                    $isActive = $gates_config[$key] ?? false;
+                ?>
+                <a href="?tool=<?php echo $key; ?>" class="gate-card <?php echo !$isActive ? 'inactive' : ''; ?>" style="border-color: <?php echo $gate['color']; ?>40">
+                    <div class="gate-icon"><?php echo $gate['icon']; ?></div>
+                    <h3><?php echo $gate['name']; ?></h3>
+                    <div class="gate-status <?php echo $isActive ? 'status-active' : 'status-inactive'; ?>"></div>
+                    <p style="color: #8b949e; font-size: 11px; text-align: center;">
+                        <?php echo $isActive ? 'Active' : 'Inactive'; ?>
+                    </p>
+                </a>
+                <?php endforeach; ?>
+            </div>
         </div>
 
         <div class="info-grid">
             <div class="info-card">
                 <div class="icon">📊</div>
-                <div class="title">TOTAL CHECKS</div>
+                <div class="title">Total Checks</div>
                 <div class="value"><?php echo $current_user['total_checks'] ?? 0; ?></div>
             </div>
 
             <div class="info-card">
                 <div class="icon">✅</div>
-                <div class="title">TOTAL LIVES</div>
+                <div class="title">Total Lives</div>
                 <div class="value"><?php echo $current_user['total_lives'] ?? 0; ?></div>
             </div>
 
             <div class="info-card">
                 <div class="icon">📅</div>
-                <div class="title">MEMBER SINCE</div>
+                <div class="title">Member Since</div>
                 <div class="value"><?php echo isset($current_user['created_at']) ? date('d/m/Y', strtotime($current_user['created_at'])) : date('d/m/Y'); ?></div>
             </div>
 
             <div class="info-card">
                 <div class="icon">🔐</div>
-                <div class="title">LAST LOGIN</div>
+                <div class="title">Last Login</div>
                 <div class="value"><?php echo isset($current_user['last_login']) ? date('d/m/Y H:i', strtotime($current_user['last_login'])) : 'First access'; ?></div>
             </div>
         </div>
