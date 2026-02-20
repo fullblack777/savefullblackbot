@@ -1,6 +1,9 @@
 <?php
 error_reporting(0);
 
+$delay = rand(20, 40);
+sleep($delay);
+
 $lista = str_replace(array(" "), '/', $_GET['lista']);
 $regex = str_replace(array(':',";","|",",","=>","-"," ",'/','|||'), "|", $lista);
 
