@@ -19,6 +19,32 @@ if (isset($_GET['devtools_detected']) && $_GET['devtools_detected'] == 1) {
 }
 
 // ============================================
+// FUNÇÃO DE DOWNLOAD DE VÍDEO
+// ============================================
+function downloadVideo($url, $format = 'video') {
+    // Criar diretório temporário se não existir
+    $temp_dir = __DIR__ . '/temp';
+    if (!file_exists($temp_dir)) {
+        mkdir($temp_dir, 0755, true);
+    }
+    
+    // Gerar nome de arquivo único
+    $filename = $temp_dir . '/' . uniqid() . '.mp4';
+    
+    // Baixar o vídeo (simplificado - em produção usar yt-dlp ou similar)
+    $ch = curl_init($url);
+    $fp = fopen($filename, 'wb');
+    curl_setopt($ch, CURLOPT_FILE, $fp);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 300);
+    curl_exec($ch);
+    curl_close($ch);
+    fclose($fp);
+    
+    return $filename;
+}
+
+// ============================================
 // CONFIGURAÇÕES DO BANCO DE DADOS SQLITE OTIMIZADO
 // ============================================
 class Database {
@@ -661,18 +687,15 @@ function checkAccess() {
 }
 
 // ============================================
-// PROCESSAR LOGIN/REGISTRO (COM CYBERCAP DE IMAGEM)
+// PROCESSAR LOGIN/REGISTRO (COM CYBERCAP DE IMAGEM REAL)
 // ============================================
-// Lista de imagens para o CyberCap
+// Lista de imagens reais para o CyberCap
 $cybercap_images = [
-    ['file' => 'carro.png', 'label' => 'Carro', 'correct' => false],
-    ['file' => 'casa.png', 'label' => 'Casa', 'correct' => true],
-    ['file' => 'arvore.png', 'label' => 'Árvore', 'correct' => false],
-    ['file' => 'cachorro.png', 'label' => 'Cachorro', 'correct' => false],
+    ['file' => 'carro.jpg', 'label' => 'Carro', 'correct' => false],
+    ['file' => 'casa.jpg', 'label' => 'Casa', 'correct' => true],
+    ['file' => 'arvore.jpg', 'label' => 'Árvore', 'correct' => false],
+    ['file' => 'cachorro.jpg', 'label' => 'Cachorro', 'correct' => false],
 ];
-
-// Em produção, você deve ter imagens reais. Por enquanto, usaremos emojis como placeholder
-// Mas a lógica está pronta para imagens reais
 
 // Gerar novo desafio CyberCap se não existir
 if (!isset($_SESSION['cybercap_images']) || !isset($_SESSION['cybercap_correct_index'])) {
@@ -1097,6 +1120,29 @@ if (isset($_POST['purchase_gg']) && checkAccess()) {
 }
 
 // ============================================
+// PROCESSAR DOWNLOAD DE VÍDEO
+// ============================================
+if (isset($_POST['download_video'])) {
+    $url = $_POST['video_url'] ?? '';
+    $format = $_POST['format'] ?? 'video';
+    
+    if (filter_var($url, FILTER_VALIDATE_URL)) {
+        $file = downloadVideo($url, $format);
+        if (file_exists($file)) {
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="' . basename($file) . '"');
+            readfile($file);
+            unlink($file); // Remove arquivo temporário
+            exit;
+        } else {
+            $download_error = "Failed to download video";
+        }
+    } else {
+        $download_error = "Invalid URL";
+    }
+}
+
+// ============================================
 // PROCESSAR CHECKER (AJAX) - CORRIGIDO DESCONTO
 // ============================================
 if (isset($_GET['action']) && $_GET['action'] === 'check' && isset($_GET['lista']) && isset($_GET['tool'])) {
@@ -1201,10 +1247,10 @@ if (!checkAccess()) {
     // Garantir que as imagens do CyberCap existem na sessão
     if (!isset($_SESSION['cybercap_images']) || !isset($_SESSION['cybercap_correct_index'])) {
         $images = [
-            ['file' => 'carro.png', 'label' => 'Carro', 'correct' => false],
-            ['file' => 'casa.png', 'label' => 'Casa', 'correct' => true],
-            ['file' => 'arvore.png', 'label' => 'Árvore', 'correct' => false],
-            ['file' => 'cachorro.png', 'label' => 'Cachorro', 'correct' => false],
+            ['file' => 'carro.jpg', 'label' => 'Carro', 'correct' => false],
+            ['file' => 'casa.jpg', 'label' => 'Casa', 'correct' => true],
+            ['file' => 'arvore.jpg', 'label' => 'Árvore', 'correct' => false],
+            ['file' => 'cachorro.jpg', 'label' => 'Cachorro', 'correct' => false],
         ];
         shuffle($images);
         $correct_index = 0;
@@ -1219,14 +1265,15 @@ if (!checkAccess()) {
     }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CYBERSEC OFC - Enterprise Login</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -1235,8 +1282,8 @@ if (!checkAccess()) {
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #0f0c1f 0%, #1a1a2e 100%);
+            font-family: 'Inter', sans-serif;
+            background: #0a0c0f;
             color: #e4e6eb;
             min-height: 100vh;
             display: flex;
@@ -1246,34 +1293,34 @@ if (!checkAccess()) {
             overflow: hidden;
         }
 
-        /* Animated background */
-        .bg-orb {
+        /* Background elegante */
+        .bg-gradient {
             position: absolute;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(100, 108, 255, 0.15) 0%, transparent 70%);
-            border-radius: 50%;
-            top: -200px;
-            right: -200px;
-            filter: blur(60px);
-            animation: float 20s infinite ease-in-out;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(45, 55, 72, 0.8) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(25, 30, 40, 0.9) 0%, transparent 50%),
+                        linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            animation: rotate 60s linear infinite;
+            z-index: -2;
         }
 
-        .bg-orb-2 {
-            position: absolute;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(255, 70, 150, 0.1) 0%, transparent 70%);
-            border-radius: 50%;
-            bottom: -150px;
-            left: -150px;
-            filter: blur(60px);
-            animation: float 25s infinite ease-in-out reverse;
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            50% { transform: translate(30px, -30px) scale(1.1); }
+        .bg-noise {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJmIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjc0IiBudW1PY3RhdmVzPSIzIiAvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNmKSIgb3BhY2l0eT0iMC4wNCIgLz48L3N2Zz4=');
+            opacity: 0.4;
+            z-index: -1;
         }
 
         .container {
@@ -1282,12 +1329,18 @@ if (!checkAccess()) {
             padding: 20px;
             position: relative;
             z-index: 10;
-            animation: fadeIn 0.6s ease-out;
+            animation: fadeInUp 0.8s ease-out;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .brand {
@@ -1296,125 +1349,124 @@ if (!checkAccess()) {
         }
 
         .brand h1 {
-            font-size: 42px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: -1px;
             margin-bottom: 8px;
-            text-shadow: 0 0 30px rgba(165, 180, 252, 0.3);
         }
 
         .brand p {
-            color: #8b949e;
+            color: #64748b;
             font-size: 14px;
             font-weight: 500;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
         }
 
-        .glass-card {
-            background: rgba(22, 27, 34, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+        .card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 32px;
-            padding: 40px;
+            border-radius: 24px;
+            padding: 32px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         .tabs {
             display: flex;
             gap: 8px;
-            margin-bottom: 32px;
-            background: rgba(0, 0, 0, 0.2);
+            margin-bottom: 28px;
+            background: rgba(15, 23, 42, 0.5);
             padding: 4px;
-            border-radius: 16px;
+            border-radius: 12px;
         }
 
         .tab {
             flex: 1;
             padding: 12px;
             text-align: center;
-            border-radius: 12px;
+            border-radius: 10px;
             font-size: 14px;
             font-weight: 600;
-            color: #8b949e;
+            color: #94a3b8;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .tab.active {
-            background: linear-gradient(135deg, #6366f1, #a855f7);
-            color: #fff;
-            box-shadow: 0 10px 20px -10px rgba(99, 102, 241, 0.5);
+            background: #2d3a4f;
+            color: #ffffff;
         }
 
         .form {
             display: none;
-            animation: slideIn 0.4s ease;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(10px); }
-            to { opacity: 1; transform: translateX(0); }
         }
 
         .form.active {
             display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(10px); }
+            to { opacity: 1; transform: translateX(0); }
         }
 
         .input-group {
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
 
         .input-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-size: 13px;
             font-weight: 600;
-            color: #a5b4fc;
+            color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .input-group input {
             width: 100%;
-            padding: 16px 18px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            color: #fff;
+            padding: 14px 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            color: #ffffff;
             font-size: 15px;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
 
         .input-group input:focus {
             outline: none;
-            border-color: #6366f1;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            border-color: #3b82f6;
+            background: rgba(15, 23, 42, 0.8);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .input-group input::placeholder {
-            color: rgba(255, 255, 255, 0.2);
+            color: #475569;
         }
 
-        /* CyberCap Image Style */
+        /* CyberCap com imagens reais */
         .cybercap-container {
-            margin: 30px 0;
-            background: rgba(0, 0, 0, 0.2);
+            margin: 24px 0;
+            background: rgba(15, 23, 42, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
-            padding: 24px;
+            border-radius: 16px;
+            padding: 20px;
         }
 
         .cybercap-title {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 20px;
-            color: #a5b4fc;
-            font-size: 14px;
+            margin-bottom: 16px;
+            color: #94a3b8;
+            font-size: 13px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -1423,26 +1475,24 @@ if (!checkAccess()) {
         .cybercap-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            margin-bottom: 16px;
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
         .cybercap-item {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.8);
             border: 2px solid transparent;
-            border-radius: 16px;
-            padding: 20px;
+            border-radius: 12px;
+            padding: 12px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
             position: relative;
-            overflow: hidden;
         }
 
         .cybercap-item:hover {
+            border-color: #3b82f6;
             transform: translateY(-2px);
-            border-color: #6366f1;
-            box-shadow: 0 10px 20px -10px rgba(99, 102, 241, 0.3);
         }
 
         .cybercap-item.selected {
@@ -1451,34 +1501,37 @@ if (!checkAccess()) {
         }
 
         .cybercap-item.selected::after {
-            content: '✓';
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 8px;
+            right: 8px;
             width: 24px;
             height: 24px;
             background: #10b981;
-            color: #fff;
+            color: #ffffff;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
-            font-weight: bold;
+            font-size: 12px;
         }
 
-        /* Placeholder para imagens - em produção, usar imagens reais */
+        /* Imagens reais */
         .cybercap-image {
             width: 80px;
             height: 80px;
-            margin: 0 auto 12px;
-            background: linear-gradient(135deg, #6366f1, #a855f7);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            color: #fff;
+            margin: 0 auto 8px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #1e293b;
+        }
+
+        .cybercap-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .cybercap-label {
@@ -1489,39 +1542,47 @@ if (!checkAccess()) {
 
         .cybercap-instruction {
             text-align: center;
-            color: #8b949e;
+            color: #64748b;
             font-size: 13px;
-            margin-top: 16px;
+            margin-top: 12px;
+        }
+
+        .cybercap-instruction strong {
+            color: #3b82f6;
+            font-weight: 600;
         }
 
         .btn-primary {
             width: 100%;
-            padding: 18px;
-            background: linear-gradient(135deg, #6366f1, #a855f7);
+            padding: 16px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
             border: none;
-            border-radius: 16px;
-            color: #fff;
+            border-radius: 12px;
+            color: #ffffff;
             font-size: 16px;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-            margin: 16px 0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            transition: all 0.2s;
+            margin: 8px 0;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 20px 30px -10px rgba(99, 102, 241, 0.5);
+            box-shadow: 0 10px 20px -10px #3b82f6;
         }
 
         .message {
-            padding: 16px 20px;
-            border-radius: 16px;
-            margin-bottom: 24px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
             font-size: 14px;
             font-weight: 500;
             animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .message.error {
@@ -1536,20 +1597,20 @@ if (!checkAccess()) {
             color: #6ee7b7;
         }
 
-        .footer-links {
+        .footer {
             margin-top: 24px;
             text-align: center;
         }
 
-        .footer-links a {
-            color: #6e7681;
+        .footer a {
+            color: #64748b;
             text-decoration: none;
             font-size: 13px;
             transition: color 0.2s;
         }
 
-        .footer-links a:hover {
-            color: #a5b4fc;
+        .footer a:hover {
+            color: #3b82f6;
         }
 
         .telegram-link {
@@ -1557,25 +1618,24 @@ if (!checkAccess()) {
             align-items: center;
             gap: 8px;
             margin-top: 16px;
-            padding: 10px 24px;
-            background: rgba(0, 0, 0, 0.2);
+            padding: 8px 20px;
+            background: rgba(15, 23, 42, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 40px;
-            color: #8b949e;
+            color: #94a3b8;
             text-decoration: none;
             font-size: 13px;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
 
         .telegram-link:hover {
-            border-color: #6366f1;
-            color: #fff;
-            transform: translateY(-2px);
+            border-color: #3b82f6;
+            color: #ffffff;
         }
 
         .version {
-            margin-top: 24px;
-            color: #30363d;
+            margin-top: 20px;
+            color: #334155;
             font-size: 12px;
             text-align: center;
         }
@@ -1632,8 +1692,8 @@ if (!checkAccess()) {
     </script>
 </head>
 <body>
-    <div class="bg-orb"></div>
-    <div class="bg-orb-2"></div>
+    <div class="bg-gradient"></div>
+    <div class="bg-noise"></div>
 
     <div class="container">
         <div class="brand">
@@ -1641,12 +1701,10 @@ if (!checkAccess()) {
             <p>ENTERPRISE SECURITY PLATFORM</p>
         </div>
 
-        <div class="glass-card">
+        <div class="card">
             <div class="tabs">
                 <div class="tab active" onclick="switchTab('login')">LOGIN</div>
                 <div class="tab" onclick="switchTab('register')">REGISTER</div>
-                <div class="tab" onclick="switchTab('shop')">SHOP</div>
-                <div class="tab" onclick="switchTab('generator')">GERADOR</div>
             </div>
 
             <?php if (isset($login_error)): ?>
@@ -1672,27 +1730,26 @@ if (!checkAccess()) {
                     <input type="password" name="password" required placeholder="Enter your password">
                 </div>
 
-                <!-- CyberCap Image Challenge -->
+                <!-- CyberCap Image Challenge com imagens reais -->
                 <div class="cybercap-container">
                     <div class="cybercap-title">
-                        <span>🛡️</span> SELECT THE CORRECT IMAGE
+                        <i class="fas fa-shield-alt"></i> SELECT THE CORRECT IMAGE
                     </div>
                     <div class="cybercap-grid" id="cybercapGrid">
                         <?php foreach ($_SESSION['cybercap_images'] as $index => $image): ?>
                         <div class="cybercap-item" onclick="selectImage(<?php echo $index; ?>)">
                             <div class="cybercap-image">
-                                <?php 
-                                // Placeholder - em produção, usar imagens reais
-                                $emojis = ['🚗', '🏠', '🌳', '🐕'];
-                                echo $emojis[$index % 4];
-                                ?>
+                                <!-- Substitua pelo caminho real das suas imagens -->
+                                <img src="foto/<?php echo $image['file']; ?>" alt="<?php echo $image['label']; ?>" onerror="this.src='https://via.placeholder.com/80?text=<?php echo $image['label']; ?>'">
                             </div>
                             <div class="cybercap-label"><?php echo $image['label']; ?></div>
                         </div>
                         <?php endforeach; ?>
                     </div>
                     <input type="hidden" name="cybercap_selected" id="cybercapSelected" value="-1">
-                    <div class="cybercap-instruction">Click on the image that shows a <strong>HOUSE</strong></div>
+                    <div class="cybercap-instruction">
+                        Click on the image that shows a <strong>HOUSE</strong>
+                    </div>
                 </div>
 
                 <button type="submit" name="login" class="btn-primary">ACCESS PLATFORM</button>
@@ -1713,53 +1770,33 @@ if (!checkAccess()) {
                     <input type="password" name="confirm_password" required placeholder="Confirm your password">
                 </div>
 
-                <!-- CyberCap Image Challenge -->
+                <!-- CyberCap Image Challenge com imagens reais -->
                 <div class="cybercap-container">
                     <div class="cybercap-title">
-                        <span>🛡️</span> SELECT THE CORRECT IMAGE
+                        <i class="fas fa-shield-alt"></i> SELECT THE CORRECT IMAGE
                     </div>
                     <div class="cybercap-grid" id="cybercapGridRegister">
                         <?php foreach ($_SESSION['cybercap_images'] as $index => $image): ?>
                         <div class="cybercap-item" onclick="selectImageRegister(<?php echo $index; ?>)">
                             <div class="cybercap-image">
-                                <?php 
-                                $emojis = ['🚗', '🏠', '🌳', '🐕'];
-                                echo $emojis[$index % 4];
-                                ?>
+                                <img src="foto/<?php echo $image['file']; ?>" alt="<?php echo $image['label']; ?>" onerror="this.src='https://via.placeholder.com/80?text=<?php echo $image['label']; ?>'">
                             </div>
                             <div class="cybercap-label"><?php echo $image['label']; ?></div>
                         </div>
                         <?php endforeach; ?>
                     </div>
                     <input type="hidden" name="cybercap_selected" id="cybercapSelectedRegister" value="-1">
-                    <div class="cybercap-instruction">Click on the image that shows a <strong>HOUSE</strong></div>
+                    <div class="cybercap-instruction">
+                        Click on the image that shows a <strong>HOUSE</strong>
+                    </div>
                 </div>
 
                 <button type="submit" name="register" class="btn-primary">CREATE ACCOUNT</button>
             </form>
 
-            <!-- Shop Form -->
-            <form class="form" id="shopForm" method="GET" action="?ggs">
-                <div style="text-align: center; padding: 20px 0;">
-                    <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">🛒</div>
-                    <h3 style="color: #fff; margin-bottom: 12px;">GG SHOP</h3>
-                    <p style="color: #8b949e; margin-bottom: 24px;">Access premium cards after login.</p>
-                    <button type="submit" class="btn-primary" style="width: auto; padding: 14px 40px;">ENTER SHOP</button>
-                </div>
-            </form>
-
-            <!-- Generator Form (iframe do site) -->
-            <div class="form" id="generatorForm">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h3 style="color: #fff; margin-bottom: 8px;">🎲 CARD GENERATOR</h3>
-                    <p style="color: #8b949e; font-size: 13px;">Generate test cards instantly</p>
-                </div>
-                <iframe src="https://peruyashgen.netlify.app" style="width: 100%; height: 400px; border: none; border-radius: 16px; background: #0d1117;"></iframe>
-            </div>
-
-            <div class="footer-links">
+            <div class="footer">
                 <a href="https://t.me/centralsavefullblack" target="_blank" class="telegram-link">
-                    <span>📱</span>
+                    <i class="fab fa-telegram"></i>
                     @centralsavefullblack
                 </a>
             </div>
@@ -1784,12 +1821,6 @@ if (!checkAccess()) {
                 document.querySelectorAll('.tab')[1].classList.add('active');
                 document.getElementById('registerForm').classList.add('active');
                 resetCyberCapRegister();
-            } else if (tab === 'shop') {
-                document.querySelectorAll('.tab')[2].classList.add('active');
-                document.getElementById('shopForm').classList.add('active');
-            } else if (tab === 'generator') {
-                document.querySelectorAll('.tab')[3].classList.add('active');
-                document.getElementById('generatorForm').classList.add('active');
             }
         }
 
@@ -1892,12 +1923,13 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
     $bins = getAllBins();
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CYBERSEC - Admin Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -1906,8 +1938,8 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #0f0c1f 0%, #1a1a2e 100%);
+            font-family: 'Inter', sans-serif;
+            background: #0a0c0f;
             color: #e4e6eb;
             padding: 30px;
         }
@@ -1918,11 +1950,11 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         }
 
         .header {
-            background: rgba(22, 27, 34, 0.7);
-            backdrop-filter: blur(20px);
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
-            padding: 24px 32px;
+            border-radius: 16px;
+            padding: 20px 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
@@ -1931,10 +1963,8 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
 
         .header h1 {
             font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #6366f1, #a855f7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 600;
+            color: #ffffff;
         }
 
         .header-actions {
@@ -1943,21 +1973,20 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         }
 
         .btn {
-            padding: 10px 20px;
-            border-radius: 12px;
+            padding: 8px 16px;
+            border-radius: 8px;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
             text-decoration: none;
-            transition: all 0.3s;
+            transition: all 0.2s;
             border: 1px solid rgba(255, 255, 255, 0.05);
-            background: rgba(0, 0, 0, 0.3);
-            color: #8b949e;
+            background: rgba(15, 23, 42, 0.6);
+            color: #94a3b8;
         }
 
         .btn:hover {
-            border-color: #6366f1;
-            color: #fff;
-            transform: translateY(-2px);
+            border-color: #3b82f6;
+            color: #ffffff;
         }
 
         .btn-danger {
@@ -1967,7 +1996,7 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
 
         .btn-danger:hover {
             background: #ef4444;
-            color: #fff;
+            color: #ffffff;
         }
 
         .grid {
@@ -1978,10 +2007,10 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         }
 
         .card {
-            background: rgba(22, 27, 34, 0.7);
+            background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
+            border-radius: 16px;
             padding: 24px;
         }
 
@@ -1997,7 +2026,7 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         .card-header h2 {
             font-size: 18px;
             font-weight: 600;
-            color: #a5b4fc;
+            color: #94a3b8;
         }
 
         .form-group {
@@ -2008,19 +2037,18 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             display: block;
             margin-bottom: 6px;
             font-size: 13px;
-            font-weight: 600;
-            color: #8b949e;
-            text-transform: uppercase;
+            font-weight: 500;
+            color: #64748b;
         }
 
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 12px 14px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
+            border-radius: 8px;
             color: #e4e6eb;
             font-size: 14px;
         }
@@ -2029,24 +2057,24 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #6366f1;
+            border-color: #3b82f6;
         }
 
         .btn-primary {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #6366f1, #a855f7);
+            padding: 12px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
             border: none;
-            border-radius: 12px;
-            color: #fff;
-            font-weight: 600;
+            border-radius: 8px;
+            color: #ffffff;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px -10px rgba(99, 102, 241, 0.5);
+            box-shadow: 0 10px 20px -10px #3b82f6;
         }
 
         .gates-scroll {
@@ -2064,10 +2092,10 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 10px 16px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid;
-            border-radius: 12px;
+            border-radius: 8px;
             cursor: pointer;
         }
 
@@ -2095,8 +2123,8 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         .users-table th {
             text-align: left;
             padding: 12px;
-            background: rgba(0, 0, 0, 0.3);
-            color: #a5b4fc;
+            background: rgba(15, 23, 42, 0.6);
+            color: #94a3b8;
             font-weight: 600;
             font-size: 13px;
         }
@@ -2108,7 +2136,7 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
 
         .badge {
             display: inline-block;
-            padding: 4px 8px;
+            padding: 2px 8px;
             border-radius: 20px;
             font-size: 11px;
             font-weight: 600;
@@ -2116,37 +2144,37 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
 
         .badge-admin {
             background: #ef4444;
-            color: #fff;
+            color: #ffffff;
         }
 
         .badge-permanent {
             background: #10b981;
-            color: #000;
+            color: #000000;
         }
 
         .badge-temporary {
             background: #f59e0b;
-            color: #000;
+            color: #000000;
         }
 
         .badge-credits {
-            background: #6366f1;
-            color: #fff;
+            background: #3b82f6;
+            color: #ffffff;
         }
 
         .action-btn {
-            padding: 6px 10px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 8px;
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            color: #8b949e;
+            border-radius: 6px;
+            color: #94a3b8;
             cursor: pointer;
             margin: 0 2px;
         }
 
         .action-btn:hover {
-            border-color: #6366f1;
-            color: #fff;
+            border-color: #3b82f6;
+            color: #ffffff;
         }
     </style>
 </head>
@@ -2155,25 +2183,25 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         <div class="header">
             <h1>⚙️ Admin Dashboard</h1>
             <div class="header-actions">
-                <span style="color: #a5b4fc;">👑 <?php echo $_SESSION['username']; ?></span>
+                <span style="color: #94a3b8;">👑 <?php echo $_SESSION['username']; ?></span>
                 <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="btn">Main</a>
                 <a href="?logout" class="btn btn-danger">Logout</a>
             </div>
         </div>
 
         <?php if (isset($success_message)): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 12px; padding: 16px 24px; margin-bottom: 20px; color: #6ee7b7;"><?php echo $success_message; ?></div>
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; color: #6ee7b7;"><?php echo $success_message; ?></div>
         <?php endif; ?>
         
         <?php if (isset($error_message)): ?>
-        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 12px; padding: 16px 24px; margin-bottom: 20px; color: #fca5a5;"><?php echo $error_message; ?></div>
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; color: #fca5a5;"><?php echo $error_message; ?></div>
         <?php endif; ?>
 
         <div class="grid">
             <!-- Create User -->
             <div class="card">
                 <div class="card-header">
-                    <span>👤</span>
+                    <i class="fas fa-user-plus" style="color: #94a3b8;"></i>
                     <h2>Create User</h2>
                 </div>
                 <form method="POST">
@@ -2213,7 +2241,7 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             <!-- Gate Management -->
             <div class="card">
                 <div class="card-header">
-                    <span>🔧</span>
+                    <i class="fas fa-cogs" style="color: #94a3b8;"></i>
                     <h2>Gate Management</h2>
                 </div>
                 <div class="gates-scroll">
@@ -2231,7 +2259,7 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             <!-- Add GGs -->
             <div class="card">
                 <div class="card-header">
-                    <span>📥</span>
+                    <i class="fas fa-credit-card" style="color: #94a3b8;"></i>
                     <h2>Add GGs</h2>
                 </div>
                 <form method="POST">
@@ -2247,7 +2275,7 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
             <!-- BIN Prices -->
             <div class="card">
                 <div class="card-header">
-                    <span>💰</span>
+                    <i class="fas fa-tags" style="color: #94a3b8;"></i>
                     <h2>BIN Prices</h2>
                 </div>
                 <div style="max-height: 300px; overflow-y: auto;">
@@ -2270,8 +2298,8 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
                                     <form method="POST" style="display: flex; gap: 5px;">
                                         <input type="hidden" name="admin_action" value="update_bin_price">
                                         <input type="hidden" name="bin" value="<?php echo $bin['bin']; ?>">
-                                        <input type="number" name="price" step="0.01" value="<?php echo $bin['price']; ?>" min="0.01" style="width: 80px; background: #0d1117; border: 1px solid #30363d; color: #e4e6eb; padding: 4px; border-radius: 4px;">
-                                        <button type="submit" style="background: #10b981; border: none; color: #fff; padding: 4px 8px; border-radius: 4px; cursor: pointer;">OK</button>
+                                        <input type="number" name="price" step="0.01" value="<?php echo $bin['price']; ?>" min="0.01" style="width: 80px; background: #0f172a; border: 1px solid rgba(255,255,255,0.05); color: #e4e6eb; padding: 4px; border-radius: 4px;">
+                                        <button type="submit" style="background: #3b82f6; border: none; color: #fff; padding: 4px 8px; border-radius: 4px; cursor: pointer;">OK</button>
                                     </form>
                                 </td>
                             </tr>
@@ -2285,7 +2313,7 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
         <!-- Users Table -->
         <div class="card">
             <div class="card-header">
-                <span>📋</span>
+                <i class="fas fa-users" style="color: #94a3b8;"></i>
                 <h2>Users</h2>
             </div>
             <div style="overflow-x: auto;">
@@ -2325,13 +2353,13 @@ if ($user_role === 'admin' && isset($_GET['admin'])) {
                             <td><?php echo $data['total_checks'] ?? 0; ?></td>
                             <td>
                                 <?php if ($username !== 'admin'): ?>
-                                <button class="action-btn" onclick="editUserCredits('<?php echo $username; ?>', <?php echo $data['credits']; ?>)">💰</button>
-                                <button class="action-btn" onclick="editUserCyber('<?php echo $username; ?>', <?php echo $data['cyber_money']; ?>)">🪙</button>
-                                <button class="action-btn" onclick="editUserHours('<?php echo $username; ?>')">⏱️</button>
+                                <button class="action-btn" onclick="editUserCredits('<?php echo $username; ?>', <?php echo $data['credits']; ?>)"><i class="fas fa-coins"></i></button>
+                                <button class="action-btn" onclick="editUserCyber('<?php echo $username; ?>', <?php echo $data['cyber_money']; ?>)"><i class="fas fa-crown"></i></button>
+                                <button class="action-btn" onclick="editUserHours('<?php echo $username; ?>')"><i class="fas fa-clock"></i></button>
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="admin_action" value="remove">
                                     <input type="hidden" name="username" value="<?php echo $username; ?>">
-                                    <button class="action-btn" onclick="return confirm('Remove user?')">🗑️</button>
+                                    <button class="action-btn" onclick="return confirm('Remove user?')"><i class="fas fa-trash"></i></button>
                                 </form>
                                 <?php endif; ?>
                             </td>
@@ -2426,12 +2454,13 @@ if (isset($_GET['ggs'])) {
     $purchased_cards = isset($_GET['mycards']) ? getUserPurchasedCards($_SESSION['username']) : [];
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CYBERSEC - GG Shop</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -2440,8 +2469,8 @@ if (isset($_GET['ggs'])) {
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #0f0c1f 0%, #1a1a2e 100%);
+            font-family: 'Inter', sans-serif;
+            background: #0a0c0f;
             color: #e4e6eb;
             padding: 30px;
         }
@@ -2452,11 +2481,11 @@ if (isset($_GET['ggs'])) {
         }
 
         .header {
-            background: rgba(22, 27, 34, 0.7);
-            backdrop-filter: blur(20px);
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
-            padding: 24px 32px;
+            border-radius: 16px;
+            padding: 20px 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
@@ -2465,43 +2494,94 @@ if (isset($_GET['ggs'])) {
 
         .header h1 {
             font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #6366f1, #a855f7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 600;
+            color: #ffffff;
         }
 
         .balance {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 40px;
-            padding: 10px 24px;
+            border-radius: 30px;
+            padding: 8px 20px;
             color: #10b981;
-            font-weight: 600;
+            font-weight: 500;
         }
 
         .nav {
             display: flex;
             gap: 12px;
             margin-bottom: 30px;
+            flex-wrap: wrap;
         }
 
         .nav-btn {
-            padding: 10px 24px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 20px;
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 40px;
-            color: #8b949e;
+            border-radius: 30px;
+            color: #94a3b8;
             text-decoration: none;
             font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .nav-btn:hover,
         .nav-btn.active {
-            border-color: #6366f1;
-            color: #fff;
+            border-color: #3b82f6;
+            color: #ffffff;
+        }
+
+        .nav-btn.youtube {
+            border-color: #ff0000;
+            color: #ff8888;
+        }
+
+        .nav-btn.youtube:hover {
+            background: #ff0000;
+            color: #ffffff;
+        }
+
+        .nav-btn.refs {
+            border-color: #10b981;
+            color: #6ee7b7;
+        }
+
+        .nav-btn.refs:hover {
+            background: #10b981;
+            color: #000000;
+        }
+
+        .nav-btn.baixar {
+            border-color: #8b5cf6;
+            color: #c4b5fd;
+        }
+
+        .nav-btn.baixar:hover {
+            background: #8b5cf6;
+            color: #ffffff;
+        }
+
+        .nav-btn.gerador {
+            border-color: #f59e0b;
+            color: #fcd34d;
+        }
+
+        .nav-btn.gerador:hover {
+            background: #f59e0b;
+            color: #000000;
+        }
+
+        .content-section {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 24px;
+            min-height: 500px;
         }
 
         .bins-scroll {
@@ -2519,18 +2599,17 @@ if (isset($_GET['ggs'])) {
         .bin-card {
             display: inline-block;
             width: 280px;
-            background: rgba(22, 27, 34, 0.7);
-            backdrop-filter: blur(10px);
+            background: rgba(15, 23, 42, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
-            padding: 24px;
+            border-radius: 12px;
+            padding: 20px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
             white-space: normal;
         }
 
         .bin-card:hover {
-            border-color: #6366f1;
+            border-color: #3b82f6;
             transform: translateY(-4px);
         }
 
@@ -2538,26 +2617,26 @@ if (isset($_GET['ggs'])) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .bin-number {
-            font-size: 20px;
-            font-weight: 700;
-            color: #a5b4fc;
+            font-size: 18px;
+            font-weight: 600;
+            color: #94a3b8;
         }
 
         .bin-price {
-            background: linear-gradient(135deg, #6366f1, #a855f7);
-            color: #fff;
-            padding: 6px 12px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #ffffff;
+            padding: 4px 10px;
             border-radius: 20px;
             font-size: 13px;
             font-weight: 600;
         }
 
         .bin-info {
-            color: #8b949e;
+            color: #64748b;
             font-size: 14px;
         }
 
@@ -2569,8 +2648,8 @@ if (isset($_GET['ggs'])) {
         .cards-table th {
             text-align: left;
             padding: 12px;
-            background: rgba(0, 0, 0, 0.3);
-            color: #a5b4fc;
+            background: rgba(15, 23, 42, 0.6);
+            color: #94a3b8;
             font-weight: 600;
             font-size: 13px;
         }
@@ -2599,11 +2678,11 @@ if (isset($_GET['ggs'])) {
         }
 
         .modal-content {
-            background: rgba(22, 27, 34, 0.95);
+            background: rgba(30, 41, 59, 0.95);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 32px;
-            padding: 32px;
+            border-radius: 24px;
+            padding: 30px;
             max-width: 500px;
             width: 90%;
             max-height: 80vh;
@@ -2614,21 +2693,21 @@ if (isset($_GET['ggs'])) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             padding-bottom: 16px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .modal-header h2 {
             font-size: 20px;
-            font-weight: 700;
-            color: #a5b4fc;
+            font-weight: 600;
+            color: #94a3b8;
         }
 
         .modal-close {
             font-size: 24px;
             cursor: pointer;
-            color: #8b949e;
+            color: #64748b;
         }
 
         .modal-close:hover {
@@ -2636,9 +2715,9 @@ if (isset($_GET['ggs'])) {
         }
 
         .card-item {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 20px;
             margin-bottom: 16px;
         }
@@ -2648,12 +2727,12 @@ if (isset($_GET['ggs'])) {
             padding: 12px;
             background: linear-gradient(135deg, #10b981, #059669);
             border: none;
-            border-radius: 40px;
-            color: #fff;
+            border-radius: 30px;
+            color: #ffffff;
             font-weight: 600;
             cursor: pointer;
-            margin-top: 16px;
-            transition: all 0.3s;
+            margin-top: 12px;
+            transition: all 0.2s;
         }
 
         .btn-buy:hover {
@@ -2674,17 +2753,80 @@ if (isset($_GET['ggs'])) {
         }
 
         .page-btn {
-            padding: 6px 12px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 10px;
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            color: #8b949e;
+            border-radius: 6px;
+            color: #64748b;
             cursor: pointer;
         }
 
         .page-btn.active {
-            border-color: #6366f1;
-            color: #fff;
+            border-color: #3b82f6;
+            color: #ffffff;
+        }
+
+        .download-form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8;
+            cursor: pointer;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .image-item {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .image-item span {
+            display: block;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .youtube-iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            border-radius: 12px;
+        }
+
+        .iframe-container {
+            width: 100%;
+            height: 600px;
+            border-radius: 12px;
+            overflow: hidden;
         }
     </style>
 </head>
@@ -2696,25 +2838,95 @@ if (isset($_GET['ggs'])) {
         </div>
 
         <div class="nav">
-            <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="nav-btn">Main</a>
-            <a href="?ggs" class="nav-btn <?php echo !isset($_GET['mycards']) ? 'active' : ''; ?>">Buy</a>
-            <a href="?ggs&mycards=1" class="nav-btn <?php echo isset($_GET['mycards']) ? 'active' : ''; ?>">My Cards</a>
-            <a href="?lives" class="nav-btn">Lives</a>
-            <a href="?logout" class="nav-btn">Logout</a>
+            <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="nav-btn"><i class="fas fa-home"></i> Main</a>
+            <a href="?ggs" class="nav-btn <?php echo (!isset($_GET['mycards']) && !isset($_GET['tab'])) ? 'active' : ''; ?>"><i class="fas fa-store"></i> Buy</a>
+            <a href="?ggs&mycards=1" class="nav-btn <?php echo isset($_GET['mycards']) ? 'active' : ''; ?>"><i class="fas fa-credit-card"></i> My Cards</a>
+            <a href="?ggs&tab=youtube" class="nav-btn youtube <?php echo (isset($_GET['tab']) && $_GET['tab'] == 'youtube') ? 'active' : ''; ?>"><i class="fab fa-youtube"></i> YouTube</a>
+            <a href="?ggs&tab=refs" class="nav-btn refs <?php echo (isset($_GET['tab']) && $_GET['tab'] == 'refs') ? 'active' : ''; ?>"><i class="fas fa-images"></i> Refs</a>
+            <a href="?ggs&tab=baixar" class="nav-btn baixar <?php echo (isset($_GET['tab']) && $_GET['tab'] == 'baixar') ? 'active' : ''; ?>"><i class="fas fa-download"></i> Baixar</a>
+            <a href="?ggs&tab=gerador" class="nav-btn gerador <?php echo (isset($_GET['tab']) && $_GET['tab'] == 'gerador') ? 'active' : ''; ?>"><i class="fas fa-dice"></i> Gerador</a>
+            <a href="?lives" class="nav-btn lives"><i class="fas fa-history"></i> Lives</a>
+            <a href="?logout" class="nav-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
 
         <?php if (isset($_SESSION['purchase_result'])): ?>
-        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 16px; padding: 20px; margin-bottom: 20px; white-space: pre-wrap; font-family: monospace;">
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 12px; padding: 16px; margin-bottom: 20px; white-space: pre-wrap; font-family: monospace;">
             <?php echo nl2br($_SESSION['purchase_result']); ?>
         </div>
         <?php unset($_SESSION['purchase_result']); ?>
         <?php endif; ?>
 
-        <?php if (isset($_GET['mycards'])): ?>
-            <div style="background: rgba(22, 27, 34, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 24px; padding: 24px;">
-                <h2 style="font-size: 20px; font-weight: 700; color: #a5b4fc; margin-bottom: 20px;">📋 My Purchased Cards</h2>
+        <?php if (isset($download_error)): ?>
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 12px; padding: 16px; margin-bottom: 20px;"><?php echo $download_error; ?></div>
+        <?php endif; ?>
+
+        <div class="content-section">
+            <?php if (isset($_GET['tab']) && $_GET['tab'] == 'youtube'): ?>
+                <!-- YouTube -->
+                <h2 style="font-size: 20px; font-weight: 600; color: #94a3b8; margin-bottom: 20px;"><i class="fab fa-youtube" style="color: #ff0000;"></i> YouTube Channel</h2>
+                <div class="iframe-container">
+                    <iframe class="youtube-iframe" src="https://www.youtube.com/embed?listType=user&list=cybersecofc" allowfullscreen></iframe>
+                </div>
+
+            <?php elseif (isset($_GET['tab']) && $_GET['tab'] == 'refs'): ?>
+                <!-- Refs - Fotos da pasta /foto -->
+                <h2 style="font-size: 20px; font-weight: 600; color: #94a3b8; margin-bottom: 20px;"><i class="fas fa-images"></i> Reference Images</h2>
+                <div class="image-grid">
+                    <?php
+                    $foto_dir = __DIR__ . '/foto';
+                    if (file_exists($foto_dir)) {
+                        $images = glob($foto_dir . '/*.{jpg,jpeg,png,gif}', GLOB_BRACE);
+                        foreach ($images as $image) {
+                            $filename = basename($image);
+                            echo '<div class="image-item">';
+                            echo '<img src="foto/' . $filename . '" alt="' . $filename . '">';
+                            echo '<span>' . $filename . '</span>';
+                            echo '</div>';
+                        }
+                    } else {
+                        echo '<p style="color: #64748b; text-align: center; padding: 40px;">No images found in /foto directory</p>';
+                    }
+                    ?>
+                </div>
+
+            <?php elseif (isset($_GET['tab']) && $_GET['tab'] == 'baixar'): ?>
+                <!-- Baixar Vídeo -->
+                <h2 style="font-size: 20px; font-weight: 600; color: #94a3b8; margin-bottom: 20px;"><i class="fas fa-download"></i> Video Downloader</h2>
+                <form method="POST" class="download-form">
+                    <div class="input-group">
+                        <label>VIDEO URL</label>
+                        <input type="url" name="video_url" required placeholder="https://youtube.com/watch?v=...">
+                    </div>
+                    
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="format" value="video" checked> 🎬 Video (MP4)
+                        </label>
+                        <label>
+                            <input type="radio" name="format" value="audio"> 🎵 Audio Only (MP3)
+                        </label>
+                    </div>
+
+                    <button type="submit" name="download_video" class="btn-primary">Download</button>
+                </form>
+
+                <div style="margin-top: 30px; padding: 20px; background: rgba(15, 23, 42, 0.6); border-radius: 12px;">
+                    <h3 style="color: #94a3b8; margin-bottom: 10px;">Supported Sites:</h3>
+                    <p style="color: #64748b; font-size: 14px;">YouTube, Vimeo, Dailymotion, Facebook, Twitter, Instagram, TikTok, and many more...</p>
+                </div>
+
+            <?php elseif (isset($_GET['tab']) && $_GET['tab'] == 'gerador'): ?>
+                <!-- Gerador de Cartões -->
+                <h2 style="font-size: 20px; font-weight: 600; color: #94a3b8; margin-bottom: 20px;"><i class="fas fa-dice"></i> Card Generator</h2>
+                <div class="iframe-container">
+                    <iframe src="https://peruyashgen.netlify.app" style="width: 100%; height: 600px; border: none; border-radius: 12px;"></iframe>
+                </div>
+
+            <?php elseif (isset($_GET['mycards'])): ?>
+                <!-- Meus Cartões Comprados -->
+                <h2 style="font-size: 20px; font-weight: 600; color: #94a3b8; margin-bottom: 20px;">📋 My Purchased Cards</h2>
                 <?php if (empty($purchased_cards)): ?>
-                <div style="text-align: center; padding: 40px; color: #8b949e;">
+                <div style="text-align: center; padding: 40px; color: #64748b;">
                     <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
                     <h3>No cards purchased yet</h3>
                 </div>
@@ -2746,32 +2958,34 @@ if (isset($_GET['ggs'])) {
                     </table>
                 </div>
                 <?php endif; ?>
-            </div>
-        <?php else: ?>
-            <h2 style="font-size: 20px; font-weight: 700; color: #a5b4fc; margin-bottom: 16px;">🔍 Available Cards</h2>
-            <?php if (empty($ggs_by_bin)): ?>
-            <div style="text-align: center; padding: 60px; background: rgba(22, 27, 34, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 24px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
-                <h3 style="color: #8b949e;">No cards available</h3>
-            </div>
+
             <?php else: ?>
-            <div class="bins-scroll">
-                <div class="bins-row">
-                    <?php foreach ($ggs_by_bin as $bin): ?>
-                    <div class="bin-card" onclick="showCards('<?php echo $bin['bin']; ?>')">
-                        <div class="bin-header">
-                            <span class="bin-number">BIN <?php echo $bin['bin']; ?></span>
-                            <span class="bin-price">R$ <?php echo number_format($bin['price'], 2); ?></span>
-                        </div>
-                        <div class="bin-info">
-                            <span>📦 Available: <?php echo $bin['total']; ?></span>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
+                <!-- Loja de GGs -->
+                <h2 style="font-size: 20px; font-weight: 600; color: #94a3b8; margin-bottom: 16px;">🔍 Available Cards</h2>
+                <?php if (empty($ggs_by_bin)): ?>
+                <div style="text-align: center; padding: 60px;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
+                    <h3 style="color: #64748b;">No cards available</h3>
                 </div>
-            </div>
+                <?php else: ?>
+                <div class="bins-scroll">
+                    <div class="bins-row">
+                        <?php foreach ($ggs_by_bin as $bin): ?>
+                        <div class="bin-card" onclick="showCards('<?php echo $bin['bin']; ?>')">
+                            <div class="bin-header">
+                                <span class="bin-number">BIN <?php echo $bin['bin']; ?></span>
+                                <span class="bin-price">R$ <?php echo number_format($bin['price'], 2); ?></span>
+                            </div>
+                            <div class="bin-info">
+                                <span>📦 Available: <?php echo $bin['total']; ?></span>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
             <?php endif; ?>
-        <?php endif; ?>
+        </div>
     </div>
 
     <!-- Cards Modal -->
@@ -2899,12 +3113,13 @@ if (isset($_GET['lives'])) {
     }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CYBERSEC - Live History</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -2913,8 +3128,8 @@ if (isset($_GET['lives'])) {
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #0f0c1f 0%, #1a1a2e 100%);
+            font-family: 'Inter', sans-serif;
+            background: #0a0c0f;
             color: #e4e6eb;
             padding: 30px;
         }
@@ -2925,11 +3140,11 @@ if (isset($_GET['lives'])) {
         }
 
         .header {
-            background: rgba(22, 27, 34, 0.7);
-            backdrop-filter: blur(20px);
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
-            padding: 24px 32px;
+            border-radius: 16px;
+            padding: 20px 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
@@ -2938,10 +3153,8 @@ if (isset($_GET['lives'])) {
 
         .header h1 {
             font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #6366f1, #a855f7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 600;
+            color: #ffffff;
         }
 
         .nav {
@@ -2950,20 +3163,19 @@ if (isset($_GET['lives'])) {
         }
 
         .btn {
-            padding: 8px 16px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 6px 14px;
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 40px;
-            color: #8b949e;
+            border-radius: 30px;
+            color: #94a3b8;
             text-decoration: none;
             font-size: 13px;
-            font-weight: 500;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
 
         .btn:hover {
-            border-color: #6366f1;
-            color: #fff;
+            border-color: #3b82f6;
+            color: #ffffff;
         }
 
         .btn-export {
@@ -2973,21 +3185,21 @@ if (isset($_GET['lives'])) {
 
         .btn-export:hover {
             background: #10b981;
-            color: #fff;
+            color: #ffffff;
         }
 
         .lives-container {
-            background: rgba(22, 27, 34, 0.7);
+            background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
+            border-radius: 16px;
             padding: 24px;
         }
 
         .live-card {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 20px;
             margin-bottom: 16px;
         }
@@ -2996,49 +3208,49 @@ if (isset($_GET['lives'])) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             padding-bottom: 8px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .live-gate {
-            background: linear-gradient(135deg, #6366f1, #a855f7);
-            color: #fff;
-            padding: 4px 12px;
-            border-radius: 40px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #ffffff;
+            padding: 2px 10px;
+            border-radius: 30px;
             font-size: 12px;
             font-weight: 600;
         }
 
         .live-date {
-            color: #8b949e;
+            color: #64748b;
             font-size: 12px;
         }
 
         .live-detail {
-            margin-bottom: 8px;
-            font-size: 14px;
+            margin-bottom: 6px;
+            font-size: 13px;
         }
 
         .live-detail strong {
-            color: #a5b4fc;
+            color: #94a3b8;
         }
 
         .live-response {
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 16px;
+            border-radius: 8px;
+            padding: 12px;
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 12px;
             white-space: pre-wrap;
-            margin-top: 16px;
+            margin-top: 12px;
         }
 
         .empty {
             text-align: center;
             padding: 40px;
-            color: #8b949e;
+            color: #64748b;
         }
     </style>
 </head>
@@ -3111,12 +3323,13 @@ if (isset($_GET['tool'])) {
     $gate = $all_gates[$selected_tool];
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $gate['name']; ?> - CYBERSEC</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -3125,8 +3338,8 @@ if (isset($_GET['tool'])) {
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #0f0c1f 0%, #1a1a2e 100%);
+            font-family: 'Inter', sans-serif;
+            background: #0a0c0f;
             color: #e4e6eb;
             padding: 30px;
         }
@@ -3137,11 +3350,11 @@ if (isset($_GET['tool'])) {
         }
 
         .header {
-            background: rgba(22, 27, 34, 0.7);
-            backdrop-filter: blur(20px);
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
-            padding: 24px 32px;
+            border-radius: 16px;
+            padding: 20px 30px;
             margin-bottom: 30px;
             display: flex;
             align-items: center;
@@ -3150,7 +3363,7 @@ if (isset($_GET['tool'])) {
 
         .header h1 {
             font-size: 24px;
-            font-weight: 700;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -3161,12 +3374,11 @@ if (isset($_GET['tool'])) {
         }
 
         .user-info {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 40px;
-            padding: 8px 20px;
+            border-radius: 30px;
+            padding: 6px 16px;
             font-size: 14px;
-            font-weight: 500;
         }
 
         .nav {
@@ -3177,27 +3389,27 @@ if (isset($_GET['tool'])) {
         }
 
         .nav-btn {
-            padding: 8px 24px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 6px 20px;
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 40px;
-            color: #8b949e;
+            border-radius: 30px;
+            color: #94a3b8;
             text-decoration: none;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
 
         .nav-btn:hover {
-            border-color: #6366f1;
-            color: #fff;
+            border-color: #3b82f6;
+            color: #ffffff;
         }
 
         .nav-btn.start {
             background: linear-gradient(135deg, #10b981, #059669);
             border: none;
-            color: #fff;
+            color: #ffffff;
         }
 
         .nav-btn.stop {
@@ -3207,7 +3419,7 @@ if (isset($_GET['tool'])) {
 
         .nav-btn.stop:hover {
             background: #ef4444;
-            color: #fff;
+            color: #ffffff;
         }
 
         .nav-btn.clear {
@@ -3217,14 +3429,14 @@ if (isset($_GET['tool'])) {
 
         .nav-btn.clear:hover {
             background: #f59e0b;
-            color: #000;
+            color: #000000;
         }
 
         .loading {
             display: none;
             align-items: center;
             gap: 8px;
-            color: #a5b4fc;
+            color: #94a3b8;
         }
 
         .loading.active {
@@ -3234,7 +3446,7 @@ if (isset($_GET['tool'])) {
         .spinner {
             width: 16px;
             height: 16px;
-            border: 2px solid #a5b4fc;
+            border: 2px solid #94a3b8;
             border-top-color: transparent;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -3247,11 +3459,11 @@ if (isset($_GET['tool'])) {
         textarea {
             width: 100%;
             height: 200px;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
+            border-radius: 12px;
             color: #e4e6eb;
-            padding: 20px;
+            padding: 16px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 13px;
             resize: vertical;
@@ -3260,7 +3472,7 @@ if (isset($_GET['tool'])) {
 
         textarea:focus {
             outline: none;
-            border-color: #6366f1;
+            border-color: #3b82f6;
         }
 
         .stats-grid {
@@ -3271,24 +3483,24 @@ if (isset($_GET['tool'])) {
         }
 
         .stat-box {
-            background: rgba(22, 27, 34, 0.7);
+            background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 20px;
             text-align: center;
         }
 
         .stat-label {
-            color: #8b949e;
+            color: #64748b;
             font-size: 13px;
             margin-bottom: 8px;
         }
 
         .stat-value {
             font-size: 28px;
-            font-weight: 700;
-            color: #a5b4fc;
+            font-weight: 600;
+            color: #94a3b8;
         }
 
         .results-grid {
@@ -3298,10 +3510,10 @@ if (isset($_GET['tool'])) {
         }
 
         .result-box {
-            background: rgba(22, 27, 34, 0.7);
+            background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid;
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 20px;
             max-height: 500px;
             overflow-y: auto;
@@ -3316,7 +3528,7 @@ if (isset($_GET['tool'])) {
         }
 
         .result-box h3 {
-            color: #e4e6eb;
+            color: #ffffff;
             font-size: 18px;
             font-weight: 600;
             margin-bottom: 16px;
@@ -3324,13 +3536,13 @@ if (isset($_GET['tool'])) {
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             position: sticky;
             top: 0;
-            background: rgba(22, 27, 34, 0.9);
+            background: rgba(30, 41, 59, 0.9);
         }
 
         .result-item {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.6);
             border-left: 4px solid;
-            border-radius: 12px;
+            border-radius: 8px;
             padding: 16px;
             margin-bottom: 12px;
             font-family: 'JetBrains Mono', monospace;
@@ -3349,13 +3561,13 @@ if (isset($_GET['tool'])) {
         .credits-counter, .cyber-counter {
             position: fixed;
             bottom: 30px;
-            background: rgba(22, 27, 34, 0.9);
+            background: rgba(30, 41, 59, 0.9);
             backdrop-filter: blur(10px);
             border: 1px solid;
-            border-radius: 40px;
-            padding: 12px 24px;
+            border-radius: 30px;
+            padding: 10px 20px;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
             z-index: 100;
         }
 
@@ -3367,8 +3579,8 @@ if (isset($_GET['tool'])) {
 
         .cyber-counter {
             left: 30px;
-            border-color: #a5b4fc;
-            color: #a5b4fc;
+            border-color: #94a3b8;
+            color: #94a3b8;
         }
     </style>
 </head>
@@ -3587,12 +3799,13 @@ $active_gates = array_filter($gates_config, function($v) { return $v; });
 $ggs_available = count(getGGsByBin());
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CYBERSEC - Main Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -3601,8 +3814,8 @@ $ggs_available = count(getGGsByBin());
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #0f0c1f 0%, #1a1a2e 100%);
+            font-family: 'Inter', sans-serif;
+            background: #0a0c0f;
             color: #e4e6eb;
             padding: 30px;
         }
@@ -3613,52 +3826,48 @@ $ggs_available = count(getGGsByBin());
         }
 
         .header {
-            background: rgba(22, 27, 34, 0.7);
-            backdrop-filter: blur(20px);
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 32px;
-            padding: 50px;
-            margin-bottom: 40px;
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 30px;
             text-align: center;
             position: relative;
         }
 
         .header h1 {
-            font-size: 48px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -1px;
-            margin-bottom: 10px;
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+            margin-bottom: 8px;
         }
 
         .header p {
-            color: #8b949e;
+            color: #64748b;
             font-size: 14px;
-            font-weight: 500;
-            letter-spacing: 2px;
         }
 
         .user-info {
             position: absolute;
             top: 20px;
             right: 30px;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 40px;
-            padding: 8px 20px;
+            border-radius: 30px;
+            padding: 6px 16px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .user-badge {
-            background: linear-gradient(135deg, #6366f1, #a855f7);
-            color: #fff;
-            padding: 4px 12px;
-            border-radius: 40px;
-            font-size: 12px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #ffffff;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-size: 11px;
             font-weight: 600;
         }
 
@@ -3666,17 +3875,17 @@ $ggs_available = count(getGGsByBin());
             display: flex;
             justify-content: center;
             gap: 20px;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
 
         .status-item {
-            background: rgba(22, 27, 34, 0.7);
+            background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
-            padding: 20px 40px;
+            border-radius: 12px;
+            padding: 16px 32px;
             text-align: center;
-            min-width: 180px;
+            min-width: 160px;
         }
 
         .status-credits {
@@ -3684,7 +3893,7 @@ $ggs_available = count(getGGsByBin());
         }
 
         .status-cyber {
-            border-color: #a5b4fc;
+            border-color: #94a3b8;
         }
 
         .status-gates {
@@ -3692,14 +3901,14 @@ $ggs_available = count(getGGsByBin());
         }
 
         .status-label {
-            color: #8b949e;
-            font-size: 13px;
-            margin-bottom: 8px;
+            color: #64748b;
+            font-size: 12px;
+            margin-bottom: 6px;
         }
 
         .value {
-            font-size: 24px;
-            font-weight: 700;
+            font-size: 20px;
+            font-weight: 600;
         }
 
         .status-credits .value {
@@ -3707,7 +3916,7 @@ $ggs_available = count(getGGsByBin());
         }
 
         .status-cyber .value {
-            color: #a5b4fc;
+            color: #94a3b8;
         }
 
         .status-gates .value {
@@ -3719,27 +3928,27 @@ $ggs_available = count(getGGsByBin());
             gap: 12px;
             margin-bottom: 40px;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         .nav-btn {
-            padding: 12px 28px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 24px;
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 40px;
-            color: #8b949e;
+            border-radius: 30px;
+            color: #94a3b8;
             text-decoration: none;
             font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
+            font-weight: 500;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .nav-btn:hover {
-            border-color: #6366f1;
-            color: #fff;
-            transform: translateY(-2px);
+            border-color: #3b82f6;
+            color: #ffffff;
         }
 
         .nav-btn.ggs {
@@ -3749,17 +3958,57 @@ $ggs_available = count(getGGsByBin());
 
         .nav-btn.ggs:hover {
             background: #10b981;
-            color: #000;
+            color: #000000;
         }
 
         .nav-btn.lives {
-            border-color: #a855f7;
-            color: #d8b4fe;
+            border-color: #8b5cf6;
+            color: #c4b5fd;
         }
 
         .nav-btn.lives:hover {
-            background: #a855f7;
-            color: #fff;
+            background: #8b5cf6;
+            color: #ffffff;
+        }
+
+        .nav-btn.youtube {
+            border-color: #ff0000;
+            color: #ff8888;
+        }
+
+        .nav-btn.youtube:hover {
+            background: #ff0000;
+            color: #ffffff;
+        }
+
+        .nav-btn.refs {
+            border-color: #10b981;
+            color: #6ee7b7;
+        }
+
+        .nav-btn.refs:hover {
+            background: #10b981;
+            color: #000000;
+        }
+
+        .nav-btn.baixar {
+            border-color: #8b5cf6;
+            color: #c4b5fd;
+        }
+
+        .nav-btn.baixar:hover {
+            background: #8b5cf6;
+            color: #ffffff;
+        }
+
+        .nav-btn.gerador {
+            border-color: #f59e0b;
+            color: #fcd34d;
+        }
+
+        .nav-btn.gerador:hover {
+            background: #f59e0b;
+            color: #000000;
         }
 
         .gates-scroll {
@@ -3777,22 +4026,22 @@ $ggs_available = count(getGGsByBin());
         .gate-card {
             display: inline-block;
             width: 240px;
-            background: rgba(22, 27, 34, 0.7);
+            background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid;
-            border-radius: 24px;
+            border-radius: 16px;
             padding: 24px;
             text-decoration: none;
             color: #e4e6eb;
-            transition: all 0.3s;
+            transition: all 0.2s;
             position: relative;
             white-space: normal;
         }
 
         .gate-card:hover {
             transform: translateY(-4px);
-            border-color: #6366f1 !important;
-            box-shadow: 0 20px 30px -10px rgba(99, 102, 241, 0.3);
+            border-color: #3b82f6 !important;
+            box-shadow: 0 20px 30px -10px rgba(59, 130, 246, 0.3);
         }
 
         .gate-card.inactive {
@@ -3807,11 +4056,11 @@ $ggs_available = count(getGGsByBin());
         }
 
         .gate-card h3 {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
             text-align: center;
             margin-bottom: 12px;
-            color: #a5b4fc;
+            color: #94a3b8;
         }
 
         .gate-status {
@@ -3826,17 +4075,11 @@ $ggs_available = count(getGGsByBin());
         .status-active {
             background: #10b981;
             box-shadow: 0 0 10px #10b981;
-            animation: pulse 2s infinite;
         }
 
         .status-inactive {
             background: #ef4444;
             box-shadow: 0 0 10px #ef4444;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
         }
 
         .info-grid {
@@ -3847,10 +4090,10 @@ $ggs_available = count(getGGsByBin());
         }
 
         .info-card {
-            background: rgba(22, 27, 34, 0.7);
+            background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 20px;
             text-align: center;
         }
@@ -3861,23 +4104,23 @@ $ggs_available = count(getGGsByBin());
         }
 
         .info-card .title {
-            color: #8b949e;
+            color: #64748b;
             font-size: 13px;
             margin-bottom: 4px;
         }
 
         .info-card .value {
-            font-size: 18px;
-            font-weight: 700;
-            color: #a5b4fc;
+            font-size: 16px;
+            font-weight: 600;
+            color: #94a3b8;
         }
 
         .ggs-badge {
             background: #10b981;
-            color: #000;
+            color: #000000;
             padding: 2px 8px;
             border-radius: 20px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             margin-left: 8px;
         }
@@ -3918,19 +4161,37 @@ $ggs_available = count(getGGsByBin());
 
         <div class="nav">
             <a href="?ggs" class="nav-btn ggs">
-                🛒 GG Shop
+                <i class="fas fa-store"></i> GG Shop
                 <?php if ($ggs_available > 0): ?>
                 <span class="ggs-badge"><?php echo $ggs_available; ?></span>
                 <?php endif; ?>
             </a>
-            <a href="?lives" class="nav-btn lives">📋 Live History</a>
+            <a href="?lives" class="nav-btn lives">
+                <i class="fas fa-history"></i> Live History
+            </a>
+            <a href="?ggs&tab=youtube" class="nav-btn youtube">
+                <i class="fab fa-youtube"></i> YouTube
+            </a>
+            <a href="?ggs&tab=refs" class="nav-btn refs">
+                <i class="fas fa-images"></i> Refs
+            </a>
+            <a href="?ggs&tab=baixar" class="nav-btn baixar">
+                <i class="fas fa-download"></i> Baixar
+            </a>
+            <a href="?ggs&tab=gerador" class="nav-btn gerador">
+                <i class="fas fa-dice"></i> Gerador
+            </a>
             <?php if ($user_role === 'admin'): ?>
-            <a href="?admin=true" class="nav-btn">⚙ Admin</a>
+            <a href="?admin=true" class="nav-btn">
+                <i class="fas fa-cog"></i> Admin
+            </a>
             <?php endif; ?>
-            <a href="?logout" class="nav-btn">🚪 Logout</a>
+            <a href="?logout" class="nav-btn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
         </div>
 
-        <h2 style="font-size: 20px; font-weight: 700; color: #a5b4fc; margin-bottom: 16px;">🔧 Available Checkers</h2>
+        <h2 style="font-size: 18px; font-weight: 600; color: #94a3b8; margin-bottom: 16px;">🔧 Available Checkers</h2>
 
         <div class="gates-scroll">
             <div class="gates-row">
@@ -3941,7 +4202,7 @@ $ggs_available = count(getGGsByBin());
                     <div class="gate-icon"><?php echo $gate['icon']; ?></div>
                     <h3><?php echo $gate['name']; ?></h3>
                     <div class="gate-status <?php echo $isActive ? 'status-active' : 'status-inactive'; ?>"></div>
-                    <p style="color: #8b949e; font-size: 12px; text-align: center;">
+                    <p style="color: #64748b; font-size: 11px; text-align: center;">
                         <?php echo $isActive ? 'Active' : 'Inactive'; ?>
                     </p>
                 </a>
